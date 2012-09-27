@@ -1,0 +1,498 @@
+#!/bin/bash
+
+set -o errexit
+set -o nounset
+
+main() {
+    argparse "$@"
+
+    cmd_$arg_cmd
+}
+
+argparse() {
+    arg_cmd=
+    while [ $# -ge 1 ]; do
+        case "$1" in
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        -*)
+            die "Unknown option $1"
+            ;;
+        *)
+            if test $arg_cmd; then
+                die "Wrong number of arguments"
+            else
+                validateCmd "$1"
+                arg_cmd=$1
+                shift
+                argparse_$arg_cmd "$@"
+                return
+            fi
+            ;;
+        esac
+    done
+    test $arg_cmd || die "Missing command."
+}
+
+argparse_init() {
+    argparse_default "$@"
+}
+
+argparse_gc() {
+    argparse_default "$@"
+}
+
+argparse_default() {
+    while [ $# -ge 1 ]; do
+        case "$1" in
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        -*)
+            die "Unknown option $1"
+            ;;
+        *)
+            die "Wrong number of arguments"
+            ;;
+        esac
+    done
+}
+
+argparse_filter_smudge() {
+    argparse_filter "$@"
+}
+
+argparse_filter_clean() {
+    argparse_filter "$@"
+}
+
+argparse_filter() {
+    arg_file=
+    while [ $# -ge 1 ]; do
+        case "$1" in
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        -*)
+            die "Unknown option $1"
+            ;;
+        *)
+            if test $arg_file; then
+                die "Wrong number of arguments"
+            else
+                arg_file=$1
+                shift
+            fi
+            ;;
+        esac
+    done
+    test $arg_file || die "Missing <path>."
+}
+
+argparse_add() {
+    argparse_pathspec "$@"
+}
+
+argparse_checkout() {
+    argparse_pathspec "$@"
+}
+
+argparse_status() {
+    argparse_pathspec "$@"
+}
+
+argparse_pathspec() {
+    arg_pathspec=
+    while [ $# -ge 1 ]; do
+        case "$1" in
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        --)
+            shift
+            arg_pathspec=( "$@" )
+            return 0
+            ;;
+        -*)
+            die "Unknown option $1"
+            ;;
+        *)
+            arg_pathspec=( "$@" )
+            return 0
+            ;;
+        esac
+    done
+}
+
+argparse_fetch() {
+    argparse_rsync "$@"
+}
+
+argparse_push() {
+    argparse_rsync "$@"
+}
+
+argparse_rsync() {
+    opt_dry_run=
+    arg_pathspec=
+    while [ $# -ge 1 ]; do
+        case "$1" in
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        --dry-run)
+            opt_dry_run=--dry-run
+            shift
+            ;;
+        --)
+            shift
+            arg_pathspec=( "$@" )
+            return 0
+            ;;
+        -*)
+            die "Unknown option $1"
+            ;;
+        *)
+            arg_pathspec=( "$@" )
+            return 0
+            ;;
+        esac
+    done
+}
+
+usage() {
+    cat <<EOFTXT
+git-silo init
+git-silo add [--] [<file>...]
+git-silo checkout -- [<file>...]
+git-silo status [<path>...]
+git-silo push [--] [<path>...]
+git-silo fetch [--] [<path>...]
+git-silo gc
+git-silo filter_smudge <path>
+git-silo filter_clean <path>
+
+  init              initialize silo in gitdir.
+
+  add               add untracked files such that they are stored in silo.
+
+  checkout          replace placeholders with full content.
+
+  status            print status about files stored in silo.
+
+  push              push silo files for current HEAD.
+
+  fetch             fetch silo files for current HEAD.
+
+  gc                delete silo objects that are not directly referenced by
+                    HEAD, tags or tips of branches.
+
+
+  filter_smudge     smudge filter (see gitattributes); receives sha1 from git
+                    and corresponding content from silo.
+
+  filter_clean      clean filter (see gitattributes); stores file in silo and
+                    returns sha1 to git.
+EOFTXT
+}
+
+validateCmd() {
+    case "$1" in
+        filter_smudge|filter_clean|add|status|push|fetch|init|checkout|gc)
+            return 0
+            ;;
+        *)
+            die "Invalid command '$1'."
+            ;;
+    esac
+}
+
+cmd_init() {
+    local gitdir siloprg
+    gitdir=$(git rev-parse --git-dir)
+    echo "Initializing silo in '$gitdir'."
+    mkdir -p "$gitdir/silo/objects"
+    if ! isBareRepo; then
+        configFilters
+    fi
+}
+
+configFilters() {
+    siloprg=$(getSiloProgram)
+    git config filter.silo.clean "$siloprg filter_clean %f"
+    git config filter.silo.smudge "$siloprg filter_smudge %f"
+}
+
+isBareRepo() {
+    [ $(git rev-parse --is-bare-repository) = "true" ]
+}
+
+getSiloProgram() {
+    local dir
+    dir=$(dirname "$0")
+    dir=$(cd $dir; pwd)
+    base=$(basename "$0")
+    printf '%s/%s' "$dir" "$base"
+}
+
+cmd_filter_clean() {
+    validateHaveSilo
+    if isSha1PlaceholderFile $arg_file; then
+        cat
+    else
+        computeSha1AndStoreContentInSilo
+    fi
+}
+
+computeSha1AndStoreContentInSilo() {
+    local silodir sha1 subdir objfile
+    silodir=$(getSiloObjectDir)
+    sha1=$(computeSha1) || die "Failed to compute sha1."
+    subdir=$silodir/${sha1:0:2}
+    objfile=$subdir/${sha1:2}
+    if [ ! -e $objfile ]; then
+        mkdir -p $subdir
+        cp $arg_file $objfile
+    fi
+    printf '%s\n' $sha1
+}
+
+cmd_filter_smudge() {
+    local silodir sha1
+    read sha1
+    validSha1 "$sha1" || die "Invalid input; expected sha1."
+    [ "$(head -c 1)" = "" ] || die "Input too large."
+    silodir=$(getSiloObjectDir)
+    objfile=$silodir/${sha1:0:2}/${sha1:2}
+    if [ -e $objfile ]; then
+        cat $objfile
+    else
+        printf "%s: silo content %s not available locally.\n" \
+            $arg_file $sha1 >&2
+        printf '%s\n' $sha1
+    fi
+}
+
+validateHaveSilo() {
+    local silodir
+    silodir=$(getSiloObjectDir)
+    [ -d "$silodir" ] || die "Missing silo '$silodir'; run 'git-silo init'."
+}
+
+getSiloObjectDir() {
+    local silodir
+    silodir=$(git rev-parse --git-dir)/silo/objects
+    printf '%s' "$silodir"
+}
+
+computeSha1() {
+    openssl sha1 | cut -d ' ' -f 2 | egrep '^[0-9a-f]{40}$'
+}
+
+validSha1() {
+    egrep -q '^[0-9a-f]{40}$' <<< "$1"
+}
+
+isSha1PlaceholderFile() {
+    head -n 1 "$1" | egrep -q '^[0-9a-f]{40}$'
+}
+
+cmd_add() {
+    validateHaveSilo
+    while read p; do
+        [ "$p" = "" ] && continue
+        updateGitattributes "$p"
+        git add "$p"
+    done <<< "$(lsUntrackedFiles)"
+}
+
+cmd_checkout() {
+    validateHaveSilo
+    local sha1 path err
+    err=
+    while read sha1 path; do
+        [ "$path" = "" ] && continue
+        if isSha1PlaceholderFile "$path"; then
+            rm "$path"
+            git checkout -- "$path"
+            if isSha1PlaceholderFile "$path"; then
+                err=t
+                printf "Failed to checkout silo content for '%s'.\n" \
+                    "$path" >&2
+            fi
+        fi
+    done <<< "$(lsSiloTracked)"
+    test $err && die "Errors during silo checkout (see above)."
+}
+
+lsUntrackedFiles() {
+    git ls-files --exclude-standard --exclude=.git* -o -- "${arg_pathspec[@]}"
+}
+
+updateGitattributes() {
+    local p dir base gitignore
+    p="$1"
+    dir="$(dirname $p)"
+    base="$(basename $p)"
+    gitattributes="$dir/.gitattributes"
+    tmpfile="$gitattributes-tmp$$"
+
+    [ -e "$gitattributes" ] || touch "$gitattributes"
+    ( printf '/%s filter=silo -text\n' "$base" && cat "$gitattributes") |
+        sort -u >"$tmpfile"
+    mv "$tmpfile" "$gitattributes"
+    git add "$gitattributes"
+}
+
+cmd_status() {
+    validateHaveSilo
+    local sha1 path
+    while read sha1 path; do
+        [ "$path" = "" ] && continue
+        printf '%s: ' "$path"
+        if isSha1PlaceholderFile "$path"; then
+            printf 'placeholder'
+        else
+            printf 'content'
+        fi
+        printf '\n'
+    done <<< "$(lsSiloTracked)"
+}
+
+lsSiloTracked() {
+    local perm ty gitsha1 size path sha1
+    while read perm ty gitsha1 size path; do
+        [ "$path" = "" ] && continue
+        if [ "$path" != "" ] && [ "$size" = 41 ] && \
+            sha1=$(getSha1ForGitObject $gitsha1); then
+            printf '%s %s\n' "$sha1" "$path"
+        fi
+    done <<< "$(lsTree)"
+}
+
+lsTree() {
+    git ls-tree -rl HEAD -- "${arg_pathspec[@]}"
+}
+
+getSha1ForGitObject() {
+    git show $1 | egrep '^[0-9a-f]{40}$'
+}
+
+cmd_push() {
+    validateHaveSilo
+    local silodir url
+    silodir=$(getSiloObjectDir)
+    url=$(getRemoteUrlForRsync)
+    echo "pushing silo with rsync to $url"
+    echo
+    printUserSyncInfo
+    echo
+    lsSiloObjectsForHEAD |
+        rsync $opt_dry_run -rav --files-from=- $silodir/ $url/
+}
+
+cmd_fetch() {
+    validateHaveSilo
+    local silodir url
+    silodir=$(getSiloObjectDir)
+    url=$(getRemoteUrlForRsync)
+    echo "fetching silo with rsync from $url"
+    echo
+    printUserSyncInfo
+    echo
+    lsSiloObjectsForHEAD |
+        rsync $opt_dry_run -rav --files-from=- $url/ $silodir/
+}
+
+lsSiloObjectsForHEAD() {
+    while read sha1; do
+        [ "$sha1" = "" ] && continue
+        objfile=${sha1:0:2}/${sha1:2}
+        printf '%s\n' "$objfile"
+    done <<< "$(lsSiloTracked | cut -b 1-40 | sort -u)"
+}
+
+printUserSyncInfo() {
+    local sha1 path
+    while read sha1 path; do
+        [ "$path" = "" ] && continue
+        printf '%s: %s\n' "$path" $sha1
+    done <<< "$(lsSiloTracked)"
+}
+
+getRemoteUrlForRsync() {
+    local url
+    url=$(git config remote.origin.url) || die "Failed to get URL of 'origin'."
+    if grep -q '^ssh://' <<< "$url"; then
+        url=$(sed -e 's@ssh://@@' -e 's@/@:@' <<< "$url")
+    elif grep -q '^[^:]*://' <<< "$url"; then
+        die "Don't know how to use $url for rsync."
+    fi
+    grep -q '\.git$' <<< "$url" || url="$url/.git"
+    printf '%s/silo/objects\n' "$url"
+}
+
+cmd_gc() {
+    local silodir current stored delete
+    validateHaveSilo
+
+    current=$(allCurrentSiloObjects)
+    current=$(convertToObjectSubdirPath <<< "$current")
+
+    silodir=$(getSiloObjectDir)
+    stored=$(cd $silodir && find . -type f | sed -e 's@^\./@@')
+
+    delete=$(setminus "$stored" "$current")
+    cd $silodir
+    xargs rm -f <<< "$delete"
+    rmdir * 2>/dev/null
+}
+
+setminus() {
+    comm -23 <(sort -u <<< "$1") <(sort -u <<< "$2")
+}
+
+convertToObjectSubdirPath() {
+    sed -e 's@^\(.\{2\}\)@\1/@'
+}
+
+allCurrentSiloObjects() {
+    while read sha1; do
+        [ "$sha1" = "" ] && continue
+        allSiloObjectsForTree $sha1
+    done <<< "$(allLocalRefs)"
+}
+
+allLocalRefs() {
+    git rev-parse HEAD
+    git show-ref --heads --tags -s
+}
+
+allSiloObjectsForTree() {
+    local tree perm ty gitsha1 size path sha1
+    tree=$1
+    while read perm ty gitsha1 size path; do
+        [ "$path" = "" ] && continue
+        if [ "$path" != "" ] && [ "$size" = 41 ] && \
+            sha1=$(getSha1ForGitObject $gitsha1); then
+            printf '%s\n' "$sha1"
+        fi
+    done <<< "$(lsFullTree $1)"
+}
+
+lsFullTree() {
+    git ls-tree -rl --full-tree $1
+}
+
+die() {
+    echo >&2 "Error (silo): $1"
+    exit 1
+}
+
+main "$@"
