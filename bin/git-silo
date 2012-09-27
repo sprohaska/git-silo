@@ -439,27 +439,25 @@ getRemoteUrlForRsync() {
 }
 
 cmd_gc() {
-    local silodir current stored delete
+    validateNoChanges
     validateHaveSilo
+    gcSiloObjects
+    gcAllGitattributes
+}
 
+gcSiloObjects() {
+    local silodir current stored delete
     current=$(allCurrentSiloObjects)
-    current=$(convertToObjectSubdirPath <<< "$current")
+    current=$(convertToObjectSubdirPaths <<< "$current")
 
     silodir=$(getSiloObjectDir)
     stored=$(cd $silodir && find . -type f | sed -e 's@^\./@@')
 
     delete=$(setminus "$stored" "$current")
-    cd $silodir
-    xargs rm -f <<< "$delete"
-    rmdir * 2>/dev/null
-}
-
-setminus() {
-    comm -23 <(sort -u <<< "$1") <(sort -u <<< "$2")
-}
-
-convertToObjectSubdirPath() {
-    sed -e 's@^\(.\{2\}\)@\1/@'
+    ( cd $silodir &&
+        xargs rm -f <<< "$delete" &&
+        rmdir * 2>/dev/null ||
+        true )
 }
 
 allCurrentSiloObjects() {
@@ -488,6 +486,58 @@ allSiloObjectsForTree() {
 
 lsFullTree() {
     git ls-tree -rl --full-tree $1
+}
+
+convertToObjectSubdirPaths() {
+    sed -e 's@^\(.\{2\}\)@\1/@'
+}
+
+setminus() {
+    comm -23 <(sort -u <<< "$1") <(sort -u <<< "$2")
+}
+
+gcAllGitattributes() {
+    while read p; do
+        [ "$p" = "" ] && continue
+        gcGitattributes $p
+    done <<< "$(lsGitattributes)"
+    git commit -m "git-silo gc gitattributes" &&
+        git commit --amend
+    true
+}
+
+gcGitattributes() {
+    local attr tmpfile dir reEntry
+    attr=$1
+    dir=$(dirname $attr)
+    tmpfile=$attr-tmp$$
+    reEntry='^/.*filter=silo -text$'
+    grep -v "$reEntry" $attr >$tmpfile && true
+    while read path rest; do
+        if [ -f "$dir/$path" ]; then
+            printf '%s filter=silo -text\n' "$path" >>$tmpfile
+        fi
+    done <<< "$(grep "$reEntry" $attr)"
+    mv $tmpfile $attr
+    git add $attr
+}
+
+lsGitattributes() {
+    git ls-files | egrep '^.gitattributes|/.gitattributes'
+    true
+}
+
+validateNoChanges() {
+    no_staged_changes || die "You have staged changes."
+    no_unstaged_changes || die "You have unstaged changes."
+}
+
+no_staged_changes() {
+    git diff-index --quiet --cached HEAD
+}
+
+no_unstaged_changes() {
+    git diff-files --quiet
 }
 
 die() {
