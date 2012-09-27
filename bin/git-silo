@@ -180,22 +180,22 @@ git-silo filter_clean <path>
 
   init              initialize silo in gitdir.
 
-  add               add untracked files such that they are stored in silo.
+  add               add untracked files for silo storage.
 
   checkout          replace placeholders with full content.
 
-  status            print status about files stored in silo.
+  status            print status of files stored in silo.
 
   push              push silo files for current HEAD.
 
   fetch             fetch silo files for current HEAD.
 
-  gc                delete silo objects that are not directly referenced by
+  gc                delete silo files that are not directly referenced by
                     HEAD, tags or tips of branches.
 
 
   filter_smudge     smudge filter (see gitattributes); receives sha1 from git
-                    and corresponding content from silo.
+                    and expands it to corresponding content from silo.
 
   filter_clean      clean filter (see gitattributes); stores file in silo and
                     returns sha1 to git.
