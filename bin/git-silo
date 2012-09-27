@@ -323,8 +323,6 @@ cmd_checkout() {
             git checkout -- "$path"
             if isSha1PlaceholderFile "$path"; then
                 err=t
-                printf "Failed to checkout silo content for '%s'.\n" \
-                    "$path" >&2
             fi
         fi
     done <<< "$(lsSiloTracked)"
