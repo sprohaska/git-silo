@@ -386,7 +386,7 @@ cmd_push() {
     validateHaveSilo
     local url
     url=$(getRemoteUrl)
-    echo "pushing silo with rsync to $url"
+    echo "pushing silo to $url"
     echo
     printUserSyncInfo
     echo
@@ -399,7 +399,7 @@ cmd_fetch() {
     local url
     silodir=$(getSiloObjectDir)
     url=$(getRemoteUrl)
-    echo "fetching silo with rsync from $url"
+    echo "fetching silo from $url"
     echo
     printUserSyncInfo
     echo
@@ -408,7 +408,7 @@ cmd_fetch() {
 }
 
 transport_scp_fetch() {
-    local silodir url
+    local silodir url dir
     url=$1
     silodir=$(getSiloObjectDir)
     while read p; do
@@ -417,7 +417,10 @@ transport_scp_fetch() {
         if test $opt_dry_run; then
             echo Would have run: scp "$url/$p" "$silodir/$p"
         else
-            scp "$url/$p" "$silodir/$p"
+            dir=$(dirname $p)
+            mkdir -p "$silodir/$dir"
+            scp "$url/$p" "$silodir/$p-tmp"
+            mv "$silodir/$p-tmp" "$silodir/$p"
         fi
     done
 }
@@ -438,7 +441,18 @@ transport_scp_push() {
         if test $opt_dry_run; then
             echo Would have run: scp "$silodir/$p" "$url/$p"
         else
-            scp "$silodir/$p" "$url/$p"
+            dir=$(dirname $p)
+            if [ "$url_host" = LOCAL ]; then
+                mkdir -p "$silodir/$p"
+            else
+                ssh -n "$url_host" mkdir -p "$url_dir/$dir"
+            fi
+            scp "$silodir/$p" "$url/$p-tmp"
+            if [ "$url_host" = LOCAL ]; then
+                mv "$url/$p-tmp" "$url/$p"
+            else
+                ssh -n "$url_host" mv "$url_dir/$p-tmp" "$url_dir/$p"
+            fi
         fi
     done
 }
@@ -511,7 +525,7 @@ lsDir() {
 }
 
 lsRemoteDir() {
-    ssh -n "$1" "( cd $2 && find . -type f )" | sed -e 's@^\./@@'
+    ssh -n "$1" cd "$2" '&&' find . -type f | sed -e 's@^\./@@'
 }
 
 allCurrentSiloObjects() {
