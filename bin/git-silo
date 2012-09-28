@@ -407,20 +407,6 @@ cmd_fetch() {
         transport_scp_fetch "$url"
 }
 
-transport_rsync_fetch() {
-    local silodir url
-    url=$1
-    silodir=$(getSiloObjectDir)
-    rsync $opt_dry_run -rav --files-from=- $url/ $silodir/
-}
-
-transport_rsync_push() {
-    local silodir url
-    url=$1
-    silodir=$(getSiloObjectDir)
-    rsync $opt_dry_run -rav --files-from=- $silodir/ $url/
-}
-
 transport_scp_fetch() {
     local silodir url
     url=$1
