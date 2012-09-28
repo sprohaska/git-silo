@@ -41,7 +41,25 @@ argparse_init() {
 }
 
 argparse_gc() {
-    argparse_default "$@"
+    opt_force=
+    while [ $# -ge 1 ]; do
+        case "$1" in
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        -f|--force)
+            opt_force=t
+            shift
+            ;;
+        -*)
+            die "Unknown option $1"
+            ;;
+        *)
+            die "Wrong number of arguments"
+            ;;
+        esac
+    done
 }
 
 argparse_default() {
@@ -174,7 +192,7 @@ git-silo checkout -- [<file>...]
 git-silo status [<path>...]
 git-silo push [--] [<path>...]
 git-silo fetch [--] [<path>...]
-git-silo gc
+git-silo gc [-f|--force]
 git-silo filter_smudge <path>
 git-silo filter_clean <path>
 
@@ -192,6 +210,9 @@ git-silo filter_clean <path>
 
   gc                delete silo files that are not directly referenced by
                     HEAD, tags or tips of branches.
+
+    -f|--force      run gc even with unstaged changes.  Note that gc might
+                    modify and commit .gitattributes.
 
 
   filter_smudge     smudge filter (see gitattributes); receives sha1 from git
@@ -512,7 +533,8 @@ getRemoteUrl() {
 }
 
 cmd_gc() {
-    validateNoChanges
+    validateNoStagedChanges
+    test $opt_force || validateNoUnstagedChanges
     validateHaveSilo
     gcSiloObjects
     gcAllGitattributes
@@ -611,8 +633,11 @@ lsGitattributes() {
     true
 }
 
-validateNoChanges() {
+validateNoStagedChanges() {
     no_staged_changes || die "You have staged changes."
+}
+
+validateNoUnstagedChanges() {
     no_unstaged_changes || die "You have unstaged changes."
 }
 
