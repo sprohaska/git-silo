@@ -273,8 +273,8 @@ cmd_filter_smudge() {
     if [ -e $objfile ]; then
         cat $objfile
     else
-        printf "%s: silo content %s not available locally.\n" \
-            $arg_file $sha1 >&2
+        printf "missing silo content: %s\n" \
+            $arg_file >&2
         printf '%s\n' $sha1
     fi
 }
@@ -353,13 +353,12 @@ cmd_status() {
     local sha1 path
     while read sha1 path; do
         [ "$path" = "" ] && continue
-        printf '%s: ' "$path"
         if isSha1PlaceholderFile "$path"; then
-            printf 'placeholder'
+            printf 'placeholder '
         else
-            printf 'content'
+            printf 'content     '
         fi
-        printf '\n'
+        printf '%s\n' "$path"
     done <<< "$(lsSiloTracked)"
 }
 
