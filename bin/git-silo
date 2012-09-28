@@ -384,27 +384,28 @@ getSha1ForGitObject() {
 
 cmd_push() {
     validateHaveSilo
-    local url
+    local url transport
     url=$(getRemoteUrl)
+    transport=$(getTransport "$url")
     echo "pushing silo to $url"
     echo
     printUserSyncInfo
     echo
     lsSiloObjectsForHEAD |
-        transport_scp_push "$url"
+        transport_${transport}_push "$url"
 }
 
 cmd_fetch() {
     validateHaveSilo
-    local url
-    silodir=$(getSiloObjectDir)
+    local url transport
     url=$(getRemoteUrl)
+    transport=$(getTransport "$url")
     echo "fetching silo from $url"
     echo
     printUserSyncInfo
     echo
     lsSiloObjectsForHEAD |
-        transport_scp_fetch "$url"
+        transport_${transport}_fetch "$url"
 }
 
 transport_scp_fetch() {
@@ -430,11 +431,7 @@ transport_scp_push() {
     url=$1
     silodir=$(getSiloObjectDir)
     read url_host url_dir <<< "$(parseUrl "$url")"
-    if [ "$url_host" = LOCAL ]; then
-        existing=$(lsDir "$url_dir")
-    else
-        existing=$(lsRemoteDir "$url_host" "$url_dir")
-    fi
+    existing=$(lsRemoteDir "$url_host" "$url_dir")
     while read p; do
         [ "$p" = "" ] && continue
         findLineIn "$p" "$existing" && continue
@@ -442,17 +439,31 @@ transport_scp_push() {
             echo Would have run: scp "$silodir/$p" "$url/$p"
         else
             dir=$(dirname $p)
-            if [ "$url_host" = LOCAL ]; then
-                mkdir -p "$silodir/$p"
-            else
-                ssh -n "$url_host" mkdir -p "$url_dir/$dir"
-            fi
+            ssh -n "$url_host" mkdir -p "$url_dir/$dir"
             scp "$silodir/$p" "$url/$p-tmp"
-            if [ "$url_host" = LOCAL ]; then
-                mv "$url/$p-tmp" "$url/$p"
-            else
-                ssh -n "$url_host" mv "$url_dir/$p-tmp" "$url_dir/$p"
-            fi
+            ssh -n "$url_host" mv "$url_dir/$p-tmp" "$url_dir/$p"
+        fi
+    done
+}
+
+transport_localcp_fetch() {
+    transport_scp_fetch "$@"
+}
+
+transport_localcp_push() {
+    local silodir url url_host url_dir existing
+    url=$1
+    silodir=$(getSiloObjectDir)
+    while read p; do
+        [ "$p" = "" ] && continue
+        [ -f "$url/$p" ] && continue
+        if test $opt_dry_run; then
+            echo Would have run: cp "$silodir/$p" "$url/$p"
+        else
+            dir=$(dirname $p)
+            mkdir -p "$url/$dir"
+            cp "$silodir/$p" "$url/$p-tmp"
+            mv "$url/$p-tmp" "$url/$p"
         fi
     done
 }
@@ -461,13 +472,16 @@ findLineIn() {
     grep -q "^$1\$" <<< "$2"
 }
 
-parseUrl() {
-    local url=$1
-    if [ "${url/://}" = "$url" ]; then
-        printf 'LOCAL %s\n' "$url"
+getTransport() {
+    if [ "${1/://}" = "$1" ]; then
+        echo localcp
     else
-        sed -e 's/:/ /' <<< "$url"
+        echo scp
     fi
+}
+
+parseUrl() {
+    sed -e 's/:/ /' <<< "$1"
 }
 
 lsSiloObjectsForHEAD() {
