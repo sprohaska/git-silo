@@ -516,7 +516,7 @@ printUserSyncInfo() {
     local sha1 path
     while read sha1 path; do
         [ "$path" = "" ] && continue
-        printf '%s: %s\n' "$path" $sha1
+        printf '%s %s\n' $sha1 "$path"
     done <<< "$(lsSiloTracked)"
 }
 
