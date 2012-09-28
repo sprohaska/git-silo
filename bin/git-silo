@@ -220,6 +220,12 @@ git-silo filter_clean <path>
 
   filter_clean      clean filter (see gitattributes); stores file in silo and
                     returns sha1 to git.
+
+
+scp performance on Windows might be poor.  Method 3 of the following Microsoft
+kb entry might fix it
+
+    http://support.microsoft.com/kb/823764
 EOFTXT
 }
 
