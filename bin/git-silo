@@ -130,14 +130,14 @@ argparse_pathspec() {
 }
 
 argparse_fetch() {
-    argparse_rsync "$@"
+    argparse_sync "$@"
 }
 
 argparse_push() {
-    argparse_rsync "$@"
+    argparse_sync "$@"
 }
 
-argparse_rsync() {
+argparse_sync() {
     opt_dry_run=
     arg_pathspec=
     while [ $# -ge 1 ]; do
@@ -384,28 +384,90 @@ getSha1ForGitObject() {
 
 cmd_push() {
     validateHaveSilo
-    local silodir url
-    silodir=$(getSiloObjectDir)
-    url=$(getRemoteUrlForRsync)
+    local url
+    url=$(getRemoteUrl)
     echo "pushing silo with rsync to $url"
     echo
     printUserSyncInfo
     echo
     lsSiloObjectsForHEAD |
-        rsync $opt_dry_run -rav --files-from=- $silodir/ $url/
+        transport_scp_push "$url"
 }
 
 cmd_fetch() {
     validateHaveSilo
-    local silodir url
+    local url
     silodir=$(getSiloObjectDir)
-    url=$(getRemoteUrlForRsync)
+    url=$(getRemoteUrl)
     echo "fetching silo with rsync from $url"
     echo
     printUserSyncInfo
     echo
     lsSiloObjectsForHEAD |
-        rsync $opt_dry_run -rav --files-from=- $url/ $silodir/
+        transport_scp_fetch "$url"
+}
+
+transport_rsync_fetch() {
+    local silodir url
+    url=$1
+    silodir=$(getSiloObjectDir)
+    rsync $opt_dry_run -rav --files-from=- $url/ $silodir/
+}
+
+transport_rsync_push() {
+    local silodir url
+    url=$1
+    silodir=$(getSiloObjectDir)
+    rsync $opt_dry_run -rav --files-from=- $silodir/ $url/
+}
+
+transport_scp_fetch() {
+    local silodir url
+    url=$1
+    silodir=$(getSiloObjectDir)
+    while read p; do
+        [ "$p" = "" ] && continue
+        [ -f "$silodir/$p" ] && continue
+        if test $opt_dry_run; then
+            echo Would have run: scp "$url/$p" "$silodir/$p"
+        else
+            scp "$url/$p" "$silodir/$p"
+        fi
+    done
+}
+
+transport_scp_push() {
+    local silodir url url_host url_dir existing
+    url=$1
+    silodir=$(getSiloObjectDir)
+    read url_host url_dir <<< "$(parseUrl "$url")"
+    if [ "$url_host" = LOCAL ]; then
+        existing=$(lsDir "$url_dir")
+    else
+        existing=$(lsRemoteDir "$url_host" "$url_dir")
+    fi
+    while read p; do
+        [ "$p" = "" ] && continue
+        findLineIn "$p" "$existing" && continue
+        if test $opt_dry_run; then
+            echo Would have run: scp "$silodir/$p" "$url/$p"
+        else
+            scp "$silodir/$p" "$url/$p"
+        fi
+    done
+}
+
+findLineIn() {
+    grep -q "^$1\$" <<< "$2"
+}
+
+parseUrl() {
+    local url=$1
+    if [ "${url/://}" = "$url" ]; then
+        printf 'LOCAL %s\n' "$url"
+    else
+        sed -e 's/:/ /' <<< "$url"
+    fi
 }
 
 lsSiloObjectsForHEAD() {
@@ -424,7 +486,7 @@ printUserSyncInfo() {
     done <<< "$(lsSiloTracked)"
 }
 
-getRemoteUrlForRsync() {
+getRemoteUrl() {
     local url
     url=$(git config remote.origin.url) || die "Failed to get URL of 'origin'."
     if grep -q '^ssh://' <<< "$url"; then
@@ -449,13 +511,21 @@ gcSiloObjects() {
     current=$(convertToObjectSubdirPaths <<< "$current")
 
     silodir=$(getSiloObjectDir)
-    stored=$(cd $silodir && find . -type f | sed -e 's@^\./@@')
+    stored=$(lsDir "$silodir")
 
     delete=$(setminus "$stored" "$current")
     ( cd $silodir &&
         xargs rm -f <<< "$delete" &&
         rmdir * 2>/dev/null ||
         true )
+}
+
+lsDir() {
+    cd $1 && find . -type f | sed -e 's@^\./@@'
+}
+
+lsRemoteDir() {
+    ssh -n "$1" "( cd $2 && find . -type f )" | sed -e 's@^\./@@'
 }
 
 allCurrentSiloObjects() {
