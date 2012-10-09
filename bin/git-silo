@@ -226,7 +226,7 @@ scp performance on Windows might be poor.  The reason is explained in
 
     http://support.microsoft.com/kb/823764
 
-As a workaround, alternative url to a mounted network drive can be provided by
+As a workaround, an alternative path to a network drive can be provided by
 
     git config remote.origin.silourl <DRIVE:/...>
 EOFTXT
