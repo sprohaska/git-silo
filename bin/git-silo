@@ -222,10 +222,13 @@ git-silo filter_clean <path>
                     returns sha1 to git.
 
 
-scp performance on Windows might be poor.  Method 3 of the following Microsoft
-kb entry might fix it
+scp performance on Windows might be poor.  The reason is explained in
 
     http://support.microsoft.com/kb/823764
+
+As a workaround, alternative url to a mounted network drive can be provided by
+
+    git config remote.origin.silourl <DRIVE:/...>
 EOFTXT
 }
 
@@ -528,7 +531,9 @@ printUserSyncInfo() {
 
 getRemoteUrl() {
     local url
-    url=$(git config remote.origin.url) || die "Failed to get URL of 'origin'."
+    url=$(git config remote.origin.silourl) ||
+        url=$(git config remote.origin.url) ||
+        die "Failed to get URL of 'origin'."
     if grep -q '^ssh://' <<< "$url"; then
         url=$(sed -e 's@ssh://@@' -e 's@/@:/@' -e 's@//@/@' <<< "$url")
     elif grep -q '^[^:]*://' <<< "$url"; then
