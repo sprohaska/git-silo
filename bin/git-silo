@@ -438,18 +438,23 @@ cmd_fetch() {
 }
 
 transport_scp_fetch() {
-    local silodir url dir
-    url=$1
+    fetch_with_cp_program scp "$@"
+}
+
+fetch_with_cp_program() {
+    local exec_cp silodir url dir
+    exec_cp=$1
+    url=$2
     silodir=$(getSiloObjectDir)
     while read p; do
         [ "$p" = "" ] && continue
         [ -f "$silodir/$p" ] && continue
         if test $opt_dry_run; then
-            echo Would have run: scp "$url/$p" "$silodir/$p"
+            echo Would have run: $exec_cp "$url/$p" "$silodir/$p"
         else
             dir=$(dirname $p)
             mkdir -p "$silodir/$dir"
-            scp "$url/$p" "$silodir/$p-tmp"
+            $exec_cp "$url/$p" "$silodir/$p-tmp"
             mv "$silodir/$p-tmp" "$silodir/$p"
         fi
     done
@@ -476,7 +481,7 @@ transport_scp_push() {
 }
 
 transport_localcp_fetch() {
-    transport_scp_fetch "$@"
+    fetch_with_cp_program cp "$@"
 }
 
 transport_localcp_push() {
