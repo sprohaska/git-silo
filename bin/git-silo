@@ -544,7 +544,8 @@ getRemoteUrl() {
         url=$(git config remote.origin.url) ||
         die "Failed to get URL of 'origin'."
     if grep -q '^ssh://' <<< "$url"; then
-        url=$(sed -e 's@ssh://@@' -e 's@/@:/@' -e 's@//@/@' <<< "$url")
+        url=$(sed -e 's@ssh://@@' -e 's@/@:/@' -e 's@//@/@' \
+            -e 's@:/~@:~@' <<< "$url")
     elif grep -q '^[^:]*://' <<< "$url"; then
         die "Don't know how to use $url."
     fi
