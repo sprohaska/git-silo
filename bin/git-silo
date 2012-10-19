@@ -351,7 +351,7 @@ cmd_checkout() {
         [ "$path" = "" ] && continue
         if ! [ -e $path ] || isSha1PlaceholderFile "$path"; then
             objfile=$silodir/${sha1:0:2}/${sha1:2}
-            echo cp ... "$path"
+            echo cp $sha1 "$path"
             rm -f "$path"
             mkdir -p "$(dirname "$path")"
             cp "$objfile" "$path" || {
