@@ -344,16 +344,19 @@ cmd_add() {
 
 cmd_checkout() {
     validateHaveSilo
-    local sha1 path err
+    local sha1 path err silodir objfile
+    silodir=$(getSiloObjectDir)
     err=
     while read sha1 path; do
         [ "$path" = "" ] && continue
-        if isSha1PlaceholderFile "$path"; then
-            rm "$path"
-            git checkout -- "$path"
-            if isSha1PlaceholderFile "$path"; then
+        if ! [ -e $path ] || isSha1PlaceholderFile "$path"; then
+            objfile=$silodir/${sha1:0:2}/${sha1:2}
+            rm -f "$path"
+            echo cp ... "$path"
+            cp "$objfile" "$path" || {
+                printf >&2 "Failed to copy '%s' to '%s'.\n' "$silosha1 "$path"
                 err=t
-            fi
+            }
         fi
     done <<< "$(lsSiloTracked)"
     test $err && die "Errors during silo checkout (see above)."
