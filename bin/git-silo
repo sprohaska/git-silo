@@ -517,8 +517,11 @@ transport_localcp_push() {
         else
             dir=$(dirname $p)
             mkdir -p "$url/$dir"
+            isSharedDir "$url" && chmod g+ws "$url/$dir" || true
             echo cp $p ...
+            rm -f "$url/$p-tmp"
             cp "$silodir/$p" "$url/$p-tmp"
+            chmod a-w "$url/$p-tmp"
             mv "$url/$p-tmp" "$url/$p"
         fi
     done
