@@ -4,8 +4,6 @@ set -o errexit
 set -o nounset
 
 main() {
-    locate_gnufind
-
     argparse "$@"
 
     cmd_$arg_cmd
@@ -321,8 +319,13 @@ cmd_filter_smudge() {
     fi
 }
 
+# Determine file size for large files on Mac, Linux and msysgit.
+# Because the output format of BSD find and GNU find differ, sed is used
+# to remove all leading characters before the permission field.
+# Because msysgit's ls reports the wrong size for large files, find is used
+# instead.
 fileSize() {
-    $gnufind "$1" -printf '%s'
+    find "$1" -ls | sed -e 's/  */ /g' -e 's/^[^-]*-/-/' | cut -d ' ' -f 5
 }
 
 validateHaveSilo() {
@@ -711,17 +714,6 @@ no_unstaged_changes() {
 die() {
     echo >&2 "Error (silo): $1"
     exit 1
-}
-
-locate_gnufind() {
-    gnufind=
-    for f in find gfind; do
-        if $f --version 2>&1 | grep -q GNU; then
-            gnufind=$f
-            break
-        fi
-    done
-    test $gnufind || die "Failed to locate GNU find."
 }
 
 main "$@"
