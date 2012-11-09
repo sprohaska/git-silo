@@ -4,6 +4,8 @@ set -o errexit
 set -o nounset
 
 main() {
+    locate_gnufind
+
     argparse "$@"
 
     cmd_$arg_cmd
@@ -216,7 +218,8 @@ git-silo filter_clean <path>
 
 
   filter_smudge     smudge filter (see gitattributes); receives sha1 from git
-                    and expands it to corresponding content from silo.
+                    and expands it to corresponding content from silo.  Large
+                    files will not be expanded to avoid crashes with msysgit.
 
   filter_clean      clean filter (see gitattributes); stores file in silo and
                     returns sha1 to git.
@@ -304,12 +307,22 @@ cmd_filter_smudge() {
     silodir=$(getSiloObjectDir)
     objfile=$silodir/${sha1:0:2}/${sha1:2}
     if [ -e $objfile ]; then
-        cat $objfile
+        if [ $(fileSize $objfile) -lt 10000000 ]; then
+            cat $objfile
+        else
+            printf "placeholder for file >10MB (use git-silo checkout): %s\n" \
+                $arg_file >&2
+            printf '%s\n' $sha1
+        fi
     else
         printf "missing silo content: %s\n" \
             $arg_file >&2
         printf '%s\n' $sha1
     fi
+}
+
+fileSize() {
+    $gnufind "$1" -printf '%s'
 }
 
 validateHaveSilo() {
@@ -698,6 +711,17 @@ no_unstaged_changes() {
 die() {
     echo >&2 "Error (silo): $1"
     exit 1
+}
+
+locate_gnufind() {
+    gnufind=
+    for f in find gfind; do
+        if $f --version 2>&1 | grep -q GNU; then
+            gnufind=$f
+            break
+        fi
+    done
+    test $gnufind || die "Failed to locate GNU find."
 }
 
 main "$@"
