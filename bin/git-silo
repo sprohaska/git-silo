@@ -209,7 +209,8 @@ git-silo filter_clean <path>
   fetch             fetch silo files for current HEAD.
 
   gc                delete silo files that are not directly referenced by
-                    HEAD, tags or tips of branches.
+                    HEAD, tags or tips of branches and remove unused
+                    entries in .gitattributes.
 
     -f|--force      run gc even with unstaged changes.  Note that gc might
                     modify and commit .gitattributes.
