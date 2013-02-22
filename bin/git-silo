@@ -234,13 +234,20 @@ git-silo filter_clean <path>
                     returns sha1 to git.
 
 
-scp performance on Windows might be poor.  The reason is explained in
+# Known Issues
 
-    http://support.microsoft.com/kb/823764
+  - scp performance on Windows might be poor.  The reason is explained in
 
-As a workaround, an alternative path to a network drive can be provided by
+        http://support.microsoft.com/kb/823764
 
-    git config remote.origin.silourl <DRIVE:/...>
+    As a workaround, an alternative path to a network drive can be provided by
+
+        git config remote.origin.silourl <DRIVE:/...>
+
+  - git might fail with mmap out-of-memory on Windows.  Git on Windows is a
+    32-bit executable, which fails for large files in some situations.  There is
+    now known workaround.
+
 EOFTXT
 }
 
