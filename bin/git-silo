@@ -487,7 +487,9 @@ cmd_fetch() {
 }
 
 transport_scp_fetch() {
-    fetch_with_cp_program scp "$@"
+    local url_host url_dir
+    read url_host url_dir <<< "$(parseUrl "$1")"
+    fetch_with_cp_program scp "$url_host:\"$url_dir\""
 }
 
 fetch_with_cp_program() {
