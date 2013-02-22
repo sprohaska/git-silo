@@ -23,13 +23,13 @@ test_expect_success \
     ( openssl sha1 b | cut -d " " -f 2 > b.sha1 ) &&
     git-silo add a b &&
     git commit -m "Add a b"
-    # rm -rf .git/silo/objects/$(cut -b 1-2 a.sha1) &&
+    rm -rf .git/silo/objects/$(cut -b 1-2 a.sha1) &&
     cd .. &&
     git clone "ssh://localhost$(pwd)/repo1" repo2 &&
     cd repo2 &&
     git-silo init &&
-    git-silo fetch &&
-    git-silo checkout . &&
+    ( git-silo fetch || true ) &&
+    git-silo checkout b &&
     test -e b
 '
 

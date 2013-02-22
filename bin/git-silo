@@ -497,6 +497,7 @@ fetch_with_cp_program() {
     exec_cp=$1
     url=$2
     silodir=$(getSiloObjectDir)
+    err=
     while read p; do
         [ "$p" = "" ] && continue
         [ -f "$silodir/$p" ] && continue
@@ -508,11 +509,17 @@ fetch_with_cp_program() {
             isSharedDir "$silodir" && chmod g+ws "$silodir/$dir" || true
             echo $exec_cp $p ...
             rm -f "$silodir/$p-tmp"
-            $exec_cp "$url/$p" "$silodir/$p-tmp"
+            $exec_cp "$url/$p" "$silodir/$p-tmp" || {
+                printf >&2 "Failed to copy '$p'.\n"
+                err=t
+                continue
+            }
             chmod a-w "$silodir/$p-tmp"
             mv "$silodir/$p-tmp" "$silodir/$p"
         fi
     done
+    test $err && die "There have been problems during fetch (see above)."
+    true
 }
 
 isSharedDir() {
