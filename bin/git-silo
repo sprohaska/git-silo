@@ -630,7 +630,15 @@ allCurrentSiloObjects() {
     while read sha1; do
         [ "$sha1" = "" ] && continue
         allSiloObjectsForTree $sha1
-    done <<< "$(allLocalRefs)"
+    done <<< "$(allReachableCommits)"
+}
+
+allReachableCommits() {
+    while read sha1; do
+        [ "$sha1" = "" ] && continue
+        git rev-list $sha1
+    done <<< "$(allLocalRefs)" |
+    sort -u
 }
 
 allLocalRefs() {

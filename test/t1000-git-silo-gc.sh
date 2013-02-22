@@ -37,22 +37,22 @@ test_expect_success \
 "
 
 test_expect_success \
-"'git-silo gc' will collect objects that are not part of current heads." \
+"'git-silo gc' will keep all reachable objects." \
 "
     git rm a &&
     git commit -m 'Remove a' &&
     git silo gc &&
     ( cd .git/silo/objects && find * -type f | sed -e 's@/@@' ) >actual &&
-    test_cmp bc.sha1 actual
+    test_cmp abc.sha1 actual
 "
 
 test_expect_success \
-"'git-silo gc' will collect objects of deleted branch." \
+"'git-silo gc' will collect objects that are unreachable." \
 "
     git branch -D tmp &&
     git silo gc &&
     ( cd .git/silo/objects && find * -type f | sed -e 's@/@@' ) >actual &&
-    test_cmp b.sha1 actual
+    test_cmp ab.sha1 actual
 "
 
 test_done
