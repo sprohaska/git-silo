@@ -310,8 +310,8 @@ computeSha1AndStoreContentInSilo() {
     objfile=$subdir/${sha1:2}
     if [ ! -e $objfile ]; then
         mkdir -p $subdir
-        cp $arg_file $objfile
-        chmod a-w $objfile
+        cp "$arg_file" "$objfile"
+        chmod a-w "$objfile"
     fi
     printf '%s\n' $sha1
 }
@@ -417,8 +417,8 @@ lsUntrackedFiles() {
 updateGitattributes() {
     local p dir base gitignore
     p="$1"
-    dir="$(dirname $p)"
-    base="$(basename $p)"
+    dir="$(dirname "$p")"
+    base="$(basename "$p")"
     gitattributes="$dir/.gitattributes"
     tmpfile="$gitattributes-tmp$$"
 
@@ -506,7 +506,7 @@ fetch_with_cp_program() {
         if test $opt_dry_run; then
             echo Would have run: $exec_cp "$url/$p" "$silodir/$p"
         else
-            dir=$(dirname $p)
+            dir="$(dirname "$p")"
             mkdir -p "$silodir/$dir"
             isSharedDir "$silodir" && chmod g+ws "$silodir/$dir" || true
             echo $exec_cp $p ...
