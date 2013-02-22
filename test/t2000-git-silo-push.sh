@@ -4,6 +4,13 @@ test_description="git-silo push"
 
 . ./sharness/sharness.sh
 
+ssh localhost true 2>/dev/null && test_set_prereq LOCALHOST
+
+if ! test_have_prereq LOCALHOST; then
+    skip_all='skipping tests that require ssh to localhost.'
+    test_done
+fi
+
 test_expect_success \
 "'git-silo push' (scp) should push." \
 "
