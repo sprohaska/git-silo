@@ -115,7 +115,7 @@ argparse_filter() {
             ;;
         esac
     done
-    test $arg_file || die "Missing <path>."
+    test "$arg_file" || die "Missing <path>."
 }
 
 argparse_add() {
@@ -295,7 +295,7 @@ getSiloProgram() {
 
 cmd_filter_clean() {
     validateHaveSilo
-    if isSha1PlaceholderFile $arg_file; then
+    if isSha1PlaceholderFile "$arg_file"; then
         cat
     else
         computeSha1AndStoreContentInSilo
@@ -387,7 +387,7 @@ cmd_checkout() {
     err=
     while read sha1 path; do
         [ "$path" = "" ] && continue
-        if ! [ -e $path ] || isSha1PlaceholderFile "$path"; then
+        if ! [ -e "$path" ] || isSha1PlaceholderFile "$path"; then
             objfile=$silodir/${sha1:0:2}/${sha1:2}
             echo cp $sha1 "$path"
             rm -f "$path"
@@ -423,10 +423,15 @@ updateGitattributes() {
     tmpfile="$gitattributes-tmp$$"
 
     [ -e "$gitattributes" ] || touch "$gitattributes"
-    ( printf '/%s filter=silo -text\n' "$base" && cat "$gitattributes") |
+    ( printf '/%s filter=silo -text\n' "$(escapeSpacesForGitattributes "$base")" && cat "$gitattributes") |
         sort -u >"$tmpfile"
     mv "$tmpfile" "$gitattributes"
     git add "$gitattributes"
+}
+
+# .gitattributes doesn't support spaces, so replace them by ?.
+escapeSpacesForGitattributes() {
+    tr ' ' '?' <<< "$1"
 }
 
 cmd_status() {
