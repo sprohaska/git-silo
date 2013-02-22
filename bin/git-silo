@@ -724,7 +724,7 @@ gcAllGitattributes() {
         gcGitattributes $p
     done <<< "$(lsGitattributes)"
     git commit -m "git-silo gc gitattributes" &&
-        git commit --amend
+        echo "Consider amending the commit to explain the reason."
     true
 }
 
