@@ -391,14 +391,20 @@ cmd_checkout() {
             echo cp $sha1 "$path"
             rm -f "$path"
             mkdir -p "$(dirname "$path")"
-            cp "$objfile" "$path" || {
-                printf >&2 "Failed to copy '%s' to '%s'.\n' "$silosha1 "$path"
+            if ! test -e "$objfile"; then
+                printf >&2 "Missing silo object for '%s'.\n" $sha1
                 err=t
+                continue
+            fi
+            cp "$objfile" "$path" || {
+                printf >&2 "Failed to copy '%s' to '%s'.\n" "$objfile" "$path"
+                err=t
+                continue
             }
             git add -u -- "$path"  # Update index, so that 'git status' is clean.
         fi
     done <<< "$(lsSiloTracked)"
-    test $err && die "Errors during silo checkout (see above)."
+    test $err && die "There were problems during silo checkout (see above)."
     true
 }
 
