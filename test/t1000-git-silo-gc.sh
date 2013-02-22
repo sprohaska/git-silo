@@ -64,7 +64,7 @@ test_expect_success \
 "
 
 test_expect_success \
-"'git-silo gc -n 1' will collect keep only latest objects." \
+"'git-silo gc -n 1' will keep only latest objects." \
 "
     git silo gc -n 1 &&
     ( cd .git/silo/objects && find * -type f | sed -e 's@/@@' ) >actual &&
