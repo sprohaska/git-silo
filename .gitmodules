@@ -1,3 +1,6 @@
 [submodule "test/roundup"]
 	path = test/roundup
 	url = git://github.com/bmizerany/roundup.git
+[submodule "test/sharness"]
+	path = test/sharness
+	url = https://github.com/mlafeldt/sharness.git
