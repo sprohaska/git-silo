@@ -42,6 +42,7 @@ argparse_init() {
 
 argparse_gc() {
     opt_force=
+    opt_n=
     while [ $# -ge 1 ]; do
         case "$1" in
         -h|--help)
@@ -50,6 +51,12 @@ argparse_gc() {
             ;;
         -f|--force)
             opt_force=t
+            shift
+            ;;
+        -n)
+            shift
+            [ $# -ge 1 ] || die "-n must be followed by number."
+            opt_n=$1
             shift
             ;;
         -*)
@@ -192,7 +199,7 @@ git-silo checkout -- [<file>...]
 git-silo status [<path>...]
 git-silo push [--] [<path>...]
 git-silo fetch [--] [<path>...]
-git-silo gc [-f|--force]
+git-silo gc [-f|--force] [-n <number>]
 git-silo filter_smudge <path>
 git-silo filter_clean <path>
 
@@ -214,6 +221,9 @@ git-silo filter_clean <path>
 
     -f|--force      run gc even with unstaged changes.  Note that gc might
                     modify and commit .gitattributes.
+
+    -n <number>     keep only objects reachable from the lastest <number>
+                    commits at each head.
 
 
   filter_smudge     smudge filter (see gitattributes); receives sha1 from git
@@ -636,7 +646,11 @@ allCurrentSiloObjects() {
 allReachableCommits() {
     while read sha1; do
         [ "$sha1" = "" ] && continue
-        git rev-list $sha1
+        if test $opt_n; then
+            git rev-list -n $opt_n $sha1
+        else
+            git rev-list $sha1
+        fi
     done <<< "$(allLocalRefs)" |
     sort -u
 }
