@@ -404,7 +404,7 @@ cmd_checkout() {
             git add -u -- "$path"  # Update index, so that 'git status' is clean.
         fi
     done <<< "$(lsSiloTracked)"
-    test $err && die "There were problems during silo checkout (see above)."
+    test $err && die "There have been problems during silo checkout (see above)."
     true
 }
 
