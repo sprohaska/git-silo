@@ -43,6 +43,7 @@ argparse_init() {
 argparse_gc() {
     opt_force=
     opt_n=
+    opt_dry_run=
     while [ $# -ge 1 ]; do
         case "$1" in
         -h|--help)
@@ -51,6 +52,10 @@ argparse_gc() {
             ;;
         -f|--force)
             opt_force=t
+            shift
+            ;;
+        --dry-run)
+            opt_dry_run=t
             shift
             ;;
         -n)
@@ -199,7 +204,7 @@ git-silo checkout -- [<file>...]
 git-silo status [<path>...]
 git-silo push [--] [<path>...]
 git-silo fetch [--] [<path>...]
-git-silo gc [-f|--force] [-n <number>]
+git-silo gc [-f|--force] [-n <number>] [--dry-run]
 git-silo filter_smudge <path>
 git-silo filter_clean <path>
 
@@ -224,6 +229,8 @@ git-silo filter_clean <path>
 
     -n <number>     keep only objects reachable from the lastest <number>
                     commits at each head.
+
+    --dry-run       print only what would be deleted.
 
 
   filter_smudge     smudge filter (see gitattributes); receives sha1 from git
@@ -641,6 +648,7 @@ cmd_gc() {
     test $opt_force || validateNoUnstagedChanges
     validateHaveSilo
     gcSiloObjects
+    test $opt_dry_run && return 0
     gcAllGitattributes
 }
 
@@ -653,6 +661,14 @@ gcSiloObjects() {
     stored=$(lsDir "$silodir")
 
     delete=$(setminus "$stored" "$current")
+    if test $opt_dry_run; then
+        if [ "$delete" != "" ]; then
+            printf "Would delete:\n%s\n" "$delete"
+        else
+            printf "No objects to delete.\n"
+        fi
+        return 0
+    fi
     ( cd $silodir &&
         xargs rm -f <<< "$delete" &&
         rmdir * 2>/dev/null ||

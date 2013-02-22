@@ -47,9 +47,17 @@ test_expect_success \
 "
 
 test_expect_success \
-"'git-silo gc' will collect objects that are unreachable." \
+"'git-silo gc --dry-run' will not delete anything." \
 "
     git branch -D tmp &&
+    git silo gc --dry-run &&
+    ( cd .git/silo/objects && find * -type f | sed -e 's@/@@' ) >actual &&
+    test_cmp abc.sha1 actual
+"
+
+test_expect_success \
+"'git-silo gc' will collect objects that are unreachable." \
+"
     git silo gc &&
     ( cd .git/silo/objects && find * -type f | sed -e 's@/@@' ) >actual &&
     test_cmp ab.sha1 actual
