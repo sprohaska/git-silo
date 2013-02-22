@@ -395,6 +395,7 @@ cmd_checkout() {
                 printf >&2 "Failed to copy '%s' to '%s'.\n' "$silosha1 "$path"
                 err=t
             }
+            git add -u -- "$path"  # Update index, so that 'git status' is clean.
         fi
     done <<< "$(lsSiloTracked)"
     test $err && die "Errors during silo checkout (see above)."

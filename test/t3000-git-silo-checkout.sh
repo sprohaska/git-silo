@@ -25,7 +25,8 @@ test_expect_success \
     git-silo checkout a &&
     touch ../empty &&
     git status --porcelain >../actual &&
-    cd .. # && test_cmp empty actual
+    cd .. &&
+    test_cmp empty actual
 "
 
 test_done
