@@ -311,6 +311,7 @@ computeSha1AndStoreContentInSilo() {
     if [ ! -e $objfile ]; then
         mkdir -p $subdir
         cp $arg_file $objfile
+        chmod a-w $objfile
     fi
     printf '%s\n' $sha1
 }
@@ -396,6 +397,7 @@ cmd_checkout() {
                 err=t
                 continue
             fi
+            ln "$objfile" "$path" >/dev/null 2>&1 ||
             cp "$objfile" "$path" || {
                 printf >&2 "Failed to copy '%s' to '%s'.\n" "$objfile" "$path"
                 err=t
