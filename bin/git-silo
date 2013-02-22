@@ -640,7 +640,7 @@ lsDir() {
 }
 
 lsRemoteDir() {
-    ssh -n "$1" test -e $1 '&&' cd "$2" '&&' find . -type f | sed -e 's@^\./@@'
+    ssh -n "$1" test -e "'$2'" '&&' cd "'$2'" '&&' find . -type f | sed -e 's@^\./@@'
 }
 
 allCurrentSiloObjects() {

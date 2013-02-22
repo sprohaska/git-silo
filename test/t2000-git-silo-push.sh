@@ -1,11 +1,11 @@
 #!/bin/bash
 
-test_description="git-silo (basic)"
+test_description="git-silo push"
 
 . ./sharness/sharness.sh
 
 test_expect_success \
-"'git-silo push' should push" \
+"'git-silo push' (scp) should push." \
 "
     echo a >a &&
     ( openssl sha1 a | cut -d ' ' -f 2 > a.sha1 ) &&
@@ -27,6 +27,16 @@ test_expect_success \
     cd .. &&
     ( cd repo1/.git/silo/objects && find * -type f | sed -e 's@/@@' ) >actual &&
     test_cmp a.sha1 actual
+"
+
+test_expect_success \
+"'git-silo push' (scp) should skip files that are already at remote." \
+"
+    pwd &&
+    cd repo2 &&
+    git-silo push >actual &&
+    ( ! grep -q 'scp ../..' actual || ( echo 'Found unexpected scp' && false ) ) &&
+    git-silo push
 "
 
 test_done
