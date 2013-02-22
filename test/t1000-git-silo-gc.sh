@@ -1,6 +1,6 @@
 #!/bin/bash
 
-test_description="git-silo (basic)"
+test_description="git-silo gc"
 
 . ./sharness/sharness.sh
 
