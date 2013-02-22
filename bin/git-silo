@@ -390,7 +390,7 @@ cmd_checkout() {
         if ! [ -e "$path" ] || isSha1PlaceholderFile "$path"; then
             objfile=$silodir/${sha1:0:2}/${sha1:2}
             if ! test -e "$objfile"; then
-                printf >&2 "Missing silo object for: %s %s\n" $sha1 "$path"
+                printf >&2 "missing silo content: %s\n" "$path"
                 err=t
                 continue
             fi
