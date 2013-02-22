@@ -46,4 +46,13 @@ test_expect_success \
     test_cmp bc.sha1 actual
 "
 
+test_expect_success \
+"'git-silo gc' will collect objects of deleted branch." \
+"
+    git branch -D tmp &&
+    git silo gc &&
+    ( cd .git/silo/objects && find * -type f | sed -e 's@/@@' ) >actual &&
+    test_cmp b.sha1 actual
+"
+
 test_done
