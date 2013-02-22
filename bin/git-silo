@@ -389,14 +389,14 @@ cmd_checkout() {
         [ "$path" = "" ] && continue
         if ! [ -e "$path" ] || isSha1PlaceholderFile "$path"; then
             objfile=$silodir/${sha1:0:2}/${sha1:2}
-            echo cp $sha1 "$path"
-            rm -f "$path"
-            mkdir -p "$(dirname "$path")"
             if ! test -e "$objfile"; then
-                printf >&2 "Missing silo object for '%s'.\n" $sha1
+                printf >&2 "Missing silo object for: %s %s\n" $sha1 "$path"
                 err=t
                 continue
             fi
+            echo cp $sha1 "$path"
+            rm -f "$path"
+            mkdir -p "$(dirname "$path")"
             ln "$objfile" "$path" >/dev/null 2>&1 ||
             cp "$objfile" "$path" || {
                 printf >&2 "Failed to copy '%s' to '%s'.\n" "$objfile" "$path"
