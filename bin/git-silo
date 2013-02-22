@@ -523,14 +523,14 @@ transport_scp_push() {
         else
             dir=$(dirname $p)
             ssh -n "$url_host" \
-                mkdir -p "$url_dir/$dir" '&&' \
-                test -g "$url_dir" '&&' \
-                chmod g+ws "$url_dir/$dir" || true
+                mkdir -p "'$url_dir/$dir'" '&&' \
+                test -g "'$url_dir'" '&&' \
+                chmod g+ws "'$url_dir/$dir'" || true
             echo scp $p ..
-            scp "$silodir/$p" "$url/$p-tmp"
+            scp "$silodir/$p" "$url_host:\"$url_dir/$p-tmp\""
             ssh -n "$url_host" \
-                chmod a-w "$url_dir/$p-tmp" '&&' \
-                mv "$url_dir/$p-tmp" "$url_dir/$p"
+                chmod a-w "'$url_dir/$p-tmp'" '&&' \
+                mv "'$url_dir/$p-tmp'" "'$url_dir/$p'"
         fi
     done
 }
