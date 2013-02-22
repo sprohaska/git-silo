@@ -398,6 +398,7 @@ cmd_checkout() {
         fi
     done <<< "$(lsSiloTracked)"
     test $err && die "Errors during silo checkout (see above)."
+    true
 }
 
 lsUntrackedFiles() {
