@@ -56,6 +56,12 @@ test_expect_success \
 "
 
 test_expect_success \
+"'git-silo gc --dry-run' will report objects that would be deleted." \
+'
+    git silo gc --dry-run | egrep ^[0-9a-f/]{41}
+'
+
+test_expect_success \
 "'git-silo gc' will collect objects that are unreachable." \
 "
     git silo gc &&
@@ -70,5 +76,21 @@ test_expect_success \
     ( cd .git/silo/objects && find * -type f | sed -e 's@/@@' ) >actual &&
     test_cmp b.sha1 actual
 "
+
+test_expect_success \
+"'git-silo --dry-run' will leave .gitattributes alone." \
+'
+    git checkout HEAD^ -- .gitattributes &&
+    git commit -m "Reset gitattributes" &&
+    cp .gitattributes expected &&
+    ( git silo gc --dry-run | grep "Would clean.*gitattributes" ) &&
+    test_cmp expected .gitattributes
+'
+
+test_expect_success \
+"'git-silo --dry-run' will report cleanup of .gitattributes." \
+'
+    git silo gc --dry-run | grep "Would clean.*gitattributes"
+'
 
 test_done

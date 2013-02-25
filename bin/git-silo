@@ -648,7 +648,6 @@ cmd_gc() {
     test $opt_force || validateNoUnstagedChanges
     validateHaveSilo
     gcSiloObjects
-    test $opt_dry_run && return 0
     gcAllGitattributes
 }
 
@@ -665,7 +664,7 @@ gcSiloObjects() {
         if [ "$delete" != "" ]; then
             printf "Would delete:\n%s\n" "$delete"
         else
-            printf "No objects to delete.\n"
+            printf "Would not delete any objects.\n"
         fi
         return 0
     fi
@@ -739,6 +738,7 @@ gcAllGitattributes() {
         [ "$p" = "" ] && continue
         gcGitattributes $p
     done <<< "$(lsGitattributes)"
+    test $opt_dry_run && return 0
     git commit -m "git-silo gc gitattributes" &&
         echo "Consider amending the commit to explain the reason."
     true
@@ -756,6 +756,11 @@ gcGitattributes() {
             printf '%s filter=silo -text\n' "$path" >>$tmpfile
         fi
     done <<< "$(grep "$reEntry" $attr)"
+    if test $opt_dry_run; then
+        echo "Would clean up '$attr'."
+        rm $tmpfile
+        return 0
+    fi
     mv $tmpfile $attr
     git add $attr
 }
