@@ -24,7 +24,7 @@ test_expect_success \
 "
 
 test_expect_success \
-"'git-silo add' will add objects to silo store." \
+"'git-silo add' should add objects to silo store." \
 "
     git checkout -b tmp &&
     git-silo add c &&
@@ -37,7 +37,7 @@ test_expect_success \
 "
 
 test_expect_success \
-"'git-silo gc' will keep all reachable objects." \
+"'git-silo gc' should keep all reachable objects." \
 "
     git rm a &&
     git commit -m 'Remove a' &&
@@ -47,7 +47,7 @@ test_expect_success \
 "
 
 test_expect_success \
-"'git-silo gc --dry-run' will not delete anything." \
+"'git-silo gc --dry-run' should not delete anything." \
 "
     git branch -D tmp &&
     git silo gc --dry-run &&
@@ -56,13 +56,13 @@ test_expect_success \
 "
 
 test_expect_success \
-"'git-silo gc --dry-run' will report objects that would be deleted." \
+"'git-silo gc --dry-run' should report objects that would be deleted." \
 '
     git silo gc --dry-run | egrep ^[0-9a-f/]{41}
 '
 
 test_expect_success \
-"'git-silo gc' will collect objects that are unreachable." \
+"'git-silo gc' should collect objects that are unreachable." \
 "
     git silo gc &&
     ( cd .git/silo/objects && find * -type f | sed -e 's@/@@' ) >actual &&
@@ -70,7 +70,7 @@ test_expect_success \
 "
 
 test_expect_success \
-"'git-silo gc -n 1' will keep only latest objects." \
+"'git-silo gc -n 1' should keep only latest objects." \
 "
     git silo gc -n 1 &&
     ( cd .git/silo/objects && find * -type f | sed -e 's@/@@' ) >actual &&
@@ -78,7 +78,7 @@ test_expect_success \
 "
 
 test_expect_success \
-"'git-silo --dry-run' will leave .gitattributes alone." \
+"'git-silo --dry-run' should leave .gitattributes alone." \
 '
     git checkout HEAD^ -- .gitattributes &&
     git commit -m "Reset gitattributes" &&
@@ -88,7 +88,7 @@ test_expect_success \
 '
 
 test_expect_success \
-"'git-silo --dry-run' will report cleanup of .gitattributes." \
+"'git-silo --dry-run' should report cleanup of .gitattributes." \
 '
     git silo gc --dry-run | grep "Would clean.*gitattributes"
 '
