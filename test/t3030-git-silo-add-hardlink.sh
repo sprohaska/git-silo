@@ -1,6 +1,6 @@
 #!/bin/bash
 
-test_description="git-silo checkout"
+test_description="git-silo add (hardlink)"
 
 . ./sharness/sharness.sh
 
@@ -9,7 +9,7 @@ linkCount() {
 }
 
 test_expect_success \
-"git checkout should use hardlink." \
+"git add should use hardlink" \
 '
     git init &&
     touch .gitignore &&
@@ -18,10 +18,7 @@ test_expect_success \
     git-silo init
     echo a >a &&
     git-silo add a &&
-    git commit -m "Add a" &&
-    rm a &&
-    git-silo checkout a &&
-    test $(linkCount a) -eq 2 &&
+    ( test $(linkCount a) -eq 2 || ( echo "Wrong link count." && false ) ) &&
     ! test -w a
 '
 
