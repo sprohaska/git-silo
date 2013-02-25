@@ -757,7 +757,7 @@ gcGitattributes() {
         fi
     done <<< "$(grep "$reEntry" $attr)"
     if test $opt_dry_run; then
-        echo "Would clean up '$attr'."
+        diff $attr $tmpfile >/dev/null || echo "Would clean up '$attr'."
         rm $tmpfile
         return 0
     fi

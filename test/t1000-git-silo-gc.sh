@@ -78,6 +78,12 @@ test_expect_success \
 "
 
 test_expect_success \
+"'git-silo --dry-run' should not report cleanup of .gitattributes if unchanged." \
+'
+    ! ( git silo gc --dry-run | grep "Would clean.*gitattributes" )
+'
+
+test_expect_success \
 "'git-silo --dry-run' should leave .gitattributes alone." \
 '
     git checkout HEAD^ -- .gitattributes &&
