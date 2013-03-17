@@ -684,22 +684,29 @@ lsRemoteDir() {
 }
 
 allCurrentSiloObjects() {
-    while read sha1; do
-        [ "$sha1" = "" ] && continue
-        allSiloObjectsForTree $sha1
-    done <<< "$(allReachableCommits)"
+    if test $opt_n; then
+        while read ref; do
+            [ "$ref" = "" ] && continue
+            siloObjectsWithRevListArgs -n $opt_n $ref
+        done <<< "$(allLocalRefs)" |
+        sort -u
+    else
+        siloObjectsWithRevListArgs --all
+    fi
 }
 
-allReachableCommits() {
-    while read sha1; do
-        [ "$sha1" = "" ] && continue
-        if test $opt_n; then
-            git rev-list -n $opt_n $sha1
-        else
-            git rev-list $sha1
+siloObjectsWithRevListArgs() {
+    git rev-list --objects "$@" |
+    cut -d ' ' -f 1 |
+    git cat-file --batch-check |
+    grep 'blob 41$' |
+    cut -d ' ' -f 1 |
+    sort -u |
+    while read blob; do
+        if sha1=$(getSha1ForGitObject $blob); then
+            printf '%s\n' "$sha1"
         fi
-    done <<< "$(allLocalRefs)" |
-    sort -u
+    done
 }
 
 allLocalRefs() {
