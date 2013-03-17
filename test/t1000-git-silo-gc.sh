@@ -39,6 +39,7 @@ test_expect_success \
 test_expect_success \
 "'git-silo gc' should keep all reachable objects." \
 "
+    git tag witha &&
     git rm a &&
     git commit -m 'Remove a' &&
     git silo gc &&
@@ -70,8 +71,17 @@ test_expect_success \
 "
 
 test_expect_success \
+"'git-silo gc -n 1' should keep latest objects reachable by tag." \
+"
+    git silo gc -n 1 &&
+    ( cd .git/silo/objects && find * -type f | sed -e 's@/@@' ) >actual &&
+    test_cmp ab.sha1 actual
+"
+
+test_expect_success \
 "'git-silo gc -n 1' should keep only latest objects." \
 "
+    git tag -d witha &&
     git silo gc -n 1 &&
     ( cd .git/silo/objects && find * -type f | sed -e 's@/@@' ) >actual &&
     test_cmp b.sha1 actual
