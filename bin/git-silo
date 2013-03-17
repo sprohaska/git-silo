@@ -44,6 +44,7 @@ argparse_gc() {
     opt_force=
     opt_n=
     opt_dry_run=
+    opt_tags=t
     while [ $# -ge 1 ]; do
         case "$1" in
         -h|--help)
@@ -56,6 +57,10 @@ argparse_gc() {
             ;;
         --dry-run)
             opt_dry_run=t
+            shift
+            ;;
+        --no-tags)
+            opt_tags=
             shift
             ;;
         -n)
@@ -204,7 +209,7 @@ git-silo checkout -- [<file>...]
 git-silo status [<path>...]
 git-silo push [--] [<path>...]
 git-silo fetch [--] [<path>...]
-git-silo gc [-f|--force] [-n <number>] [--dry-run]
+git-silo gc [-f|--force] [-n <number>] [--dry-run] [--no-tags]
 git-silo filter_smudge <path>
 git-silo filter_clean <path>
 
@@ -228,7 +233,9 @@ git-silo filter_clean <path>
                     modify and commit .gitattributes.
 
     -n <number>     keep only objects reachable from the lastest <number>
-                    commits at each head.
+                    commits at each head, including tags.
+
+    --no-tags       remove objects that are reachable only via a tag.
 
     --dry-run       print only what would be deleted.
 
@@ -711,7 +718,7 @@ siloObjectsWithRevListArgs() {
 
 allLocalRefs() {
     git rev-parse HEAD
-    git show-ref --heads --tags -s
+    git show-ref --heads $(test $opt_tags && echo --tags) -s
 }
 
 allSiloObjectsForTree() {
