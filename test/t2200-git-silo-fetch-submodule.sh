@@ -5,7 +5,7 @@ test_description="git-silo dedup"
 . ./sharness/sharness.sh
 
 test_expect_success \
-"fetch should correctly fetch from submodule that uses 'gitdir: ...' redirect." \
+"Setup submodule" \
 '
     mkdir super &&
     cd super &&
@@ -34,14 +34,40 @@ test_expect_success \
             git-silo init &&
             git-silo fetch &&
         cd ..
-    cd .. &&
-    git clone super2/sub sub2 &&
-    cd sub2 &&
+    cd ..
+'
+
+test_expect_success \
+"local fetch should correctly handle submodule that uses 'gitdir: ...' redirect." \
+'
+    git clone super2/sub sublocal &&
+    cd sublocal &&
         git-silo init &&
         git-silo fetch &&
         git-silo checkout a &&
         echo a >expected &&
-        test_cmp expected a
+        test_cmp expected a &&
+    cd ..
+'
+
+ssh localhost true 2>/dev/null && test_set_prereq LOCALHOST
+
+if ! test_have_prereq LOCALHOST; then
+    skip_all='skipping tests that require ssh to localhost.'
+    test_done
+fi
+
+test_expect_success \
+"ssh fetch should correctly handle submodule that uses 'gitdir: ...' redirect." \
+'
+    git clone "ssh://localhost$(pwd)/super2/sub" subssh &&
+    cd subssh &&
+        git-silo init &&
+        git-silo fetch &&
+        git-silo checkout a &&
+        echo a >expected &&
+        test_cmp expected a &&
+    cd ..
 '
 
 test_done

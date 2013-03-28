@@ -670,15 +670,28 @@ getRemoteSiloUrl() {
     elif grep -q '^[^:]*://' <<< "$url"; then
         die "Don't know how to use $url."
     fi
+    url=$(resolveGitDir "$url")
+    printf '%s/silo/objects\n' "$url"
+}
+
+resolveGitDir() {
+    local url=$1
+    local url_host url_dir
     case $(getTransport "$url") in
         localcp)
             url=$(cd "$url" && cd "$(git rev-parse --git-dir)" && pwd)
             ;;
         scp)
-            grep -q '\.git$' <<< "$url" || url="$url/.git"
+            read url_host url_dir <<< "$(parseUrl "$url")"
+            url_dir=$(ssh -n "$url_host" \
+                test -e "'$url_dir'" '&&' \
+                cd "'$url_dir'" '&&' \
+                cd '"$(git rev-parse --git-dir)"' '&&' \
+                pwd)
+            url=$url_host:$url_dir
             ;;
     esac
-    printf '%s/silo/objects\n' "$url"
+    printf '%s' "$url"
 }
 
 cmd_gc() {
