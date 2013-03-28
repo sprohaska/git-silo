@@ -79,6 +79,25 @@ argparse_gc() {
     done
 }
 
+argparse_dedup() {
+    while [ $# -ge 1 ]; do
+        case "$1" in
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        -*)
+            die "Unknown option $1"
+            ;;
+        *)
+            break
+            ;;
+        esac
+    done
+    [ $# -ge 1 ] || die "Wrong number of arguments (expect at least two paths)."
+    arg_repos=( "$@" )
+}
+
 argparse_default() {
     while [ $# -ge 1 ]; do
         case "$1" in
@@ -210,6 +229,7 @@ git-silo status [<path>...]
 git-silo push [--] [<path>...]
 git-silo fetch [--] [<path>...]
 git-silo gc [-f|--force] [-n <number>] [--dry-run] [--no-tags]
+git-silo dedup <repo>...
 git-silo filter_smudge <path>
 git-silo filter_clean <path>
 
@@ -239,6 +259,8 @@ git-silo filter_clean <path>
 
     --dry-run       print only what would be deleted.
 
+  dedup             create hardlinks between repositories.  Repositories listed
+                    later get linked to repositories listed earlier.
 
   filter_smudge     smudge filter (see gitattributes); receives sha1 from git
                     and expands it to corresponding content from silo.  Large
@@ -267,7 +289,7 @@ EOFTXT
 
 validateCmd() {
     case "$1" in
-        filter_smudge|filter_clean|add|status|push|fetch|init|checkout|gc)
+        filter_smudge|filter_clean|add|status|push|fetch|init|checkout|gc|dedup)
             return 0
             ;;
         *)
@@ -683,7 +705,7 @@ gcSiloObjects() {
 }
 
 lsDir() {
-    cd $1 && find . -type f | sed -e 's@^\./@@'
+    cd "$1" && find . -type f | sed -e 's@^\./@@'
 }
 
 lsRemoteDir() {
@@ -783,6 +805,56 @@ gcGitattributes() {
 lsGitattributes() {
     git ls-files | egrep '^.gitattributes|/.gitattributes'
     true
+}
+
+cmd_dedup() {
+    for r in "${arg_repos[@]}"; do
+        validateHaveSiloAt "$r"
+    done
+
+    local prev_key=invalid
+    local prev_dir
+    local src dest tmp
+    lsAllDedupCandidates |
+    while read -r key dir; do
+        if [ $key != $prev_key ]; then
+            prev_key=$key
+            prev_dir=$dir
+            continue
+        fi
+        src=$prev_dir/$key
+        dest=$dir/$key
+        tmp=$dest-$$
+        ln "$src" "$tmp" &&
+        mv -f "$tmp" "$dest" || {
+            printf "Warning: Failed to link '%s' from '%s' to '%s'.\n" \
+                "$key" "$prev_dir" "$dir"
+        }
+    done
+}
+
+validateHaveSiloAt() {
+    ( cd "$r" && validateHaveSilo ) ||
+        die "Invalid silo '$r'."
+}
+
+lsAllDedupCandidates() {
+    for r in "${arg_repos[@]}"; do
+        lsDedupCandidates "$r"
+    done |
+    sort --key=1,41 --stable
+}
+
+lsDedupCandidates() {
+    local abspath
+    abspath=$( cd "$1" && cd "$(getSiloObjectDir)" && pwd )
+    (
+    lsDir "$abspath" |
+    egrep '^[0-9a-f]{2}/[0-9a-f]{38}$'
+    ) |
+    while read -r line; do
+        printf '%s %s\n' "$line" "$abspath"
+    done
 }
 
 validateNoStagedChanges() {
