@@ -507,7 +507,7 @@ getSha1ForGitObject() {
 cmd_push() {
     validateHaveSilo
     local url transport
-    url=$(getRemoteUrl)
+    url=$(getRemoteSiloUrl)
     transport=$(getTransport "$url")
     echo "pushing silo to $url"
     echo
@@ -520,7 +520,7 @@ cmd_push() {
 cmd_fetch() {
     validateHaveSilo
     local url transport
-    url=$(getRemoteUrl)
+    url=$(getRemoteSiloUrl)
     transport=$(getTransport "$url")
     echo "fetching silo from $url"
     echo
@@ -597,7 +597,8 @@ transport_scp_push() {
 }
 
 transport_localcp_fetch() {
-    fetch_with_cp_program cp "$@"
+    local url=$1
+    fetch_with_cp_program cp "$url"
 }
 
 transport_localcp_push() {
@@ -658,7 +659,7 @@ printUserSyncInfo() {
     done <<< "$(lsSiloTracked)"
 }
 
-getRemoteUrl() {
+getRemoteSiloUrl() {
     local url
     url=$(git config remote.origin.silourl) ||
         url=$(git config remote.origin.url) ||
@@ -669,7 +670,14 @@ getRemoteUrl() {
     elif grep -q '^[^:]*://' <<< "$url"; then
         die "Don't know how to use $url."
     fi
-    grep -q '\.git$' <<< "$url" || url="$url/.git"
+    case $(getTransport "$url") in
+        localcp)
+            url=$(cd "$url" && cd "$(git rev-parse --git-dir)" && pwd)
+            ;;
+        scp)
+            grep -q '\.git$' <<< "$url" || url="$url/.git"
+            ;;
+    esac
     printf '%s/silo/objects\n' "$url"
 }
 
