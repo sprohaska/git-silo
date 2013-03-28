@@ -5,6 +5,13 @@ test_description="git-silo checkout (missing)"
 . ./sharness/sharness.sh
 
 test_expect_success \
+"setup user" \
+'
+    git config --global user.name "A U Thor" &&
+    git config --global user.email "author@example.com"
+'
+
+test_expect_success \
 "git-silo checkout should handle missing objects gracefully" \
 '
     git init &&

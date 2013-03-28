@@ -9,6 +9,13 @@ linkCount() {
 }
 
 test_expect_success \
+"setup user" \
+'
+    git config --global user.name "A U Thor" &&
+    git config --global user.email "author@example.com"
+'
+
+test_expect_success \
 "git dedup should create hardlinks between two repositories" \
 '
     mkdir repo1 &&

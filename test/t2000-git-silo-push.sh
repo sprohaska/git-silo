@@ -12,6 +12,13 @@ if ! test_have_prereq LOCALHOST; then
 fi
 
 test_expect_success \
+"setup user" \
+'
+    git config --global user.name "A U Thor" &&
+    git config --global user.email "author@example.com"
+'
+
+test_expect_success \
 "'git-silo push' (scp) should push." \
 "
     echo a >a &&

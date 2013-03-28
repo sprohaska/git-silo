@@ -1,5 +1,6 @@
 #!/bin/bash
 
+
 test_description="git-silo (basic)"
 
 . ./sharness/sharness.sh
@@ -10,6 +11,13 @@ blobSize() {
     sed -e 's/  */ /g' |
     cut -d ' ' -f 4
 }
+
+test_expect_success \
+"setup user" \
+'
+    git config --global user.name "A U Thor" &&
+    git config --global user.email "author@example.com"
+'
 
 test_expect_success \
 "'git-silo add' should handle paths with spaces." \
