@@ -851,7 +851,7 @@ cmd_fsck() {
         fi
     done <<<"$(lsSiloObjectsInDir "$silodir")"
     test $err && die "There have been errors (see above)."
-    true
+    echo ok
 }
 
 lsSiloObjectsInDir() {

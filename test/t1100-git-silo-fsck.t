@@ -26,6 +26,12 @@ test_expect_success \
 '
 
 test_expect_success \
+'git-silo fsck should print ok when repo ok.' \
+'
+    git-silo fsck | grep -q ok
+'
+
+test_expect_success \
 'git-silo fsck should exit with nonzero when repo corrupted.' \
 '
     chmod u+w a &&
