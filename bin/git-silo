@@ -79,6 +79,10 @@ argparse_gc() {
     done
 }
 
+argparse_fsck() {
+    argparse_default "$@"
+}
+
 argparse_dedup() {
     while [ $# -ge 1 ]; do
         case "$1" in
@@ -229,6 +233,7 @@ git-silo status [<path>...]
 git-silo push [--] [<path>...]
 git-silo fetch [--] [<path>...]
 git-silo gc [-f|--force] [-n <number>] [--dry-run] [--no-tags]
+git-silo fsck
 git-silo dedup <repo>...
 git-silo filter_smudge <path>
 git-silo filter_clean <path>
@@ -258,6 +263,8 @@ git-silo filter_clean <path>
     --no-tags       remove objects that are reachable only via a tag.
 
     --dry-run       print only what would be deleted.
+
+  fsck              verify silo storage.
 
   dedup             create hardlinks between repositories.  Repositories listed
                     later get linked to repositories listed earlier.
@@ -289,7 +296,7 @@ EOFTXT
 
 validateCmd() {
     case "$1" in
-        filter_smudge|filter_clean|add|status|push|fetch|init|checkout|gc|dedup)
+        filter_smudge|filter_clean|add|status|push|fetch|init|checkout|gc|dedup|fsck)
             return 0
             ;;
         *)
@@ -826,6 +833,30 @@ gcGitattributes() {
 lsGitattributes() {
     git ls-files | egrep '^.gitattributes|/.gitattributes'
     true
+}
+
+cmd_fsck() {
+    local silodir expected_sha1 actual_sha1 err
+    validateHaveSilo
+    silodir="$(getSiloObjectDir)"
+    err=
+    while read -r p; do
+        expected_sha1=${p/\//}
+        actual_sha1=$(computeSha1 <"$silodir/$p") ||
+            die "Failed to compute sha1 for '$p'."
+        if [ $expected_sha1 != $actual_sha1 ]; then
+            printf 'Error: %s corrupted, has wrong sha1 %s\n' \
+                "$p" "$actual_sha1"
+            err=t
+        fi
+    done <<<"$(lsSiloObjectsInDir "$silodir")"
+    test $err && die "There have been errors (see above)."
+    true
+}
+
+lsSiloObjectsInDir() {
+    lsDir "$1" |
+    egrep '^[0-9a-f]{2}/[0-9a-f]{38}$'
 }
 
 cmd_dedup() {
