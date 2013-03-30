@@ -4,12 +4,7 @@ test_description="git-silo gc"
 
 . ./sharness/sharness.sh
 
-test_expect_success \
-"setup user" \
-'
-    git config --global user.name "A U Thor" &&
-    git config --global user.email "author@example.com"
-'
+. "$SHARNESS_TEST_DIRECTORY/setup-user.sh"
 
 test_expect_success \
 "Setup" \
