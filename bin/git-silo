@@ -173,7 +173,7 @@ argparse_pathspec() {
             ;;
         --)
             shift
-            arg_pathspec=( "$@" )
+            [ $# -gt 0 ] && arg_pathspec=( "$@" )
             return 0
             ;;
         -*)
@@ -210,7 +210,7 @@ argparse_sync() {
             ;;
         --)
             shift
-            arg_pathspec=( "$@" )
+            [ $# -gt 0 ] && arg_pathspec=( "$@" )
             return 0
             ;;
         -*)
@@ -248,7 +248,13 @@ git-silo filter_clean <path>
 
   push              push silo files for current HEAD.
 
+    <path>...       push will be limited to the given paths.  Default paths can
+                    be configured in remote.origin.silopush.
+
   fetch             fetch silo files for current HEAD.
+
+    <path>...       fetch will be limited to the given paths.  Default paths can
+                    be configured in remote.origin.silofetch.
 
   gc                delete silo files that are not directly referenced by
                     HEAD, tags or tips of branches and remove unused
@@ -449,7 +455,7 @@ cmd_checkout() {
             }
             git add -u -- "$path"  # Update index, so that 'git status' is clean.
         fi
-    done <<< "$(lsSiloTracked)"
+    done <<< "$(lsSiloTracked "${arg_pathspec[@]}")"
     test $err && die "There have been problems during silo checkout (see above)."
     true
 }
@@ -489,7 +495,7 @@ cmd_status() {
             printf 'content     '
         fi
         printf '%s\n' "$path"
-    done <<< "$(lsSiloTracked)"
+    done <<< "$(lsSiloTracked "${arg_pathspec[@]}")"
 }
 
 lsSiloTracked() {
@@ -500,11 +506,11 @@ lsSiloTracked() {
             sha1=$(getSha1ForGitObject $gitsha1); then
             printf '%s %s\n' "$sha1" "$path"
         fi
-    done <<< "$(lsTree)"
+    done <<< "$(lsTree "$@")"
 }
 
 lsTree() {
-    git ls-tree -rl HEAD -- "${arg_pathspec[@]}"
+    git ls-tree -rl HEAD -- "$@"
 }
 
 getSha1ForGitObject() {
@@ -512,28 +518,46 @@ getSha1ForGitObject() {
 }
 
 cmd_push() {
+    local pathspec
+    if test $arg_pathspec; then
+        pathspec=( "${arg_pathspec[@]}" )
+    else
+        IFS=$'\n'
+        pathspec=( $(git config --get-all remote.origin.silopush) ) ||
+            pathspec=
+        unset IFS
+    fi
     validateHaveSilo
     local url transport
     url=$(getRemoteSiloUrl)
     transport=$(getTransport "$url")
     echo "pushing silo to $url"
     echo
-    printUserSyncInfo
+    printUserSyncInfo "${pathspec[@]}"
     echo
-    lsSiloObjectsForHEAD |
+    lsSiloObjectsForHEAD "${pathspec[@]}" |
         transport_${transport}_push "$url"
 }
 
 cmd_fetch() {
+    local pathspec
+    if test $arg_pathspec; then
+        pathspec=( "${arg_pathspec[@]}" )
+    else
+        IFS=$'\n'
+        pathspec=( $(git config --get-all remote.origin.silofetch) ) ||
+            pathspec=
+        unset IFS
+    fi
     validateHaveSilo
     local url transport
     url=$(getRemoteSiloUrl)
     transport=$(getTransport "$url")
     echo "fetching silo from $url"
     echo
-    printUserSyncInfo
+    printUserSyncInfo "${pathspec[@]}"
     echo
-    lsSiloObjectsForHEAD |
+    lsSiloObjectsForHEAD "${pathspec[@]}" |
         transport_${transport}_fetch "$url"
 }
 
@@ -655,7 +679,7 @@ lsSiloObjectsForHEAD() {
         [ "$sha1" = "" ] && continue
         objfile=${sha1:0:2}/${sha1:2}
         printf '%s\n' "$objfile"
-    done <<< "$(lsSiloTracked | cut -b 1-40 | sort -u)"
+    done <<< "$(lsSiloTracked "$@" | cut -b 1-40 | sort -u)"
 }
 
 printUserSyncInfo() {
@@ -663,7 +687,7 @@ printUserSyncInfo() {
     while read sha1 path; do
         [ "$path" = "" ] && continue
         printf '%s %s\n' $sha1 "$path"
-    done <<< "$(lsSiloTracked)"
+    done <<< "$(lsSiloTracked "$@")"
 }
 
 getRemoteSiloUrl() {
