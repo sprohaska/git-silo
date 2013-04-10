@@ -2,7 +2,7 @@
 
 test_description="git-silo (basic)"
 
-. ./sharness/sharness.sh
+. ./_testinglib.sh
 
 test_expect_success \
 "'git-silo init' should succeed." \

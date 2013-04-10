@@ -2,9 +2,13 @@
 
 test_description="git-silo checkout"
 
-. ./sharness/sharness.sh
+. ./_testinglib.sh
 
-. "$SHARNESS_TEST_DIRECTORY/setup-user.sh"
+test_expect_success \
+"setup user" \
+'
+    setup_user
+'
 
 test_expect_success \
 "git status should be clean right after git-silo checkout." \

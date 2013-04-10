@@ -2,7 +2,7 @@
 
 test_description="git-silo push"
 
-. ./sharness/sharness.sh
+. ./_testinglib.sh
 
 ssh localhost true 2>/dev/null && test_set_prereq LOCALHOST
 
@@ -11,7 +11,11 @@ if ! test_have_prereq LOCALHOST; then
     test_done
 fi
 
-. "$SHARNESS_TEST_DIRECTORY/setup-user.sh"
+test_expect_success \
+"setup user" \
+'
+    setup_user
+'
 
 test_expect_success \
 "'git-silo push' (scp) should push." \

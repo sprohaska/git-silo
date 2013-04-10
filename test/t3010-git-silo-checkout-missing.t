@@ -2,9 +2,13 @@
 
 test_description="git-silo checkout (missing)"
 
-. ./sharness/sharness.sh
+. ./_testinglib.sh
 
-. "$SHARNESS_TEST_DIRECTORY/setup-user.sh"
+test_expect_success \
+"setup user" \
+'
+    setup_user
+'
 
 test_expect_success \
 "git-silo checkout should handle missing objects gracefully" \

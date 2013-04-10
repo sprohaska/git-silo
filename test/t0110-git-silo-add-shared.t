@@ -2,13 +2,13 @@
 
 test_description="git-silo (basic)"
 
-. ./sharness/sharness.sh
+. ./_testinglib.sh
 
-. "$SHARNESS_TEST_DIRECTORY/setup-user.sh"
-
-isSharedDir() {
-    test -g "$1"
-}
+test_expect_success \
+"setup user" \
+'
+    setup_user
+'
 
 test_expect_success \
 "'git-silo add' should create subdir with shared permissions in shared repo." \

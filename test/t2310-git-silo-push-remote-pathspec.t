@@ -2,9 +2,13 @@
 
 test_description="pathspec to limit push"
 
-. ./sharness/sharness.sh
+. ./_testinglib.sh
 
-. "$SHARNESS_TEST_DIRECTORY/setup-user.sh"
+test_expect_success \
+"setup user" \
+'
+    setup_user
+'
 
 test_expect_success \
 'setup' \

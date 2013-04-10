@@ -1,18 +1,14 @@
 #!/bin/bash
 
-
 test_description="git-silo (basic)"
 
-. ./sharness/sharness.sh
+. ./_testinglib.sh
 
-blobSize() {
-    git ls-tree -rl HEAD -- "$1" |
-    cut -f 1 |
-    sed -e 's/  */ /g' |
-    cut -d ' ' -f 4
-}
-
-. "$SHARNESS_TEST_DIRECTORY/setup-user.sh"
+test_expect_success \
+"setup user" \
+'
+    setup_user
+'
 
 test_expect_success \
 "'git-silo add' should handle paths with spaces." \

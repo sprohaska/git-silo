@@ -2,13 +2,13 @@
 
 test_description="git-silo dedup"
 
-. ./sharness/sharness.sh
+. ./_testinglib.sh
 
-linkCount() {
-    ls -l $1 | sed -e 's/  */ /' | cut -d ' ' -f 2
-}
-
-. "$SHARNESS_TEST_DIRECTORY/setup-user.sh"
+test_expect_success \
+"setup user" \
+'
+    setup_user
+'
 
 test_expect_success \
 "git dedup should create hardlinks between two repositories" \
