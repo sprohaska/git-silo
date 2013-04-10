@@ -15,23 +15,25 @@ setup_repo() {
     local repo=$1
     shift
     mkdir $repo &&
-    cd $repo &&
-    git init "$@" &&
-    git-silo init &&
-    touch .gitignore &&
-    git add .gitignore &&
-    git commit -m 'initial commit' &&
-    cd ..
+    (
+        cd $repo &&
+        git init "$@" &&
+        git-silo init &&
+        touch .gitignore &&
+        git add .gitignore &&
+        git commit -m 'initial commit'
+    )
 }
 
 setup_add_file() {
     local repo=$1
     local file=$2
-    cd $repo &&
-    cp ../$file $file &&
-    git-silo add $file &&
-    git commit -m "Add $file" &&
-    cd ..
+    (
+        cd $repo &&
+        cp ../$file $file &&
+        git-silo add $file &&
+        git commit -m "Add $file"
+    )
 }
 
 setup_clone_ssh() {

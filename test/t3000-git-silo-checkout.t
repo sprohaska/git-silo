@@ -5,33 +5,26 @@ test_description="git-silo checkout"
 . ./_testinglib.sh
 
 test_expect_success \
-"setup user" \
+"setup" \
 '
-    setup_user
+    setup_user &&
+    setup_file a &&
+    setup_repo repo1 &&
+    setup_add_file repo1 a
 '
 
 test_expect_success \
 "git status should be clean right after git-silo checkout." \
 "
-    mkdir repo1 &&
-    cd repo1 &&
-    git init &&
-    touch .gitignore &&
-    git add .gitignore &&
-    git commit -m 'initial commit' &&
-    git-silo init
-    echo a >a &&
-    git-silo add a &&
-    git commit -m 'Add a' &&
-    cd .. &&
     git clone repo1 repo2 &&
-    cd repo2 &&
-    git-silo init &&
-    git-silo fetch &&
-    git-silo checkout a &&
-    touch ../empty &&
-    git status --porcelain >../actual &&
-    cd .. &&
+    (
+        cd repo2 &&
+        git-silo init &&
+        git-silo fetch &&
+        git-silo checkout a &&
+        touch ../empty &&
+        git status --porcelain >../actual
+    ) &&
     test_cmp empty actual
 "
 
