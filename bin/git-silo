@@ -358,8 +358,7 @@ computeSha1AndStoreContentInSilo() {
     subdir=$silodir/${sha1:0:2}
     objfile=$subdir/${sha1:2}
     if [ ! -e $objfile ]; then
-        mkdir -p $subdir
-        isSharedDir "$silodir" && chmod g+ws "$subdir" >/dev/null 2>&1 || true
+        mkdirWithParentsPermissions "$subdir"
         ln "$arg_file" "$objfile" >/dev/null 2>&1 ||
         cp "$arg_file" "$objfile"
         chmod a-w "$objfile"
@@ -581,8 +580,7 @@ fetch_with_cp_program() {
             echo Would have run: $exec_cp "$url/$p" "$silodir/$p"
         else
             dir="$(dirname "$p")"
-            mkdir -p "$silodir/$dir"
-            isSharedDir "$silodir" && chmod g+ws "$silodir/$dir" || true
+            mkdirWithParentsPermissions "$silodir/$dir"
             echo $exec_cp $p ...
             rm -f "$silodir/$p-tmp"
             $exec_cp "$url/$p" "$silodir/$p-tmp" || {
@@ -596,6 +594,18 @@ fetch_with_cp_program() {
     done
     test $err && die "There have been problems during fetch (see above)."
     true
+}
+
+mkdirWithParentsPermissions() {
+    local d=$1
+    local parentd=$(dirname "$d")
+    if [ -d "$d" ]; then
+        return 0
+    fi
+    mkdir -p "$d"
+    if isSharedDir "$parentd"; then
+        chmod g+ws "$d"
+    fi
 }
 
 isSharedDir() {
@@ -644,8 +654,7 @@ transport_localcp_push() {
             echo Would have run: cp "$silodir/$p" "$url/$p"
         else
             dir=$(dirname $p)
-            mkdir -p "$url/$dir"
-            isSharedDir "$url" && chmod g+ws "$url/$dir" || true
+            mkdirWithParentsPermissions "$url/$dir"
             echo cp $p ...
             rm -f "$url/$p-tmp"
             cp "$silodir/$p" "$url/$p-tmp"
