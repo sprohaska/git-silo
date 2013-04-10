@@ -66,7 +66,7 @@ fi
 test_expect_success \
 "ssh fetch should correctly handle submodule that uses 'gitdir: ...' redirect." \
 '
-    git clone "ssh://localhost$(pwd)/super2/sub" subssh &&
+    setup_clone_ssh super2/sub subssh &&
     cd subssh &&
         git-silo init &&
         git-silo fetch &&

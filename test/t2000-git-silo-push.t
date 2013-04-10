@@ -30,7 +30,7 @@ test_expect_success \
     git add .gitignore &&
     git commit -m 'initial commit' &&
     cd .. &&
-    git clone 'ssh://localhost$(pwd)/repo1' repo2 &&
+    setup_clone_ssh repo1 repo2 &&
     cd repo2 &&
     git-silo init &&
     cp ../a a &&

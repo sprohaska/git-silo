@@ -38,7 +38,7 @@ test_expect_success \
     git commit -m "Add a b"
     rm -rf .git/silo/objects/$(cut -b 1-2 a.sha1) &&
     cd .. &&
-    git clone "ssh://localhost$(pwd)/repo1" repo2 &&
+    setup_clone_ssh repo1 repo2 &&
     cd repo2 &&
     git-silo init &&
     ( git-silo fetch || true ) &&
