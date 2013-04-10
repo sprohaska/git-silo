@@ -10,25 +10,47 @@ test_expect_success \
 "setup" \
 '
     setup_user &&
-    setup_file a &&
+    setup_file first &&
+    setup_file second &&
     setup_repo repo1
 '
 
 test_expect_success \
 "'git-silo push' (cp) should push." \
 "
-    setup_clone_ssh repo1 cpclone &&
+    git clone repo1 cpclone &&
     ( cd cpclone && git-silo init) &&
-    setup_add_file cpclone a &&
+    setup_add_file cpclone first &&
     ( cd cpclone && git-silo push) &&
     ( cd repo1/.git/silo/objects && find * -type f | sed -e 's@/@@' ) >actual &&
-    test_cmp a.sha1 actual
+    test_cmp first.sha1 actual
 "
 
 test_expect_success \
 "cleanup" \
 '
-    rm repo1/.git/silo/objects/*/*
+    rm -f repo1/.git/silo/objects/*/*
+'
+
+test_expect_success \
+"'git-silo push' should mention files that are pushed." \
+'
+    ( cd cpclone && git-silo push ) >log &&
+    grep -q first log
+'
+
+test_expect_success \
+"'git-silo push' should not mention files that are already up-to-date." \
+'
+    setup_add_file cpclone second &&
+    ( cd cpclone && git-silo push ) >log &&
+    ! grep -q first log
+'
+
+test_expect_success \
+"cleanup" \
+'
+    rm -f repo1/.git/silo/objects/*/*
 '
 
 if ! test_have_prereq LOCALHOST; then
@@ -41,21 +63,31 @@ test_expect_success \
 "
     setup_clone_ssh repo1 scpclone &&
     ( cd scpclone && git-silo init) &&
-    setup_add_file scpclone a &&
+    setup_add_file scpclone first &&
     ( cd scpclone && git-silo push) &&
     ( cd repo1/.git/silo/objects && find * -type f | sed -e 's@/@@' ) >actual &&
-    test_cmp a.sha1 actual
+    test_cmp first.sha1 actual
 "
 
 test_expect_success \
-"'git-silo push' (scp) should skip files that are already at remote." \
-"
-    (
-        cd scpclone &&
-        git-silo push >actual &&
-        ( ! grep -q 'scp ../..' actual || ( echo 'Found unexpected scp' && false ) ) &&
-        git-silo push
-    )
-"
+"cleanup" \
+'
+    rm -f repo1/.git/silo/objects/*/*
+'
+
+test_expect_success \
+"'git-silo push' should mention files that are pushed." \
+'
+    ( cd scpclone && git-silo push ) >log &&
+    grep -q first log
+'
+
+test_expect_success \
+"'git-silo push' should not mention files that are already up-to-date." \
+'
+    setup_add_file scpclone second &&
+    ( cd scpclone && git-silo push ) >log &&
+    ! grep -q first log
+'
 
 test_done

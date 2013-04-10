@@ -533,10 +533,10 @@ cmd_push() {
     transport=$(getTransport "$url")
     echo "pushing silo to $url"
     echo
-    printUserSyncInfo "${pathspec[@]}"
+    local syncinfo=$(printUserSyncInfo "${pathspec[@]}")
     echo
     lsSiloObjectsForHEAD "${pathspec[@]}" |
-        transport_${transport}_push "$url"
+        transport_${transport}_push "$url" "$syncinfo"
 }
 
 cmd_fetch() {
@@ -613,14 +613,16 @@ isSharedDir() {
 }
 
 transport_scp_push() {
-    local silodir url url_host url_dir existing
+    local silodir url syncinfo url_host url_dir existing
     url=$1
+    syncinfo=$2
     silodir=$(getSiloObjectDir)
     read url_host url_dir <<< "$(parseUrl "$url")"
     existing=$(lsRemoteDir "$url_host" "$url_dir")
     while read p; do
         [ "$p" = "" ] && continue
         findLineIn "$p" "$existing" && continue
+        grep $(cut -b 1-2,4-41 <<<"$p") <<<"$syncinfo"
         if ! [ -f "$silodir/$p" ]; then
             printf 'Warning: %s not in silo store, skipping.\n' >&2 $p
             continue
@@ -633,7 +635,7 @@ transport_scp_push() {
                 mkdir -p "'$url_dir/$dir'" '&&' \
                 test -g "'$url_dir'" '&&' \
                 chmod g+ws "'$url_dir/$dir'" || true
-            echo scp $p ..
+            echo scp ...
             scp "$silodir/$p" "$url_host:\"$url_dir/$p-tmp\""
             ssh -n "$url_host" \
                 chmod a-w "'$url_dir/$p-tmp'" '&&' \
@@ -648,12 +650,14 @@ transport_localcp_fetch() {
 }
 
 transport_localcp_push() {
-    local silodir url url_host url_dir existing
+    local silodir url syncinfo url_host url_dir existing
     url=$1
+    syncinfo=$2
     silodir=$(getSiloObjectDir)
     while read p; do
         [ "$p" = "" ] && continue
         [ -f "$url/$p" ] && continue
+        grep $(cut -b 1-2,4-41 <<<"$p") <<<"$syncinfo"
         if ! [ -f "$silodir/$p" ]; then
             printf 'Warning: %s not in silo store, skipping.\n' >&2 $p
             continue
@@ -663,7 +667,7 @@ transport_localcp_push() {
         else
             dir=$(dirname $p)
             mkdirWithParentsPermissions "$url/$dir"
-            echo cp $p ...
+            echo cp ...
             rm -f "$url/$p-tmp"
             cp "$silodir/$p" "$url/$p-tmp"
             chmod a-w "$url/$p-tmp"
