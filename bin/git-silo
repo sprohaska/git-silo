@@ -621,6 +621,10 @@ transport_scp_push() {
     while read p; do
         [ "$p" = "" ] && continue
         findLineIn "$p" "$existing" && continue
+        if ! [ -f "$silodir/$p" ]; then
+            printf 'Warning: %s not in silo store, skipping.\n' >&2 $p
+            continue
+        fi
         if test $opt_dry_run; then
             echo Would have run: scp "$silodir/$p" "$url/$p"
         else
@@ -650,6 +654,10 @@ transport_localcp_push() {
     while read p; do
         [ "$p" = "" ] && continue
         [ -f "$url/$p" ] && continue
+        if ! [ -f "$silodir/$p" ]; then
+            printf 'Warning: %s not in silo store, skipping.\n' >&2 $p
+            continue
+        fi
         if test $opt_dry_run; then
             echo Would have run: cp "$silodir/$p" "$url/$p"
         else
