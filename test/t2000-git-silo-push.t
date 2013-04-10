@@ -6,11 +6,6 @@ test_description="git-silo push"
 
 ssh localhost true 2>/dev/null && test_set_prereq LOCALHOST
 
-if ! test_have_prereq LOCALHOST; then
-    skip_all='skipping tests that require ssh to localhost.'
-    test_done
-fi
-
 test_expect_success \
 "setup" \
 '
@@ -18,6 +13,28 @@ test_expect_success \
     setup_file a &&
     setup_repo repo1
 '
+
+test_expect_success \
+"'git-silo push' (cp) should push." \
+"
+    setup_clone_ssh repo1 cpclone &&
+    ( cd cpclone && git-silo init) &&
+    setup_add_file cpclone a &&
+    ( cd cpclone && git-silo push) &&
+    ( cd repo1/.git/silo/objects && find * -type f | sed -e 's@/@@' ) >actual &&
+    test_cmp a.sha1 actual
+"
+
+test_expect_success \
+"cleanup" \
+'
+    rm repo1/.git/silo/objects/*/*
+'
+
+if ! test_have_prereq LOCALHOST; then
+    skip_all='skipping tests that require ssh to localhost.'
+    test_done
+fi
 
 test_expect_success \
 "'git-silo push' (scp) should push." \
