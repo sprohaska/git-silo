@@ -11,7 +11,6 @@ test_expect_success \
 '
     setup_user &&
     setup_file first &&
-    setup_file second &&
     setup_repo repo1
 '
 
@@ -42,7 +41,6 @@ test_expect_success \
 test_expect_success \
 "'git-silo push' should not mention files that are already up-to-date." \
 '
-    setup_add_file cpclone second &&
     ( cd cpclone && git-silo push ) >log &&
     ! grep -q first log
 '
@@ -85,7 +83,6 @@ test_expect_success \
 test_expect_success \
 "'git-silo push' should not mention files that are already up-to-date." \
 '
-    setup_add_file scpclone second &&
     ( cd scpclone && git-silo push ) >log &&
     ! grep -q first log
 '
