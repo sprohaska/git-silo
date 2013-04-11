@@ -555,27 +555,31 @@ cmd_fetch() {
     transport=$(getTransport "$url")
     echo "fetching silo from $url"
     echo
-    printUserSyncInfo "${pathspec[@]}"
+    local syncinfo=$(printUserSyncInfo "${pathspec[@]}")
     echo
     lsSiloObjectsForHEAD "${pathspec[@]}" |
-        transport_${transport}_fetch "$url"
+        transport_${transport}_fetch "$url" "$syncinfo"
 }
 
 transport_scp_fetch() {
+    local url=$1
+    local syncinfo=$2
     local url_host url_dir
-    read url_host url_dir <<< "$(parseUrl "$1")"
-    fetch_with_cp_program scp "$url_host:\"$url_dir\""
+    read url_host url_dir <<< "$(parseUrl "$url")"
+    fetch_with_cp_program scp "$url_host:\"$url_dir\"" "$syncinfo"
 }
 
 fetch_with_cp_program() {
-    local exec_cp silodir url dir
+    local exec_cp silodir url dir syncinfo
     exec_cp=$1
     url=$2
+    syncinfo=$3
     silodir=$(getSiloObjectDir)
     err=
     while read p; do
         [ "$p" = "" ] && continue
         [ -f "$silodir/$p" ] && continue
+        grep $(cut -b 1-2,4-41 <<<"$p") <<<"$syncinfo"
         if test $opt_dry_run; then
             echo Would have run: $exec_cp "$url/$p" "$silodir/$p"
         else
@@ -646,7 +650,8 @@ transport_scp_push() {
 
 transport_localcp_fetch() {
     local url=$1
-    fetch_with_cp_program cp "$url"
+    syncinfo=$2
+    fetch_with_cp_program cp "$url" "$syncinfo"
 }
 
 transport_localcp_push() {
