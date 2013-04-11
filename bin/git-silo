@@ -597,7 +597,8 @@ printSyncInfo() {
     local p=$1
     local objPathMap=$2
     local sha1=$(cut -b 1-2,4-41 <<<"$p")
-    grep $sha1 <<<"$objPathMap"
+    grep $sha1 <<<"$objPathMap" |
+        sed -e 's/^/    COPY /'
 }
 
 mkdirWithParentsPermissions() {
