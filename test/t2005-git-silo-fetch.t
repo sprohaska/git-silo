@@ -38,7 +38,7 @@ test_expect_success \
     grep -q first log
 '
 
-test_expect_failure \
+test_expect_success \
 "'git-silo fetch' should not mention files that are already up-to-date." \
 '
     ( cd cpclone && git-silo fetch ) >log &&
@@ -76,10 +76,9 @@ test_expect_success \
     grep -q first log
 '
 
-test_expect_failure \
+test_expect_success \
 "'git-silo fetch' should not mention files that are already up-to-date." \
 '
-    setup_add_file scpclone second &&
     ( cd scpclone && git-silo fetch ) >log &&
     ! grep -q first log
 '
