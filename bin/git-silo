@@ -532,11 +532,8 @@ cmd_push() {
     url=$(getRemoteSiloUrl)
     transport=$(getTransport "$url")
     echo "pushing silo to $url"
-    echo
-    local syncinfo=$(printUserSyncInfo "${pathspec[@]}")
-    echo
     lsSiloObjectsForHEAD "${pathspec[@]}" |
-        transport_${transport}_push "$url" "$syncinfo"
+        transport_${transport}_push "$url"
 }
 
 cmd_fetch() {
@@ -554,32 +551,28 @@ cmd_fetch() {
     url=$(getRemoteSiloUrl)
     transport=$(getTransport "$url")
     echo "fetching silo from $url"
-    echo
-    local syncinfo=$(printUserSyncInfo "${pathspec[@]}")
-    echo
     lsSiloObjectsForHEAD "${pathspec[@]}" |
-        transport_${transport}_fetch "$url" "$syncinfo"
+        transport_${transport}_fetch "$url"
 }
 
 transport_scp_fetch() {
     local url=$1
-    local syncinfo=$2
     local url_host url_dir
     read url_host url_dir <<< "$(parseUrl "$url")"
-    fetch_with_cp_program scp "$url_host:\"$url_dir\"" "$syncinfo"
+    fetch_with_cp_program scp "$url_host:\"$url_dir\""
 }
 
 fetch_with_cp_program() {
-    local exec_cp silodir url dir syncinfo
+    local exec_cp silodir url dir objPathMap
     exec_cp=$1
     url=$2
-    syncinfo=$3
+    objPathMap=$(lsSiloTracked "${pathspec[@]}")
     silodir=$(getSiloObjectDir)
     err=
     while read p; do
         [ "$p" = "" ] && continue
         [ -f "$silodir/$p" ] && continue
-        grep $(cut -b 1-2,4-41 <<<"$p") <<<"$syncinfo"
+        printSyncInfo $p "$objPathMap"
         if test $opt_dry_run; then
             echo Would have run: $exec_cp "$url/$p" "$silodir/$p"
         else
@@ -600,6 +593,13 @@ fetch_with_cp_program() {
     true
 }
 
+printSyncInfo() {
+    local p=$1
+    local objPathMap=$2
+    local sha1=$(cut -b 1-2,4-41 <<<"$p")
+    grep $sha1 <<<"$objPathMap"
+}
+
 mkdirWithParentsPermissions() {
     local d=$1
     local parentd=$(dirname "$d")
@@ -617,16 +617,16 @@ isSharedDir() {
 }
 
 transport_scp_push() {
-    local silodir url syncinfo url_host url_dir existing
+    local silodir url objPathMap url_host url_dir existing
     url=$1
-    syncinfo=$2
+    objPathMap=$(lsSiloTracked "${pathspec[@]}")
     silodir=$(getSiloObjectDir)
     read url_host url_dir <<< "$(parseUrl "$url")"
     existing=$(lsRemoteDir "$url_host" "$url_dir")
     while read p; do
         [ "$p" = "" ] && continue
         findLineIn "$p" "$existing" && continue
-        grep $(cut -b 1-2,4-41 <<<"$p") <<<"$syncinfo"
+        printSyncInfo $p "$objPathMap"
         if ! [ -f "$silodir/$p" ]; then
             printf 'Warning: %s not in silo store, skipping.\n' >&2 $p
             continue
@@ -650,19 +650,18 @@ transport_scp_push() {
 
 transport_localcp_fetch() {
     local url=$1
-    syncinfo=$2
-    fetch_with_cp_program cp "$url" "$syncinfo"
+    fetch_with_cp_program cp "$url"
 }
 
 transport_localcp_push() {
-    local silodir url syncinfo url_host url_dir existing
+    local silodir url objPathMap url_host url_dir existing
     url=$1
-    syncinfo=$2
+    objPathMap=$(lsSiloTracked "${pathspec[@]}")
     silodir=$(getSiloObjectDir)
     while read p; do
         [ "$p" = "" ] && continue
         [ -f "$url/$p" ] && continue
-        grep $(cut -b 1-2,4-41 <<<"$p") <<<"$syncinfo"
+        printSyncInfo $p "$objPathMap"
         if ! [ -f "$silodir/$p" ]; then
             printf 'Warning: %s not in silo store, skipping.\n' >&2 $p
             continue
@@ -707,14 +706,6 @@ lsSiloObjectsForHEAD() {
         objfile=${sha1:0:2}/${sha1:2}
         printf '%s\n' "$objfile"
     done <<< "$(lsSiloTracked "$@" | cut -b 1-40 | sort -u)"
-}
-
-printUserSyncInfo() {
-    local sha1 path
-    while read sha1 path; do
-        [ "$path" = "" ] && continue
-        printf '%s %s\n' $sha1 "$path"
-    done <<< "$(lsSiloTracked "$@")"
 }
 
 getRemoteSiloUrl() {
