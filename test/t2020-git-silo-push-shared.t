@@ -21,7 +21,7 @@ test_expect_success \
 test_expect_success \
 "'git-silo push' (cp) should create dir with shared permissions when pushing to shared repo." \
 '
-    ( cd cpclone && git-silo push )
+    ( cd cpclone && git-silo push -- . )
     ( cd repo1 && isSharedDir .git/silo/objects/$(cut -b 1-2 ../a.sha1) )
 '
 
@@ -41,7 +41,7 @@ test_expect_success \
 test_expect_success \
 "'git-silo push' (scp) should create dir with shared permissions when pushing to shared repo." \
 '
-    ( cd scpclone && git-silo push ) &&
+    ( cd scpclone && git-silo push -- . ) &&
     ( cd repo1 && isSharedDir .git/silo/objects/$(cut -b 1-2 ../b.sha1) )
 '
 

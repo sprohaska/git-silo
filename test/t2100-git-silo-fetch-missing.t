@@ -1,6 +1,6 @@
 #!/bin/bash
 
-test_description="git-silo push"
+test_description="git-silo fetch"
 
 . ./_testinglib.sh
 

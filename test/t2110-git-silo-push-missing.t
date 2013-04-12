@@ -23,7 +23,7 @@ test_expect_success \
 '
     ( cd cpclone && git-silo init && git-silo fetch a ) &&
     rm -rf repo1/.git/silo/objects/* &&
-    ( cd cpclone && git-silo push )
+    ( cd cpclone && git-silo push -- . )
 '
 
 if ! test_have_prereq LOCALHOST; then
@@ -37,7 +37,7 @@ test_expect_success \
     setup_clone_ssh repo1 scpclone &&
     ( cd scpclone && git-silo init && git-silo fetch a ) &&
     rm -rf repo1/.git/silo/objects/* &&
-    ( cd scpclone && git-silo push )
+    ( cd scpclone && git-silo push -- . )
 '
 
 test_done
