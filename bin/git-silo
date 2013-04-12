@@ -531,11 +531,21 @@ updateGitattributes() {
     gitattributes="$dir/.gitattributes"
     tmpfile="$gitattributes-tmp$$"
 
+    local endl=$(getWorkingCopyEndl)
     [ -e "$gitattributes" ] || touch "$gitattributes"
-    ( printf '/%s filter=silo -text\n' "$(escapeSpacesForGitattributes "$base")" && cat "$gitattributes") |
+    ( printf '/%s filter=silo -text'$endl "$(escapeSpacesForGitattributes "$base")" && cat "$gitattributes") |
         sort -u >"$tmpfile"
     mv "$tmpfile" "$gitattributes"
     git add "$gitattributes"
+}
+
+getWorkingCopyEndl() {
+    local cfg_autocrlf
+    if cfg_autocrlf=$(git config core.autocrlf) && $cfg_autocrlf = 'true'; then
+        echo '\r\n'
+    else
+        echo '\n'
+    fi
 }
 
 # .gitattributes doesn't support spaces, so replace them by ?.
