@@ -5,6 +5,7 @@ set -o nounset
 
 main() {
     argparse "$@"
+    validateGitVersion
 
     cmd_$arg_cmd
 }
@@ -298,6 +299,16 @@ git-silo filter_clean <path>
     now known workaround.
 
 EOFTXT
+}
+
+validateGitVersion() {
+    local version major minor
+    version=$(git version)
+    version=$(cut -d ' ' -f 3 <<<"$version")
+    major=$(cut -d . -f 1 <<<"$version")
+    minor=$(cut -d . -f 2 <<<"$version")
+    [ $major -ge 1 ] && [ $minor -ge 8 ] ||
+        die "git version too low (require at least version 1.8)."
 }
 
 validateCmd() {
