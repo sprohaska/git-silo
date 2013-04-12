@@ -20,7 +20,7 @@ test_expect_success \
     (
         cd repo2 &&
         git-silo init &&
-        git-silo fetch &&
+        git-silo fetch -- . &&
         git-silo checkout a &&
         touch ../empty &&
         git status --porcelain >../actual

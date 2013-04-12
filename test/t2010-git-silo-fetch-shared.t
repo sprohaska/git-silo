@@ -22,7 +22,7 @@ test_expect_success \
     git remote add origin ../repo1 &&
     git-silo init &&
     git pull origin master &&
-    git-silo fetch &&
+    git-silo fetch -- . &&
     isSharedDir .git/silo/objects/$(cut -b 1-2 ../a.sha1)
 '
 

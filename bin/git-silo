@@ -262,7 +262,7 @@ git-silo add [--] [<file>...]
 git-silo checkout [--copy] [--link] -- [<file>...]
 git-silo status [<path>...]
 git-silo push [--] [<path>...]
-git-silo fetch [--] [<path>...]
+git-silo fetch [--] [<path>... | config remote.origin.silofetch]
 git-silo gc [-f|--force] [-n <number>] [--dry-run] [--no-tags]
 git-silo fsck
 git-silo dedup <repo>...
@@ -289,7 +289,11 @@ git-silo filter_clean <path>
   fetch             fetch silo files for current HEAD.
 
     <path>...       fetch will be limited to the given paths.  Default paths can
-                    be configured in remote.origin.silofetch.
+                    be configured in remote.origin.silofetch.  You either must
+                    provide a path on the command line or via the config file,
+                    otherwise git-silo will refuse to fetch files to protect you
+                    from accidentally starting large transfers.  Use path '.'
+                    to fetch everything.
 
   gc                delete silo files that are not directly referenced by
                     HEAD, tags or tips of branches and remove unused
@@ -599,6 +603,7 @@ cmd_fetch() {
             pathspec=
         unset IFS
     fi
+    test "$pathspec" || die "Missing path.  Fetch requires a path, either on the command line or in the config remote.origin.silofetch."
     validateHaveSilo
     local url transport
     url=$(getRemoteSiloUrl)

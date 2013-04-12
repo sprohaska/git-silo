@@ -15,12 +15,19 @@ test_expect_success \
 '
 
 test_expect_success \
+"'git-silo fetch' should refuse to fetch without pathspec." \
+'
+    git clone repo1 refuse &&
+    ( cd refuse && git-silo init && ! git-silo fetch )
+'
+
+test_expect_success \
 "'git-silo fetch' (cp) should fetch" \
 "
     git clone repo1 cpclone &&
     ( cd cpclone && git-silo init ) &&
     setup_add_file repo1 first &&
-    ( cd cpclone && git pull && git-silo fetch ) &&
+    ( cd cpclone && git pull && git-silo fetch -- . ) &&
     ( cd cpclone/.git/silo/objects && find * -type f | sed -e 's@/@@' ) >actual &&
     test_cmp first.sha1 actual
 "
@@ -34,14 +41,14 @@ test_expect_success \
 test_expect_success \
 "'git-silo fetch' should mention files that are fetched." \
 '
-    ( cd cpclone && git-silo fetch ) >log &&
+    ( cd cpclone && git-silo fetch -- . ) >log &&
     grep -q first log
 '
 
 test_expect_success \
 "'git-silo fetch' should not mention files that are already up-to-date." \
 '
-    ( cd cpclone && git-silo fetch ) >log &&
+    ( cd cpclone && git-silo fetch -- . ) >log &&
     ! grep -q first log
 '
 
@@ -57,7 +64,7 @@ test_expect_success \
     (
         cd scpclone &&
         git-silo init &&
-        git-silo fetch
+        git-silo fetch -- .
     ) &&
     ( cd scpclone/.git/silo/objects && find * -type f | sed -e 's@/@@' ) >actual &&
     test_cmp first.sha1 actual
@@ -72,14 +79,14 @@ test_expect_success \
 test_expect_success \
 "'git-silo fetch' should mention files that are fetched." \
 '
-    ( cd scpclone && git-silo fetch ) >log &&
+    ( cd scpclone && git-silo fetch -- . ) >log &&
     grep -q first log
 '
 
 test_expect_success \
 "'git-silo fetch' should not mention files that are already up-to-date." \
 '
-    ( cd scpclone && git-silo fetch ) >log &&
+    ( cd scpclone && git-silo fetch -- . ) >log &&
     ! grep -q first log
 '
 

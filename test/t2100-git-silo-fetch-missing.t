@@ -43,7 +43,7 @@ test_expect_success \
     (
         cd repo2 &&
         git-silo init &&
-        ( git-silo fetch || true ) &&
+        ( git-silo fetch -- . || true ) &&
         git-silo checkout b &&
         test -e b
     )

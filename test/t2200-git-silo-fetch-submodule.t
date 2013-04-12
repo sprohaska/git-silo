@@ -42,7 +42,7 @@ test_expect_success \
         (
             cd sub &&
             git-silo init &&
-            git-silo fetch
+            git-silo fetch -- .
         )
     )
 '
@@ -54,7 +54,7 @@ test_expect_success \
     (
         cd sublocal &&
         git-silo init &&
-        git-silo fetch &&
+        git-silo fetch -- . &&
         git-silo checkout a &&
         echo a >expected &&
         test_cmp expected a
@@ -75,7 +75,7 @@ test_expect_success \
     (
         cd subssh &&
         git-silo init &&
-        git-silo fetch &&
+        git-silo fetch -- . &&
         git-silo checkout a &&
         echo a >expected &&
         test_cmp expected a
