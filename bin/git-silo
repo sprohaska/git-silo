@@ -157,7 +157,32 @@ argparse_add() {
 }
 
 argparse_checkout() {
-    argparse_pathspec "$@"
+    arg_pathspec=
+    opt_copy=
+    while [ $# -ge 1 ]; do
+        case "$1" in
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        --copy)
+            opt_copy=t
+            shift
+            ;;
+        --)
+            shift
+            [ $# -gt 0 ] && arg_pathspec=( "$@" )
+            return 0
+            ;;
+        -*)
+            die "Unknown option $1"
+            ;;
+        *)
+            arg_pathspec=( "$@" )
+            return 0
+            ;;
+        esac
+    done
 }
 
 argparse_status() {
@@ -229,7 +254,7 @@ usage() {
     cat <<EOFTXT
 git-silo init
 git-silo add [--] [<file>...]
-git-silo checkout -- [<file>...]
+git-silo checkout [--copy] -- [<file>...]
 git-silo status [<path>...]
 git-silo push [--] [<path>...]
 git-silo fetch [--] [<path>...]
@@ -244,6 +269,8 @@ git-silo filter_clean <path>
   add               add untracked files for silo storage.
 
   checkout          replace placeholders with full content.
+
+    --copy          copy files instead of using hardlinks.
 
   status            print status of files stored in silo.
 
@@ -448,7 +475,10 @@ cmd_checkout() {
     err=
     while read sha1 path; do
         [ "$path" = "" ] && continue
-        if ! [ -e "$path" ] || isSha1PlaceholderFile "$path"; then
+        if ! [ -e "$path" ] ||
+            isSha1PlaceholderFile "$path" ||
+            ( test $opt_copy && [ $(linkCount "$path") -gt 1 ] )
+        then
             objfile=$silodir/${sha1:0:2}/${sha1:2}
             if ! test -e "$objfile"; then
                 printf >&2 "missing silo content: %s\n" "$path"
@@ -458,8 +488,8 @@ cmd_checkout() {
             echo cp $sha1 "$path"
             rm -f "$path"
             mkdir -p "$(dirname "$path")"
-            ln "$objfile" "$path" >/dev/null 2>&1 ||
-            cp "$objfile" "$path" || {
+            ( ! test $opt_copy && ln "$objfile" "$path" >/dev/null 2>&1 ) ||
+            ( cp "$objfile" "$path" && chmod u+w "$path" ) || {
                 printf >&2 "Failed to copy '%s' to '%s'.\n" "$objfile" "$path"
                 err=t
                 continue
@@ -469,6 +499,10 @@ cmd_checkout() {
     done <<< "$(lsSiloTracked "${arg_pathspec[@]}")"
     test $err && die "There have been problems during silo checkout (see above)."
     true
+}
+
+linkCount() {
+    ls -l $1 | sed -e 's/  */ /' | cut -d ' ' -f 2
 }
 
 lsUntrackedFiles() {

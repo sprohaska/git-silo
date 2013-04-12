@@ -27,4 +27,12 @@ test_expect_success \
     ! test -w a
 '
 
+test_expect_success \
+"git checkout --copy should not use hardlink." \
+'
+    git-silo checkout --copy a &&
+    test $(linkCount a) -eq 1 &&
+    test -w a
+'
+
 test_done
