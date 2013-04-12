@@ -35,4 +35,12 @@ test_expect_success \
     test -w a
 '
 
+test_expect_success \
+"git checkout --link should replace copy with hardlink." \
+'
+    git-silo checkout --link a &&
+    test $(linkCount a) -eq 2 &&
+    ! test -w a
+'
+
 test_done

@@ -159,6 +159,7 @@ argparse_add() {
 argparse_checkout() {
     arg_pathspec=
     opt_copy=
+    opt_link=
     while [ $# -ge 1 ]; do
         case "$1" in
         -h|--help)
@@ -167,6 +168,10 @@ argparse_checkout() {
             ;;
         --copy)
             opt_copy=t
+            shift
+            ;;
+        --link)
+            opt_link=t
             shift
             ;;
         --)
@@ -254,7 +259,7 @@ usage() {
     cat <<EOFTXT
 git-silo init
 git-silo add [--] [<file>...]
-git-silo checkout [--copy] -- [<file>...]
+git-silo checkout [--copy] [--link] -- [<file>...]
 git-silo status [<path>...]
 git-silo push [--] [<path>...]
 git-silo fetch [--] [<path>...]
@@ -271,6 +276,8 @@ git-silo filter_clean <path>
   checkout          replace placeholders with full content.
 
     --copy          copy files instead of using hardlinks.
+
+    --link          replace checked-out copies with hardlinks.
 
   status            print status of files stored in silo.
 
@@ -477,7 +484,8 @@ cmd_checkout() {
         [ "$path" = "" ] && continue
         if ! [ -e "$path" ] ||
             isSha1PlaceholderFile "$path" ||
-            ( test $opt_copy && [ $(linkCount "$path") -gt 1 ] )
+            ( test $opt_copy && [ $(linkCount "$path") -gt 1 ] ) ||
+            ( test $opt_link && [ $(linkCount "$path") -eq 1 ] )
         then
             objfile=$silodir/${sha1:0:2}/${sha1:2}
             if ! test -e "$objfile"; then
