@@ -319,10 +319,18 @@ git-silo filter_clean <path>
   filter_clean      clean filter (see gitattributes); stores file in silo and
                     returns sha1 to git.
 
-Note that you always must either provide a path on the command line or via the
-config file for push and fetch, otherwise git-silo will refuse to transfer files
-to protect you from accidentally starting large transfers.  Use path '.' to
+You must always either provide a path on the command line or via the config
+file for push and fetch, otherwise git-silo will refuse to transfer files to
+protect you from accidentally starting large transfers.  Use path '.' to
 transfer everything.
+
+Git can be told to use git silo for all file of a certain type (based on a glob
+pattern).  This avoids the need to explicitly calling 'git silo add' when a file
+is added for the first time; a simple 'git add' will immediately use git silo.
+For example, add the following line to .gitattributes to handle all mov files
+using git silo:
+
+    *.mov filter=silo -text
 
 # Known Issues
 
