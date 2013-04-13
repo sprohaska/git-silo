@@ -541,7 +541,8 @@ updateGitattributes() {
 
 getWorkingCopyEndl() {
     local cfg_autocrlf
-    if cfg_autocrlf=$(git config core.autocrlf) && $cfg_autocrlf = 'true'; then
+    if cfg_autocrlf=$(git config core.autocrlf) &&
+            [ $cfg_autocrlf = 'true' ]; then
         echo '\r\n'
     else
         echo '\n'
