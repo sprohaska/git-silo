@@ -504,11 +504,11 @@ cmd_checkout() {
             (
                 ! test $opt_copy &&
                 ln "$objfile" "$path" >/dev/null 2>&1 &&
-                echo ln $sha1 "$path"
+                echo "    LINK" $sha1 "$path"
             ) || (
                 cp "$objfile" "$path" &&
-                echo cp $sha1 "$path" &&
-                chmod u+w "$path"
+                chmod u+w "$path" &&
+                echo "    COPY" $sha1 "$path"
             ) || {
                 printf >&2 "Failed to copy '%s' to '%s'.\n" "$objfile" "$path"
                 err=t
