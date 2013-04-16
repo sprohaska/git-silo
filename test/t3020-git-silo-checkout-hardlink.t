@@ -43,4 +43,14 @@ test_expect_success \
     ! test -w a
 '
 
+test_expect_success \
+"git checkout --link should fix wrong write permissions in silo store." \
+'
+    chmod u+w .git/silo/objects/*/* &&
+    test -w a &&
+    rm a &&
+    git-silo checkout --link a &&
+    ! test -w a
+'
+
 test_done
