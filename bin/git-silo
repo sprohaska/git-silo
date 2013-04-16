@@ -507,13 +507,21 @@ cmd_checkout() {
                 err=t
                 continue
             fi
-            rm -f "$path"
             mkdir -p "$(dirname "$path")"
             (
                 ! test $opt_copy &&
-                ln "$objfile" "$path" >/dev/null 2>&1 &&
+                rm -f "$path" &&
+                ln "$objfile" "$path" >/dev/null 2>&1 && (
+                    ! test -w "$path" ||
+                    chmod a-w "$path" >/dev/null 2>&1 || (
+                        test $opt_link &&
+                        echo "Warning: failed to set read-only permissions, falling back to copy '$path'." &&
+                        false
+                    )
+                ) &&
                 echo "    LINK" $sha1 "$path"
             ) || (
+                rm -f "$path" &&
                 cp "$objfile" "$path" &&
                 chmod u+w "$path" &&
                 echo "    COPY" $sha1 "$path"
