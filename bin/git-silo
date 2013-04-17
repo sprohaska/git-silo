@@ -476,8 +476,13 @@ validSha1() {
     egrep -q '^[0-9a-f]{40}$' <<< "$1"
 }
 
+# Files should not end in CRLF, because .gitattributes sets -text on
+# placeholders.  In case, however, the file get checked out with CRLF, it should
+# be accepted as a placeholder.
 isSha1PlaceholderFile() {
-    head -n 1 "$1" | egrep -q '^[0-9a-f]{40}$'
+    local size=$(fileSize "$1")
+    [ $size -eq 41 -o $size -eq 42 ] &&
+    egrep -q $'^[0-9a-f]{40}\r?$' "$1"
 }
 
 cmd_add() {
