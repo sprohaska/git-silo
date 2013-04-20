@@ -377,7 +377,10 @@ cmd_init() {
     mkdir -p "$gitdir/silo/objects"
     isSharedDir "$gitdir/objects" &&
         echo "Using shared permissions." &&
-        chmod -R g+ws "$gitdir/silo"
+        (
+            find "$gitdir/silo" -type d -print0 |
+            xargs -0 chmod g+ws
+        )
     if ! isBareRepo; then
         configFilters
     fi
