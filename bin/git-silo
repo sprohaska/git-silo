@@ -431,7 +431,7 @@ computeSha1AndStoreContentInSilo() {
 cmd_filter_smudge() {
     local silodir sha1
     read sha1
-    validSha1 "$sha1" || die "Invalid input; expected sha1."
+    validSha1 "$sha1" || die "Invalid input; expected sha1: $arg_file"
     [ "$(head -c 1)" = "" ] || die "Input too large."
     silodir=$(getSiloObjectDir)
     objfile=$silodir/${sha1:0:2}/${sha1:2}
