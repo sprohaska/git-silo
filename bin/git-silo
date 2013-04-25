@@ -300,7 +300,7 @@ git-silo filter_clean <path>
     -f|--force      run gc even with unstaged changes.  Note that gc might
                     modify and commit .gitattributes.
 
-    -n <number>     keep only objects reachable from the lastest <number>
+    -n <number>     keep only objects reachable from the latest <number>
                     commits at each head, including tags.
 
     --no-tags       remove objects that are reachable only via a tag.
