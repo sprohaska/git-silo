@@ -619,7 +619,7 @@ getSha1ForGitObject() {
 
 cmd_push() {
     local pathspec
-    if test $arg_pathspec; then
+    if test "$arg_pathspec"; then
         pathspec=( "${arg_pathspec[@]}" )
     else
         IFS=$'\n'
@@ -639,7 +639,7 @@ cmd_push() {
 
 cmd_fetch() {
     local pathspec
-    if test $arg_pathspec; then
+    if test "$arg_pathspec"; then
         pathspec=( "${arg_pathspec[@]}" )
     else
         IFS=$'\n'
