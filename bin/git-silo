@@ -716,9 +716,10 @@ transport_scp_push() {
         else
             dir=$(dirname $p)
             ssh -n "$url_host" \
-                mkdir -p "'$url_dir/$dir'" '&&' \
-                test -g "'$url_dir'" '&&' \
-                chmod g+ws "'$url_dir/$dir'" || true
+                test -e "'\"$url_dir/$dir\"'" '||' \
+                mkdir -p "'\"$url_dir/$dir\"'" '&&' \
+                test -g "'\"$url_dir\"'" '&&' \
+                chmod g+ws "'\"$url_dir/$dir\"'" || true
             echo scp ...
             scp "$silodir/$p" "$url_host:\"$url_dir/$p-tmp\""
             ssh -n "$url_host" \
