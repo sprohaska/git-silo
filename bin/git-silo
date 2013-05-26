@@ -718,6 +718,7 @@ transport_scp_push() {
 
             ssh "$url_host" bash -s <<EOFPRG ||
 set -o errexit
+test -e '$url_dir/$dir' && exit 0
 mkdir -p '$url_dir/$dir'
 if test -g '$url_dir'; then
     chmod g+ws '$url_dir/$dir'
