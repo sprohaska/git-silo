@@ -658,65 +658,40 @@ cmd_fetch() {
 }
 
 transport_scp_fetch() {
-    local url=$1
-    local url_host url_dir
+    local silodir url dir objPathMap
+    local url_host url_dir scpurl
+    url=$1
     read url_host url_dir <<< "$(parseUrl "$url")"
-    fetch_with_cp_program scp "$url_host:\"$url_dir\""
-}
-
-fetch_with_cp_program() {
-    local exec_cp silodir url dir objPathMap
-    exec_cp=$1
-    url=$2
+    scpurl="$url_host:\"$url_dir\""
     objPathMap=$(lsSiloTracked "${pathspec[@]}")
     silodir=$(getSiloObjectDir)
-    err=
+    remoteObjs=$(lsRemoteDir "$url_host" "$url_dir")
+    missing=
     while read p; do
         [ "$p" = "" ] && continue
         [ -f "$silodir/$p" ] && continue
-        printSyncInfo $p "$objPathMap"
+        if ! findLineIn "$p" "$remoteObjs"; then
+            missing=t
+            printSyncInfo MISSING $p "$objPathMap"
+            continue
+        fi
+        printSyncInfo COPY $p "$objPathMap"
         if test $opt_dry_run; then
-            echo Would have run: $exec_cp "$url/$p" "$silodir/$p"
+            echo Would have run: scp "$scpurl/$p" "$silodir/$p"
         else
             dir="$(dirname "$p")"
             mkdirWithParentsPermissions "$silodir/$dir"
-            echo $exec_cp $p ...
+            echo scp $p ...
             rm -f "$silodir/$p-tmp"
-            $exec_cp "$url/$p" "$silodir/$p-tmp" || {
-                printf >&2 "Failed to copy '$p'.\n"
-                err=t
-                continue
+            scp "$scpurl/$p" "$silodir/$p-tmp" || {
+                die "Failed to copy '$p'."
             }
             chmod a-w "$silodir/$p-tmp"
             mv "$silodir/$p-tmp" "$silodir/$p"
         fi
     done
-    test $err && die "There have been problems during fetch (see above)."
+    test $missing && die "Some files are missing at remote (see above)."
     true
-}
-
-printSyncInfo() {
-    local p=$1
-    local objPathMap=$2
-    local sha1=$(cut -b 1-2,4-41 <<<"$p")
-    grep $sha1 <<<"$objPathMap" |
-        sed -e 's/^/    COPY /'
-}
-
-mkdirWithParentsPermissions() {
-    local d=$1
-    local parentd=$(dirname "$d")
-    if [ -d "$d" ]; then
-        return 0
-    fi
-    mkdir -p "$d"
-    if isSharedDir "$parentd"; then
-        chmod g+ws "$d"
-    fi
-}
-
-isSharedDir() {
-    test -g "$1"
 }
 
 transport_scp_push() {
@@ -729,7 +704,7 @@ transport_scp_push() {
     while read p; do
         [ "$p" = "" ] && continue
         findLineIn "$p" "$existing" && continue
-        printSyncInfo $p "$objPathMap"
+        printSyncInfo COPY $p "$objPathMap"
         if ! [ -f "$silodir/$p" ]; then
             printf 'Warning: %s not in silo store, skipping.\n' >&2 $p
             continue
@@ -752,8 +727,36 @@ transport_scp_push() {
 }
 
 transport_localcp_fetch() {
-    local url=$1
-    fetch_with_cp_program cp "$url"
+    local silodir url dir objPathMap
+    url=$1
+    objPathMap=$(lsSiloTracked "${pathspec[@]}")
+    silodir=$(getSiloObjectDir)
+    missing=
+    while read p; do
+        [ "$p" = "" ] && continue
+        [ -f "$silodir/$p" ] && continue
+        if ! [ -e "$url/$p" ]; then
+            missing=t
+            printSyncInfo MISSING $p "$objPathMap"
+            continue
+        fi
+        printSyncInfo COPY $p "$objPathMap"
+        if test $opt_dry_run; then
+            echo Would have run: cp "$url/$p" "$silodir/$p"
+        else
+            dir="$(dirname "$p")"
+            mkdirWithParentsPermissions "$silodir/$dir"
+            echo cp $p ...
+            rm -f "$silodir/$p-tmp"
+            cp "$url/$p" "$silodir/$p-tmp" || {
+                die "Failed to copy '$p'."
+            }
+            chmod a-w "$silodir/$p-tmp"
+            mv "$silodir/$p-tmp" "$silodir/$p"
+        fi
+    done
+    test $missing && die "Some files are missing at remote (see above)."
+    true
 }
 
 transport_localcp_push() {
@@ -764,7 +767,7 @@ transport_localcp_push() {
     while read p; do
         [ "$p" = "" ] && continue
         [ -f "$url/$p" ] && continue
-        printSyncInfo $p "$objPathMap"
+        printSyncInfo COPY $p "$objPathMap"
         if ! [ -f "$silodir/$p" ]; then
             printf 'Warning: %s not in silo store, skipping.\n' >&2 $p
             continue
@@ -781,6 +784,31 @@ transport_localcp_push() {
             mv "$url/$p-tmp" "$url/$p"
         fi
     done
+}
+
+printSyncInfo() {
+    local msg=$1
+    local p=$2
+    local objPathMap=$3
+    local sha1=$(cut -b 1-2,4-41 <<<"$p")
+    grep $sha1 <<<"$objPathMap" |
+        sed -e "s/^/    $msg /"
+}
+
+mkdirWithParentsPermissions() {
+    local d=$1
+    local parentd=$(dirname "$d")
+    if [ -d "$d" ]; then
+        return 0
+    fi
+    mkdir -p "$d"
+    if isSharedDir "$parentd"; then
+        chmod g+ws "$d"
+    fi
+}
+
+isSharedDir() {
+    test -g "$1"
 }
 
 findLineIn() {
