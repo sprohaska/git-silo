@@ -13,7 +13,7 @@ test_expect_success \
     setup_add_file repo1 a
 '
 
-test_expect_success \
+test_expect_success UNIX \
 "local fetch to shared repo should create subdir with shared permission" \
 '
     mkdir repo2 &&

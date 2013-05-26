@@ -10,7 +10,7 @@ test_expect_success \
     setup_user
 '
 
-test_expect_success \
+test_expect_success UNIX \
 "'git-silo add' should create subdir with shared permissions in shared repo." \
 '
     git init --shared &&

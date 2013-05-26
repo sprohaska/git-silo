@@ -18,7 +18,7 @@ test_expect_success \
     setup_add_file cpclone a
 '
 
-test_expect_success \
+test_expect_success UNIX \
 "'git-silo push' (cp) should create dir with shared permissions when pushing to shared repo." \
 '
     ( cd cpclone && git-silo push -- . )
