@@ -11,7 +11,7 @@ test_expect_success \
     ( cd single && git init && git-silo init )
 '
 
-test_expect_success \
+test_expect_success UNIX \
 "'git-silo init' should use shared permissions when repo is shared." \
 '
     mkdir shared &&
@@ -23,7 +23,7 @@ test_expect_success \
     )
 '
 
-test_expect_success \
+test_expect_success UNIX \
 "'git-silo init' should preserve read-only permissions of files when run twice." \
 '
     (

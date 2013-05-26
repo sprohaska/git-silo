@@ -1,5 +1,14 @@
 . ./sharness/sharness.sh
 
+case $(uname) in
+    MINGW*)
+        test_set_prereq WINDOWS
+        ;;
+    *)
+        test_set_prereq UNIX
+        ;;
+esac
+
 setup_user() {
     git config --global user.name "A U Thor" &&
     git config --global user.email "author@example.com"
