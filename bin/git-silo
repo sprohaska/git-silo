@@ -715,16 +715,26 @@ transport_scp_push() {
             echo Would have run: scp "$silodir/$p" "$url/$p"
         else
             dir=$(dirname $p)
-            ssh -n "$url_host" \
-                test -e "'\"$url_dir/$dir\"'" '||' \
-                mkdir -p "'\"$url_dir/$dir\"'" '&&' \
-                test -g "'\"$url_dir\"'" '&&' \
-                chmod g+ws "'\"$url_dir/$dir\"'" || true
+
+            ssh "$url_host" bash -s <<EOFPRG ||
+set -o errexit
+mkdir -p '$url_dir/$dir'
+if test -g '$url_dir'; then
+    chmod g+ws '$url_dir/$dir'
+fi
+EOFPRG
+            die "Failed to create remote silo directory."
+
             echo scp ...
             scp "$silodir/$p" "$url_host:\"$url_dir/$p-tmp\""
-            ssh -n "$url_host" \
-                chmod a-w "'$url_dir/$p-tmp'" '&&' \
-                mv "'$url_dir/$p-tmp'" "'$url_dir/$p'"
+
+            ssh "$url_host" bash -s <<EOFPRG ||
+set -o errexit
+chmod a-w '$url_dir/$p-tmp'
+mv '$url_dir/$p-tmp' '$url_dir/$p'
+EOFPRG
+            die "Failed to move remote file in place."
+
         fi
     done
 }
