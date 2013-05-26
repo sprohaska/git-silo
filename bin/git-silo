@@ -877,11 +877,15 @@ resolveGitDir() {
             ;;
         scp)
             read url_host url_dir <<< "$(parseUrl "$url")"
-            url_dir=$(ssh -n "$url_host" \
-                test -e "'$url_dir'" '&&' \
-                cd "'$url_dir'" '&&' \
-                cd '"$(git rev-parse --git-dir)"' '&&' \
-                pwd)
+            url_dir=$(
+                ssh "$url_host" bash -s <<EOFPRG
+set -o errexit
+test -e '$url_dir'
+cd '$url_dir'
+cd "\$(git rev-parse --git-dir)"
+pwd
+EOFPRG
+            )
             url=$url_host:$url_dir
             ;;
     esac
@@ -924,7 +928,13 @@ lsDir() {
 }
 
 lsRemoteDir() {
-    ssh -n "$1" test -e "'$2'" '&&' cd "'$2'" '&&' find . -type f | sed -e 's@^\./@@'
+    ssh "$1" bash -s <<EOFPRG |
+set -o errexit
+test -e '$2'
+cd '$2'
+find . -type f
+EOFPRG
+    sed -e 's@^\./@@'
 }
 
 allCurrentSiloObjects() {
