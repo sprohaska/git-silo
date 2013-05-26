@@ -42,6 +42,7 @@ test_expect_success \
     mkdir win &&
     (
         cd win &&
+        git init &&
         git silo init &&
         touch a &&
         git silo add a 2>log &&
