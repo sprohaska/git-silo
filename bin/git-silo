@@ -398,10 +398,11 @@ isBareRepo() {
 }
 
 getSiloProgram() {
-    local dir
-    dir=$(dirname "$0")
+    local dir prgpath
+    prgpath=$(tr '\\' / <<<"$0")
+    dir=$(dirname "$prgpath")
     dir=$(cd $dir; pwd)
-    base=$(basename "$0")
+    base=$(basename "$prgpath")
     printf '%s/%s' "$dir" "$base"
 }
 

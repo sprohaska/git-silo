@@ -36,4 +36,17 @@ test_expect_success UNIX \
     )
 '
 
+test_expect_success \
+"'git silo init' should set up correct filter path, in particular on Windows." \
+'
+    mkdir win &&
+    (
+        cd win &&
+        git silo init &&
+        touch a &&
+        git silo add a 2>log &&
+        ! grep error: log
+    )
+'
+
 test_done
