@@ -1,6 +1,6 @@
 #!/bin/bash
 
-test_description="git-silo fetch"
+test_description="git-silo fetch missing"
 
 . ./_testinglib.sh
 
@@ -18,30 +18,38 @@ test_expect_success \
 '
 
 test_expect_success \
+"setup original repo" \
+'
+    setup_file a &&
+    setup_file b &&
+    setup_repo orig &&
+    setup_add_file orig a &&
+    setup_add_file orig b &&
+    (
+        cd orig &&
+        rm -rf .git/silo/objects/$(cut -b 1-2 ../a.sha1)
+    )
+'
+
+test_expect_success \
 "'git-silo fetch' (scp) should not abort on missing objects." \
 '
-    echo a >a &&
-    ( openssl sha1 a | cut -d " " -f 2 > a.sha1 ) &&
-    mkdir repo1 &&
+    setup_clone_ssh orig reposcp &&
     (
-        cd repo1 &&
-        git init &&
+        cd reposcp &&
         git-silo init &&
-        touch .gitignore &&
-        git add .gitignore &&
-        git commit -m "initial commit" &&
-        git-silo init &&
-        echo a >a &&
-        ( openssl sha1 a | cut -d " " -f 2 > a.sha1 ) &&
-        echo b >b &&
-        ( openssl sha1 b | cut -d " " -f 2 > b.sha1 ) &&
-        git-silo add a b &&
-        git commit -m "Add a b"
-        rm -rf .git/silo/objects/$(cut -b 1-2 a.sha1)
-    ) &&
-    setup_clone_ssh repo1 repo2 &&
+        ( git-silo fetch -- . || true ) &&
+        git-silo checkout b &&
+        test -e b
+    )
+'
+
+test_expect_success \
+"'git-silo fetch' (cp) should not abort on missing objects." \
+'
+    git clone orig repocp &&
     (
-        cd repo2 &&
+        cd repocp &&
         git-silo init &&
         ( git-silo fetch -- . || true ) &&
         git-silo checkout b &&
