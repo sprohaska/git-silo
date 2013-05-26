@@ -388,8 +388,8 @@ cmd_init() {
 
 configFilters() {
     siloprg=$(getSiloProgram)
-    git config filter.silo.clean "$siloprg filter_clean %f"
-    git config filter.silo.smudge "$siloprg filter_smudge %f"
+    git config filter.silo.clean "\"$siloprg\" filter_clean %f"
+    git config filter.silo.smudge "\"$siloprg\" filter_smudge %f"
 }
 
 isBareRepo() {
