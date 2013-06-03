@@ -273,6 +273,12 @@ git-silo filter_clean <path>
 
   add               add untracked files for silo storage.
 
+                    The behavior of 'git silo add' and 'git add' can be
+                    configured with silo.add (default 'link').  For
+                    silo.add='link', a hardlink is stored and the original
+                    file's permissions set to read-only.  For silo.add='copy', a
+                    copy will be stored.
+
   checkout          replace placeholders with full content.
 
     --copy          copy files instead of using hardlinks.
@@ -423,11 +429,33 @@ computeSha1AndStoreContentInSilo() {
     objfile=$subdir/${sha1:2}
     if [ ! -e $objfile ]; then
         mkdirWithParentsPermissions "$subdir"
-        ln "$arg_file" "$objfile" >/dev/null 2>&1 ||
-        cp "$arg_file" "$objfile"
-        chmod a-w "$objfile"
+        case $(cfg_silo_add) in
+            link)
+                ln "$arg_file" "$objfile" >/dev/null 2>&1 ||
+                cp "$arg_file" "$objfile"
+                chmod a-w "$objfile"
+                ;;
+            copy)
+                cp "$arg_file" "$objfile"
+                chmod a-w "$objfile"
+                ;;
+        esac
     fi
     printf '%s\n' $sha1
+}
+
+cfg_silo_add() {
+    local option
+    option=$(git config silo.add) || option=link
+    case $option in
+        link|copy)
+            ;;  # OK
+        *)
+            printf "Warning: invalid option silo.add = '%s'; using 'link'.\n" >&2 "$option"
+            option=link
+            ;;
+    esac
+    echo $option
 }
 
 cmd_filter_smudge() {
