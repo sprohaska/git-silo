@@ -340,13 +340,18 @@ using git silo:
 
 # Known Issues
 
-  - scp performance on Windows might be poor.  The reason is explained in
+  - scp performance on Windows might be poor (only 1 MB/s on local network).
+    The reason is that openssh, which comes with msysgit, suffers from the
+    problem explained in
 
         http://support.microsoft.com/kb/823764
 
-    As a workaround, an alternative path to a network drive can be provided by
+    As a workaround, install PuTTY, configure it to use pageant, and tell
+    git-silo to use pscp.exe for copying files:
 
-        git config remote.origin.silourl <DRIVE:/...>
+        git config --global silo.scp 'c:/Program Files (x86)/PuTTY/pscp.exe'
+
+    You should now see transfer rates of several 10 MB/s on a local network.
 
   - git might fail with mmap out-of-memory on Windows.  Git on Windows is a
     32-bit executable, which fails for large files in some situations.  There is
@@ -690,11 +695,11 @@ cmd_fetch() {
 }
 
 transport_scp_fetch() {
-    local silodir url dir objPathMap
-    local url_host url_dir scpurl
+    config_ssh
+    local silodir url dir objPathMap remotep
+    local url_host url_dir
     url=$1
     read url_host url_dir <<< "$(parseUrl "$url")"
-    scpurl="$url_host:\"$url_dir\""
     objPathMap=$(lsSiloTracked "${pathspec[@]}")
     silodir=$(getSiloObjectDir)
     remoteObjs=$(lsRemoteDir "$url_host" "$url_dir")
@@ -708,14 +713,15 @@ transport_scp_fetch() {
             continue
         fi
         printSyncInfo COPY $p "$objPathMap"
+        remotep=$(makeScpUrl "$url_host" "$url_dir/$p")
         if test $opt_dry_run; then
-            echo Would have run: scp "$scpurl/$p" "$silodir/$p"
+            echo Would have run: "$scp" "$remotep" "$silodir/$p"
         else
             dir="$(dirname "$p")"
             mkdirWithParentsPermissions "$silodir/$dir"
-            echo scp $p ...
+            echo "$scp" ...
             rm -f "$silodir/$p-tmp"
-            scp "$scpurl/$p" "$silodir/$p-tmp" || {
+            "$scp" "$remotep" "$silodir/$p-tmp" || {
                 die "Failed to copy '$p'."
             }
             chmod a-w "$silodir/$p-tmp"
@@ -727,7 +733,8 @@ transport_scp_fetch() {
 }
 
 transport_scp_push() {
-    local silodir url objPathMap url_host url_dir existing
+    config_ssh
+    local silodir url objPathMap url_host url_dir existing remotep
     url=$1
     objPathMap=$(lsSiloTracked "${pathspec[@]}")
     silodir=$(getSiloObjectDir)
@@ -742,7 +749,8 @@ transport_scp_push() {
             continue
         fi
         if test $opt_dry_run; then
-            echo Would have run: scp "$silodir/$p" "$url/$p"
+            remotep=$(makeScpUrl "$url_host" "$url_dir/$p")
+            echo Would have run: "$scp" "$silodir/$p" "$remotep"
         else
             dir=$(dirname $p)
 
@@ -756,8 +764,9 @@ fi
 EOFPRG
             die "Failed to create remote silo directory."
 
-            echo scp ...
-            scp "$silodir/$p" "$url_host:\"$url_dir/$p-tmp\""
+            echo "$scp" ...
+            remotep=$(makeScpUrl "$url_host" "$url_dir/$p-tmp")
+            "$scp" "$silodir/$p" "$remotep"
 
             ssh "$url_host" bash -s <<EOFPRG ||
 set -o errexit
@@ -768,6 +777,33 @@ EOFPRG
 
         fi
     done
+}
+
+config_ssh() {
+    scp=$(git config silo.scp) || scp=scp
+    if ! scpargstyle=$(git config silo.scpargstyle); then
+        case "$scp" in
+            *pscp*)
+                scpargstyle=putty
+                ;;
+            *)
+                scpargstyle=openssh
+                ;;
+        esac
+    fi
+}
+
+makeScpUrl() {
+    local host=$1
+    local dir=$2
+    case $scpargstyle in
+        putty)
+            printf '%s:%s' "$host" "$dir"
+            ;;
+        openssh)
+            printf '%s:"%s"' "$host" "$dir"
+            ;;
+    esac
 }
 
 transport_localcp_fetch() {
@@ -885,8 +921,7 @@ lsSiloObjectsForHEAD() {
 
 getRemoteSiloUrl() {
     local url
-    url=$(git config remote.origin.silourl) ||
-        url=$(git config remote.origin.url) ||
+    url=$(git config remote.origin.url) ||
         die "Failed to get URL of 'origin'."
     if grep -q '^ssh://' <<< "$url"; then
         url=$(sed -e 's@ssh://@@' -e 's@/@:/@' -e 's@//@/@' \
