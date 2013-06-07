@@ -497,7 +497,7 @@ validateHaveSilo() {
 
 getSiloObjectDir() {
     local silodir
-    silodir=$(git rev-parse --git-dir)/silo/objects
+    silodir=$(cd "$(git rev-parse --git-dir)" && pwd)/silo/objects
     printf '%s' "$silodir"
 }
 
