@@ -427,7 +427,7 @@ computeSha1AndStoreContentInSilo() {
     sha1=$(computeSha1) || die "Failed to compute sha1."
     subdir=$silodir/${sha1:0:2}
     objfile=$subdir/${sha1:2}
-    if [ ! -e $objfile ]; then
+    if [ ! -e "$objfile" ]; then
         mkdirWithParentsPermissions "$subdir"
         case $(cfg_silo_add) in
             link)
@@ -497,7 +497,9 @@ validateHaveSilo() {
 
 getSiloObjectDir() {
     local silodir
-    silodir=$(cd "$(git rev-parse --git-dir)" && pwd)/silo/objects
+    silodir=$(git rev-parse --git-dir)
+    silodir=$(cd "$silodir" && pwd)
+    silodir="$silodir/silo/objects"
     printf '%s' "$silodir"
 }
 
@@ -945,7 +947,7 @@ gcSiloObjects() {
         fi
         return 0
     fi
-    ( cd $silodir &&
+    ( cd "$silodir" &&
         xargs rm -f <<< "$delete" &&
         rmdir * 2>/dev/null ||
         true )
