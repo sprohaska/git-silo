@@ -576,7 +576,7 @@ cmd_checkout() {
 }
 
 linkCount() {
-    ls -l $1 | sed -e 's/  */ /' | cut -d ' ' -f 2
+    ls -l "$1" | sed -e 's/  */ /' | cut -d ' ' -f 2
 }
 
 lsUntrackedFiles() {
