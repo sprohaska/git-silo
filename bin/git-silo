@@ -3,6 +3,111 @@
 set -o errexit
 set -o nounset
 
+usage() {
+    cat <<EOFTXT
+git-silo init
+git-silo add [--] [<file>...]
+git-silo checkout [--copy] [--link] -- [<file>...]
+git-silo status [<path>...]
+git-silo push [--] [<path>... | config remote.origin.silopush]
+git-silo fetch [--] [<path>... | config remote.origin.silofetch]
+git-silo gc [-f|--force] [-n <number>] [--dry-run] [--no-tags]
+git-silo fsck
+git-silo dedup <repo>...
+git-silo filter_smudge <path>
+git-silo filter_clean <path>
+
+  init              initialize silo in gitdir.
+
+  add               add untracked files for silo storage.
+
+                    The behavior of 'git silo add' and 'git add' can be
+                    configured with silo.add (default 'link').  For
+                    silo.add='link', a hardlink is stored and the original
+                    file's permissions set to read-only.  For silo.add='copy', a
+                    copy will be stored.
+
+  checkout          replace placeholders with full content.
+
+    --copy          copy files instead of using hardlinks.
+
+    --link          replace checked-out copies with hardlinks.
+
+  status            print status of files stored in silo.
+
+  push              push silo files for current HEAD.
+
+    <path>...       push will be limited to the given paths.  Default paths can
+                    be configured in remote.origin.silopush.  See note on paths
+                    below.
+
+  fetch             fetch silo files for current HEAD.
+
+    <path>...       fetch will be limited to the given paths.  Default paths can
+                    be configured in remote.origin.silofetch.  See note on paths
+                    below.
+
+  gc                delete silo files that are not directly referenced by
+                    HEAD, tags or tips of branches and remove unused
+                    entries in .gitattributes.
+
+    -f|--force      run gc even with unstaged changes.  Note that gc might
+                    modify and commit .gitattributes.
+
+    -n <number>     keep only objects reachable from the latest <number>
+                    commits at each head, including tags.
+
+    --no-tags       remove objects that are reachable only via a tag.
+
+    --dry-run       print only what would be deleted.
+
+  fsck              verify silo storage.
+
+  dedup             create hardlinks between repositories.  Repositories listed
+                    later get linked to repositories listed earlier.
+
+  filter_smudge     smudge filter (see gitattributes); receives sha1 from git
+                    and expands it to corresponding content from silo.  Large
+                    files will not be expanded to avoid crashes with msysgit.
+
+  filter_clean      clean filter (see gitattributes); stores file in silo and
+                    returns sha1 to git.
+
+You must always either provide a path on the command line or via the config
+file for push and fetch, otherwise git-silo will refuse to transfer files to
+protect you from accidentally starting large transfers.  Use path '.' to
+transfer everything.
+
+Git can be told to use git silo for all file of a certain type (based on a glob
+pattern).  This avoids the need to explicitly calling 'git silo add' when a file
+is added for the first time; a simple 'git add' will immediately use git silo.
+For example, add the following line to .gitattributes to handle all mov files
+using git silo:
+
+    *.mov filter=silo -text
+
+# Known Issues
+
+  - scp performance on Windows might be poor (only 1 MB/s on local network).
+    The reason is that openssh, which comes with msysgit, suffers from the
+    problem explained in
+
+        http://support.microsoft.com/kb/823764
+
+    As a workaround, install PuTTY, configure it to use pageant, and tell
+    git-silo to use pscp.exe for copying files:
+
+        git config --global silo.scp 'c:/Program Files (x86)/PuTTY/pscp.exe'
+
+    You should now see transfer rates of several 10 MB/s on a local network.
+
+  - git might fail with mmap out-of-memory on Windows.  Git on Windows is a
+    32-bit executable, which fails for large files in some situations.  There is
+    now known workaround.
+
+EOFTXT
+}
+
 main() {
     argparse "$@"
     validateGitVersion
@@ -253,111 +358,6 @@ argparse_sync() {
             ;;
         esac
     done
-}
-
-usage() {
-    cat <<EOFTXT
-git-silo init
-git-silo add [--] [<file>...]
-git-silo checkout [--copy] [--link] -- [<file>...]
-git-silo status [<path>...]
-git-silo push [--] [<path>... | config remote.origin.silopush]
-git-silo fetch [--] [<path>... | config remote.origin.silofetch]
-git-silo gc [-f|--force] [-n <number>] [--dry-run] [--no-tags]
-git-silo fsck
-git-silo dedup <repo>...
-git-silo filter_smudge <path>
-git-silo filter_clean <path>
-
-  init              initialize silo in gitdir.
-
-  add               add untracked files for silo storage.
-
-                    The behavior of 'git silo add' and 'git add' can be
-                    configured with silo.add (default 'link').  For
-                    silo.add='link', a hardlink is stored and the original
-                    file's permissions set to read-only.  For silo.add='copy', a
-                    copy will be stored.
-
-  checkout          replace placeholders with full content.
-
-    --copy          copy files instead of using hardlinks.
-
-    --link          replace checked-out copies with hardlinks.
-
-  status            print status of files stored in silo.
-
-  push              push silo files for current HEAD.
-
-    <path>...       push will be limited to the given paths.  Default paths can
-                    be configured in remote.origin.silopush.  See note on paths
-                    below.
-
-  fetch             fetch silo files for current HEAD.
-
-    <path>...       fetch will be limited to the given paths.  Default paths can
-                    be configured in remote.origin.silofetch.  See note on paths
-                    below.
-
-  gc                delete silo files that are not directly referenced by
-                    HEAD, tags or tips of branches and remove unused
-                    entries in .gitattributes.
-
-    -f|--force      run gc even with unstaged changes.  Note that gc might
-                    modify and commit .gitattributes.
-
-    -n <number>     keep only objects reachable from the latest <number>
-                    commits at each head, including tags.
-
-    --no-tags       remove objects that are reachable only via a tag.
-
-    --dry-run       print only what would be deleted.
-
-  fsck              verify silo storage.
-
-  dedup             create hardlinks between repositories.  Repositories listed
-                    later get linked to repositories listed earlier.
-
-  filter_smudge     smudge filter (see gitattributes); receives sha1 from git
-                    and expands it to corresponding content from silo.  Large
-                    files will not be expanded to avoid crashes with msysgit.
-
-  filter_clean      clean filter (see gitattributes); stores file in silo and
-                    returns sha1 to git.
-
-You must always either provide a path on the command line or via the config
-file for push and fetch, otherwise git-silo will refuse to transfer files to
-protect you from accidentally starting large transfers.  Use path '.' to
-transfer everything.
-
-Git can be told to use git silo for all file of a certain type (based on a glob
-pattern).  This avoids the need to explicitly calling 'git silo add' when a file
-is added for the first time; a simple 'git add' will immediately use git silo.
-For example, add the following line to .gitattributes to handle all mov files
-using git silo:
-
-    *.mov filter=silo -text
-
-# Known Issues
-
-  - scp performance on Windows might be poor (only 1 MB/s on local network).
-    The reason is that openssh, which comes with msysgit, suffers from the
-    problem explained in
-
-        http://support.microsoft.com/kb/823764
-
-    As a workaround, install PuTTY, configure it to use pageant, and tell
-    git-silo to use pscp.exe for copying files:
-
-        git config --global silo.scp 'c:/Program Files (x86)/PuTTY/pscp.exe'
-
-    You should now see transfer rates of several 10 MB/s on a local network.
-
-  - git might fail with mmap out-of-memory on Windows.  Git on Windows is a
-    32-bit executable, which fails for large files in some situations.  There is
-    now known workaround.
-
-EOFTXT
 }
 
 validateGitVersion() {
