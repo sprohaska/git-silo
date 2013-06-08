@@ -860,6 +860,9 @@ transport_localcp_fetch() {
 transport_localcp_push() {
     local silodir url objPathMap url_host url_dir existing
     url=$1
+    if ! [ -d "$url" ]; then
+        die "Missing silo dir '$url' (run 'git-silo init' at remote to create it)."
+    fi
     objPathMap=$(lsSiloTracked "${pathspec[@]}")
     silodir=$(getSiloObjectDir)
     while read p; do

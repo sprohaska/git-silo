@@ -21,16 +21,11 @@ test_expect_success \
 test_expect_success UNIX \
 "'git-silo push' (cp) should create dir with shared permissions when pushing to shared repo." \
 '
-    ( cd cpclone && git-silo push -- . )
+    ( cd cpclone && git-silo push -- . ) &&
     ( cd repo1 && isSharedDir .git/silo/objects/$(cut -b 1-2 ../a.sha1) )
 '
 
-if ! test_have_prereq LOCALHOST; then
-    skip_all='skipping tests that require ssh to localhost.'
-    test_done
-fi
-
-test_expect_success \
+test_expect_success LOCALHOST \
 "setup (ssh)" \
 '
     setup_clone_ssh repo1 scpclone &&
@@ -38,14 +33,22 @@ test_expect_success \
     setup_add_file scpclone b
 '
 
-test_expect_success \
+test_expect_success LOCALHOST \
 "'git-silo push' (scp) should create dir with shared permissions when pushing to shared repo." \
 '
     ( cd scpclone && git-silo push -- . ) &&
     ( cd repo1 && isSharedDir .git/silo/objects/$(cut -b 1-2 ../b.sha1) )
 '
 
-test_expect_success \
+test_expect_success UNIX \
+"'git-silo push' (cp) should fail with 'missing silo dir' when pushing to unitialized repo." \
+'
+    ( cd repo1 && rm -rf .git/silo ) &&
+    ( cd cpclone && ! git-silo push -- . 2>../stderr ) &&
+    grep -qi "missing silo dir" stderr
+'
+
+test_expect_success LOCALHOST \
 "'git-silo push' (scp) should fail with 'missing silo dir' when pushing to unitialized repo." \
 '
     ( cd repo1 && rm -rf .git/silo ) &&
