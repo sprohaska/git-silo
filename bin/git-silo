@@ -754,15 +754,19 @@ transport_scp_push() {
         else
             dir=$(dirname $p)
 
-            ssh "$url_host" bash -s <<EOFPRG ||
+            ssh "$url_host" bash -s 1>&2 <<EOFPRG ||
 set -o errexit
 test -e '$url_dir/$dir' && exit 0
-mkdir -p '$url_dir/$dir'
+if ! test -d '$url_dir'; then
+    echo "Missing silo dir '$url_dir' (run 'git-silo init' at remote to create it)."
+    exit 1
+fi
+mkdir '$url_dir/$dir'
 if test -g '$url_dir'; then
     chmod g+ws '$url_dir/$dir'
 fi
 EOFPRG
-            die "Failed to create remote silo directory."
+            die "Failed to create remote silo object subdirectory."
 
             echo "$scp" ...
             remotep=$(makeScpUrl "$url_host" "$url_dir/$p-tmp")

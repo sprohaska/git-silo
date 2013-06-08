@@ -45,4 +45,15 @@ test_expect_success \
     ( cd repo1 && isSharedDir .git/silo/objects/$(cut -b 1-2 ../b.sha1) )
 '
 
+test_expect_success \
+"'git-silo push' (scp) should fail with 'missing silo dir' when pushing to unitialized repo." \
+'
+    ( cd repo1 && rm -rf .git/silo ) &&
+    (
+        cd scpclone &&
+        ! git-silo push -- . 2>../stderr
+    ) &&
+    grep -qi "missing silo dir" stderr
+'
+
 test_done
