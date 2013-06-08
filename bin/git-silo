@@ -85,7 +85,11 @@ git silo:
 
 silo.add (default 'link'): Controls behaviour of 'git silo add'.  If set to
 'link', a hardlink is stored and the original file's permissions set to
-read-only.  If set to 'copy', a copy will be stored.
+read-only.  If set to 'copy', a copy will be stored.  Always storing a copy
+might be useful if you want to keep the file open in another application, like
+Word, and use 'git-silo add' repeatedly.  When creating a hardlink, the file
+permissions are changed to read-only, which might confuse applications like
+Word.
 
 silo.scp (default unset): Tells git-silo which program to use for scp.
 
