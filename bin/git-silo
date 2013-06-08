@@ -19,13 +19,8 @@ git-silo filter_clean <path>
 
   init              initialize silo in gitdir.
 
-  add               add untracked files for silo storage.
-
-                    The behavior of 'git silo add' and 'git add' can be
-                    configured with silo.add (default 'link').  For
-                    silo.add='link', a hardlink is stored and the original
-                    file's permissions set to read-only.  For silo.add='copy', a
-                    copy will be stored.
+  add               add untracked files for silo storage.  Creates hardlink or
+                    copy depending on value of config silo.add (see below).
 
   checkout          replace placeholders with full content.
 
@@ -85,6 +80,21 @@ For example, add the following line to .gitattributes to handle all mov files
 using git silo:
 
     *.mov filter=silo -text
+
+# Configuration variables
+
+silo.add (default 'link'): Controls behaviour of 'git silo add'.  If set to
+'link', a hardlink is stored and the original file's permissions set to
+read-only.  If set to 'copy', a copy will be stored.
+
+silo.scp (default unset): Tells git-silo which program to use for scp.
+
+silo.scpargstyle (default 'openssh'): Tells git-silo how to pass arguments to
+scp.  If set to 'openssh', openssh path quoting will be use.  If set to 'putty',
+arguments will be quoted as require by PuTTY's pscp.exe.  The default is
+'openssh'.  If silo.scp is set to a path that contains 'pscp', silo.scpargstyle
+will default to 'putty' and arguments will be passed as required by PuTTY's
+pscp.exe.
 
 # Known Issues
 
