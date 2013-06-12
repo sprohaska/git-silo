@@ -10,19 +10,11 @@ test_expect_success \
 "setup" \
 '
     setup_user &&
-    setup_file a &&
-    setup_file b &&
     setup_repo repo1 --shared &&
     git clone repo1 cpclone &&
     ( cd cpclone && git-silo init ) &&
+    setup_file a &&
     setup_add_file cpclone a
-'
-
-test_expect_success UNIX \
-"'git-silo push' (cp) should create dir with shared permissions when pushing to shared repo." \
-'
-    ( cd cpclone && git-silo push -- . ) &&
-    ( cd repo1 && isSharedDir .git/silo/objects/$(cut -b 1-2 ../a.sha1) )
 '
 
 test_expect_success LOCALHOST \
@@ -30,7 +22,15 @@ test_expect_success LOCALHOST \
 '
     setup_clone_ssh repo1 scpclone &&
     ( cd scpclone && git-silo init ) &&
+    setup_file b &&
     setup_add_file scpclone b
+'
+
+test_expect_success UNIX \
+"'git-silo push' (cp) should create dir with shared permissions when pushing to shared repo." \
+'
+    ( cd cpclone && git-silo push -- . ) &&
+    ( cd repo1 && isSharedDir .git/silo/objects/$(cut -b 1-2 ../a.sha1) )
 '
 
 test_expect_success LOCALHOST \
