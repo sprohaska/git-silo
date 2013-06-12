@@ -41,6 +41,38 @@ test_expect_success LOCALHOST \
 '
 
 test_expect_success UNIX \
+"'git-silo push' (cp) should set group write bit in shared repo even when file in local repo is not group readable." \
+'
+    setup_file c &&
+    setup_add_file cpclone c &&
+    (
+        cd cpclone &&
+        chmod g-r c &&
+        git-silo push -- .
+    ) &&
+    (
+        cd repo1 &&
+        ( ls -l .git/silo/objects/$(cut -b 1-2 ../c.sha1)/$(cut -b 3-40 ../c.sha1) | grep -q "^-r--r--" )
+    )
+'
+
+test_expect_success LOCALHOST \
+"'git-silo push' (scp) should set group write bit in shared repo even when file in local repo is not group readable." \
+'
+    setup_file d &&
+    setup_add_file scpclone d &&
+    (
+        cd scpclone &&
+        chmod g-r d &&
+        git-silo push -- .
+    ) &&
+    (
+        cd repo1 &&
+        ( ls -l .git/silo/objects/$(cut -b 1-2 ../d.sha1)/$(cut -b 3-40 ../d.sha1) | grep -q "^-r--r--" )
+    )
+'
+
+test_expect_success UNIX \
 "'git-silo push' (cp) should fail with 'missing silo dir' when pushing to unitialized repo." \
 '
     ( cd repo1 && rm -rf .git/silo ) &&

@@ -789,6 +789,7 @@ EOFPRG
             ssh "$url_host" bash -s <<EOFPRG ||
 set -o errexit
 chmod a-w '$url_dir/$p-tmp'
+chmod g+r '$url_dir/$p-tmp'
 mv '$url_dir/$p-tmp' '$url_dir/$p'
 EOFPRG
             die "Failed to move remote file in place."
@@ -882,6 +883,7 @@ transport_localcp_push() {
             rm -f "$url/$p-tmp"
             cp "$silodir/$p" "$url/$p-tmp"
             chmod a-w "$url/$p-tmp"
+            chmod g+r "$url/$p-tmp"
             mv "$url/$p-tmp" "$url/$p"
         fi
     done
