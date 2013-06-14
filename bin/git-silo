@@ -1179,7 +1179,7 @@ lsAllDedupCandidates() {
     for r in "${arg_repos[@]}"; do
         lsDedupCandidates "$r"
     done |
-    sort -k 1,41 -s
+    sort -k 1.1,1.41 -s
 }
 
 lsDedupCandidates() {

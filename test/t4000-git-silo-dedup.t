@@ -4,6 +4,15 @@ test_description="git-silo dedup"
 
 . ./_testinglib.sh
 
+assertLinkCount() {
+    local path=$1
+    local expected=$2
+    if ! test $(linkCount "$path") -eq $expected; then
+        echo "Wrong link count $path (expected $expected)."
+        return 1
+    fi
+}
+
 test_expect_success \
 "setup user" \
 '
@@ -23,17 +32,17 @@ test_expect_success \
         git-silo fetch -- . &&
         git-silo checkout .
     ) &&
-    ( test $(linkCount repo1/a) -eq 2 || ( echo "Wrong link count." && false ) ) &&
-    ( test $(linkCount repo2/a) -eq 2 || ( echo "Wrong link count." && false ) ) &&
-    git-silo dedup repo1 repo2 &&
-    ( test $(linkCount repo1/a) -eq 3 || ( echo "Wrong link count." && false ) ) &&
-    ( test $(linkCount repo2/a) -eq 1 || ( echo "Wrong link count." && false ) ) &&
+    assertLinkCount repo1/a 2 &&
+    assertLinkCount repo2/a 2 &&
+    git-silo dedup repo2 repo1 &&
+    assertLinkCount repo1/a 1 &&
+    assertLinkCount repo2/a 3 &&
     (
-        cd repo2 &&
+        cd repo1 &&
         rm -r a &&
         git-silo checkout .
     ) &&
-    ( test $(linkCount repo2/a) -eq 4 || ( echo "Wrong link count." && false ) )
+    assertLinkCount repo2/a 4
 '
 
 test_done
