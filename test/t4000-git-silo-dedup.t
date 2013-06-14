@@ -11,7 +11,7 @@ test_expect_success \
 '
 
 test_expect_success \
-"git dedup should create hardlinks between two repositories" \
+"git dedup should create hardlinks between two repositories in expected order" \
 '
     setup_file a &&
     setup_repo repo1 &&
@@ -23,11 +23,16 @@ test_expect_success \
         git-silo fetch -- . &&
         git-silo checkout . &&
         ( test $(linkCount a) -eq 2 || ( echo "Wrong link count." && false ) ) &&
-        git-silo dedup ../repo1 . &&
+        git-silo dedup ../repo1 .
+    ) &&
+    ( test $(linkCount repo1/a) -eq 3 || ( echo "Wrong link count." && false ) ) &&
+    ( test $(linkCount repo2/a) -eq 1 || ( echo "Wrong link count." && false ) ) &&
+    (
+        cd repo2 &&
         rm -r a &&
-        git-silo checkout . &&
-        ( test $(linkCount a) -eq 4 || ( echo "Wrong link count." && false ) )
-    )
+        git-silo checkout .
+    ) &&
+    ( test $(linkCount repo2/a) -eq 4 || ( echo "Wrong link count." && false ) )
 '
 
 test_done
