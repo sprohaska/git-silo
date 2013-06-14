@@ -21,10 +21,11 @@ test_expect_success \
         cd repo2 &&
         git-silo init &&
         git-silo fetch -- . &&
-        git-silo checkout . &&
-        ( test $(linkCount a) -eq 2 || ( echo "Wrong link count." && false ) ) &&
-        git-silo dedup ../repo1 .
+        git-silo checkout .
     ) &&
+    ( test $(linkCount repo1/a) -eq 2 || ( echo "Wrong link count." && false ) ) &&
+    ( test $(linkCount repo2/a) -eq 2 || ( echo "Wrong link count." && false ) ) &&
+    git-silo dedup repo1 repo2 &&
     ( test $(linkCount repo1/a) -eq 3 || ( echo "Wrong link count." && false ) ) &&
     ( test $(linkCount repo2/a) -eq 1 || ( echo "Wrong link count." && false ) ) &&
     (
