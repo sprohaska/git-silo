@@ -735,7 +735,7 @@ transport_scp_fetch() {
             mkdirWithParentsPermissions "$silodir/$dir"
             echo "$scp" ...
             rm -f "$silodir/$p-tmp"
-            "$scp" "$remotep" "$silodir/$p-tmp" || {
+            exec_scp "$remotep" "$silodir/$p-tmp" || {
                 die "Failed to copy '$p'."
             }
             chmod a-w "$silodir/$p-tmp"
@@ -784,7 +784,7 @@ EOFPRG
 
             echo "$scp" ...
             remotep=$(makeScpUrl "$url_host" "$url_dir/$p-tmp")
-            "$scp" "$silodir/$p" "$remotep"
+            exec_scp "$silodir/$p" "$remotep"
 
             ssh "$url_host" bash -s <<EOFPRG ||
 set -o errexit
@@ -810,6 +810,16 @@ config_ssh() {
                 ;;
         esac
     fi
+}
+
+exec_scp() {
+    local defaultargs=
+    case $scpargstyle in
+        putty)
+            defaultargs=-batch
+            ;;
+    esac
+    "$scp" $defaultargs "$@"
 }
 
 makeScpUrl() {

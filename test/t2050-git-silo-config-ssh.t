@@ -10,9 +10,13 @@ PSCP=$(pwd)/pscp.exe
 cat >"$PSCP" <<"EOFTXT"
 #!/bin/bash
 
-echo "$1" >pscp-arg1
-echo "$2" >pscp-arg2
-localpath=$(sed -e 's/.*localhost://' <<<"$2")
+[ "$1" = "-batch" ] || {
+    echo "Error: pscp wasn't called with first arg -batch."
+    exit 1
+}
+echo "$2" >pscp-arg1
+echo "$3" >pscp-arg2
+localpath=$(sed -e 's/.*localhost://' <<<"$3")
 touch "$localpath"
 EOFTXT
 chmod a+x "$PSCP"
