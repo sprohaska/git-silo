@@ -100,6 +100,9 @@ arguments will be quoted as require by PuTTY's pscp.exe.  The default is
 will default to 'putty' and arguments will be passed as required by PuTTY's
 pscp.exe.
 
+GIT_SSH (environment variable): If set, git-silo will use the specified program
+instead of ssh.
+
 # Known Issues
 
   - scp performance on Windows might be poor (only 1 MB/s on local network).
