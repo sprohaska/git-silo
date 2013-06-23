@@ -11,7 +11,7 @@ cat >"$PSCP" <<"EOFTXT"
 #!/bin/bash
 
 [ "$1" = "-batch" ] || {
-    echo "Error: pscp wasn't called with first arg -batch."
+    echo "Error: pscp wasn't called with first arg -batch." >&2
     exit 1
 }
 echo "$2" >pscp-arg1
@@ -62,6 +62,47 @@ test_expect_success \
         git-silo push -- . &&
         test -e pscp-arg2 &&
         egrep -q 'localhost:[^\"]*[0-9a-f]{38}(-tmp)?$' pscp-arg2
+    )
+"
+
+
+PLINK=$(pwd)/plink.exe
+cat >"$PLINK" <<"EOFTXT"
+#!/bin/bash
+
+[ "$1" = "-batch" ] || {
+    echo "Error: plink wasn't called with first arg -batch." >&2
+    exit 1
+}
+shift
+
+touch plink-called
+
+ssh "$@"
+EOFTXT
+chmod a+x "$PLINK"
+export GIT_SSH=$PLINK
+
+test_expect_success \
+"'git-silo fetch' (scp) should use custom plink from GIT_SSH." \
+"
+    (
+        cd clonefetch &&
+        git-silo init &&
+        rm -f plink-called &&
+        git-silo fetch -- . &&
+        test -e plink-called
+    )
+"
+
+test_expect_success \
+"'git-silo push' (scp) should use custom plink from GIT_SSH." \
+"
+    (
+        cd clonepush &&
+        rm -f plink-called &&
+        git-silo push -- . &&
+        test -e plink-called
     )
 "
 

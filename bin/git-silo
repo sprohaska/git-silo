@@ -768,7 +768,7 @@ transport_scp_push() {
         else
             dir=$(dirname $p)
 
-            ssh "$url_host" bash -s 1>&2 <<EOFPRG ||
+            exec_ssh "$url_host" bash -s 1>&2 <<EOFPRG ||
 set -o errexit
 test -e '$url_dir/$dir' && exit 0
 if ! test -d '$url_dir'; then
@@ -786,7 +786,7 @@ EOFPRG
             remotep=$(makeScpUrl "$url_host" "$url_dir/$p-tmp")
             exec_scp "$silodir/$p" "$remotep"
 
-            ssh "$url_host" bash -s <<EOFPRG ||
+            exec_ssh "$url_host" bash -s <<EOFPRG ||
 set -o errexit
 chmod a-w '$url_dir/$p-tmp'
 chmod g+r '$url_dir/$p-tmp'
@@ -820,6 +820,17 @@ exec_scp() {
             ;;
     esac
     "$scp" $defaultargs "$@"
+}
+
+exec_ssh() {
+    local defaultargs=
+    local ssh=${GIT_SSH:-ssh}
+    case "$ssh" in
+        *plink*)
+            defaultargs=-batch
+            ;;
+    esac
+    "$ssh" $defaultargs "$@"
 }
 
 makeScpUrl() {
@@ -976,7 +987,7 @@ resolveGitDir() {
         scp)
             read url_host url_dir <<< "$(parseUrl "$url")"
             url_dir=$(
-                ssh "$url_host" bash -s <<EOFPRG
+                exec_ssh "$url_host" bash -s <<EOFPRG
 set -o errexit
 test -e '$url_dir'
 cd '$url_dir'
@@ -1026,7 +1037,7 @@ lsDir() {
 }
 
 lsRemoteDir() {
-    ssh "$1" bash -s <<EOFPRG |
+    exec_ssh "$1" bash -s <<EOFPRG |
 set -o errexit
 test -e '$2'
 cd '$2'
