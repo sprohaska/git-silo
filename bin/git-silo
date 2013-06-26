@@ -403,12 +403,12 @@ cmd_init() {
     gitdir=$(git rev-parse --git-dir)
     echo "Initializing silo in '$gitdir'."
     mkdir -p "$gitdir/silo/objects"
-    isSharedDir "$gitdir/objects" &&
-        echo "Using shared permissions." &&
-        (
-            find "$gitdir/silo" -type d -print0 |
-            xargs -0 chmod g+ws
-        )
+    if isSharedDir "$gitdir/objects"; then
+        echo "Using shared permissions."
+        find "$gitdir/silo" -type d -print0 | xargs -0 chmod g+ws || {
+            echo >&2 "Warning: shared permissions might be incompletely initialized (see above)."
+        }
+    fi
     if ! isBareRepo; then
         configFilters
     fi
