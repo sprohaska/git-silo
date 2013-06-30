@@ -107,25 +107,46 @@ test_expect_success \
 "
 
 test_expect_success \
-"'git-silo --dry-run' should not report cleanup of .gitattributes if unchanged." \
+"'git-silo' without '--gitattributes' should leave .gitattributes alone." \
 '
-    ! ( git silo gc --dry-run | grep "Would clean.*gitattributes" )
-'
-
-test_expect_success \
-"'git-silo --dry-run' should leave .gitattributes alone." \
-'
-    git checkout HEAD^ -- .gitattributes &&
-    git commit -m "Reset gitattributes" &&
+    echo a >a &&
+    git-silo add a &&
+    git commit -m "Add a" &&
+    git rm a &&
+    git commit -m "Remove a" &&
     cp .gitattributes expected &&
-    ( git silo gc --dry-run | grep "Would clean.*gitattributes" ) &&
+    git silo gc &&
     test_cmp expected .gitattributes
 '
 
 test_expect_success \
-"'git-silo --dry-run' should report cleanup of .gitattributes." \
+"'git-silo --gitattributes' should clean up .gitattributes" \
 '
-    git silo gc --dry-run | grep "Would clean.*gitattributes"
+    grep ^/b .gitattributes >expected &&
+    git silo gc --gitattributes &&
+    test_cmp expected .gitattributes
+'
+
+test_expect_success \
+"'git-silo --gitattributes --dry-run' should not report cleanup of .gitattributes if unchanged." \
+'
+    ! ( git silo gc --gitattributes --dry-run | grep "Would clean.*gitattributes" )
+'
+
+test_expect_success \
+"'git-silo --gitattributes --dry-run' should report planned cleanup but leave .gitattributes alone." \
+'
+    git checkout HEAD^ -- .gitattributes &&
+    git commit -m "Reset gitattributes" &&
+    cp .gitattributes expected &&
+    ( git silo gc --gitattributes --dry-run | grep "Would clean.*gitattributes" ) &&
+    test_cmp expected .gitattributes
+'
+
+test_expect_success \
+"'git-silo --gitattributes --dry-run' should report cleanup of .gitattributes." \
+'
+    git silo gc --gitattributes --dry-run | grep "Would clean.*gitattributes"
 '
 
 test_done

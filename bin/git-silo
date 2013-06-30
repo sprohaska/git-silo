@@ -11,7 +11,7 @@ git-silo checkout [--copy] [--link] -- [<file>...]
 git-silo status [<path>...]
 git-silo push [--] [<path>... | config remote.origin.silopush]
 git-silo fetch [--] [<path>... | config remote.origin.silofetch]
-git-silo gc [-f|--force] [-n <number>] [--dry-run] [--no-tags]
+git-silo gc [--gitattributes] [-f|--force] [-n <number>] [--dry-run] [--no-tags]
 git-silo fsck
 git-silo dedup <repo>...
 git-silo filter_smudge <path>
@@ -43,8 +43,10 @@ git-silo filter_clean <path>
                     below.
 
   gc                delete silo files that are not directly referenced by
-                    HEAD, tags or tips of branches and remove unused
-                    entries in .gitattributes.
+                    HEAD, tags or tips of branches.
+
+    --gitattributes Also remove unused entries from .gitattributes and create a
+                    commit if .gitattributes has been changed.
 
     -f|--force      run gc even with unstaged changes.  Note that gc might
                     modify and commit .gitattributes.
@@ -168,6 +170,7 @@ argparse_gc() {
     opt_n=
     opt_dry_run=
     opt_tags=t
+    opt_gitattributes=
     while [ $# -ge 1 ]; do
         case "$1" in
         -h|--help)
@@ -180,6 +183,10 @@ argparse_gc() {
             ;;
         --dry-run)
             opt_dry_run=t
+            shift
+            ;;
+        --gitattributes)
+            opt_gitattributes=t
             shift
             ;;
         --no-tags)
@@ -1009,7 +1016,9 @@ cmd_gc() {
     test $opt_force || validateNoUnstagedChanges
     validateHaveSilo
     gcSiloObjects
-    gcAllGitattributes
+    if test $opt_gitattributes; then
+        gcAllGitattributes
+    fi
 }
 
 gcSiloObjects() {
