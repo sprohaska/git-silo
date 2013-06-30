@@ -52,7 +52,9 @@ git-silo filter_clean <path>
                     modify and commit .gitattributes.
 
     -n <number>     keep only objects reachable from the latest <number>
-                    commits at each head, including tags.
+                    commits at each local head, including tags.  Note that
+                    objects that are reachable only from a remote tracking
+                    branch will be deleted.
 
     --no-tags       remove objects that are reachable only via a tag.
 
