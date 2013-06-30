@@ -1133,7 +1133,7 @@ gcGitattributes() {
     dir=$(dirname $attr)
     tmpfile=$attr-tmp$$
     reEntry='^/.*filter=silo -text$'
-    grep -v "$reEntry" $attr >$tmpfile && true
+    grep -v "$reEntry" $attr >$tmpfile || true
     while read path rest; do
         if [ -f "$dir/$path" ]; then
             printf '%s filter=silo -text\n' "$path" >>$tmpfile
