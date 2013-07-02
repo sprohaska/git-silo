@@ -747,9 +747,13 @@ transport_scp_fetch() {
             mkdirWithParentsPermissions "$silodir/$dir"
             echo "$scp" ...
             rm -f "$silodir/$p-tmp"
-            exec_scp "$remotep" "$silodir/$p-tmp" || {
-                die "Failed to copy '$p'."
-            }
+            # Avoid absolute local paths to work around msysgit limitation.
+            # scp d:/... would fail.
+            (
+                cd "$silodir" &&
+                exec_scp "$remotep" "$p-tmp"
+            ) || die "Failed to copy '$p'."
+
             chmod a-w "$silodir/$p-tmp"
             mv "$silodir/$p-tmp" "$silodir/$p"
         fi
@@ -796,7 +800,12 @@ EOFPRG
 
             echo "$scp" ...
             remotep=$(makeScpUrl "$url_host" "$url_dir/$p-tmp")
-            exec_scp "$silodir/$p" "$remotep"
+            # Avoid absolute local paths to work around msysgit limitation.
+            # scp d:/... would fail.
+	    (
+                cd "$silodir" &&
+                exec_scp "$p" "$remotep"
+	    ) || die "Failed to copy '$p'."
 
             exec_ssh "$url_host" bash -s <<EOFPRG ||
 set -o errexit

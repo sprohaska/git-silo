@@ -14,8 +14,8 @@ cat >"$PSCP" <<"EOFTXT"
     echo "Error: pscp wasn't called with first arg -batch." >&2
     exit 1
 }
-echo "$2" >pscp-arg1
-echo "$3" >pscp-arg2
+echo "$2" >"$(dirname "$0")/pscp-arg1"
+echo "$3" >"$(dirname "$0")/pscp-arg2"
 localpath=$(sed -e 's/.*localhost://' <<<"$3")
 touch "$localpath"
 EOFTXT
@@ -44,10 +44,10 @@ test_expect_success \
         cd clonefetch &&
         git-silo init &&
         git config silo.scp '$PSCP' &&
-        git-silo fetch -- . &&
-        test -e pscp-arg1 &&
-        egrep -q 'localhost:[^\"]*[0-9a-f]{38}$' pscp-arg1
-    )
+        git-silo fetch -- .
+    ) &&
+    test -e pscp-arg1 &&
+    egrep -q 'localhost:[^\"]*[0-9a-f]{38}$' pscp-arg1
 "
 
 test_expect_success \
@@ -59,10 +59,10 @@ test_expect_success \
     (
         cd clonepush &&
         git config silo.scp '$PSCP' &&
-        git-silo push -- . &&
-        test -e pscp-arg2 &&
-        egrep -q 'localhost:[^\"]*[0-9a-f]{38}(-tmp)?$' pscp-arg2
-    )
+        git-silo push -- .
+    ) &&
+    test -e pscp-arg2 &&
+    egrep -q 'localhost:[^\"]*[0-9a-f]{38}(-tmp)?$' pscp-arg2
 "
 
 
