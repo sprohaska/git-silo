@@ -2,6 +2,8 @@
 
 set -o errexit
 set -o nounset
+set -o pipefail
+set -o noglob
 
 usage() {
     cat <<EOFTXT
@@ -1066,7 +1068,7 @@ test -e '$2'
 cd '$2'
 find . -type f
 EOFPRG
-    sed -e 's@^\./@@'
+    sed -e 's@^\./@@' || true
 }
 
 allCurrentSiloObjects() {
