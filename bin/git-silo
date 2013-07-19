@@ -448,7 +448,7 @@ getSiloProgram() {
 cmd_filter_clean() {
     validateHaveSilo
     if isSha1PlaceholderFile "$arg_file"; then
-        cat
+        tr -d '\r'
     else
         computeSha1AndStoreContentInSilo
     fi
