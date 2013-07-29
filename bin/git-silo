@@ -11,8 +11,8 @@ git-silo init
 git-silo add [--] [<file>...]
 git-silo checkout [--copy] [--link] -- [<file>...]
 git-silo status [<path>...]
-git-silo push [--] [<path>... | config remote.origin.silopush]
-git-silo fetch [--] [<path>... | config remote.origin.silofetch]
+git-silo push [--dry-run] [--] [<path>... | config remote.origin.silopush]
+git-silo fetch [--dry-run] [--] [<path>... | config remote.origin.silofetch]
 git-silo gc [--gitattributes] [-f|--force] [-n <number>] [--dry-run] [--no-tags]
 git-silo fsck
 git-silo dedup <repo>...
@@ -38,11 +38,15 @@ git-silo filter_clean <path>
                     be configured in remote.origin.silopush.  See note on paths
                     below.
 
+    --dry-run       print what would be pushed.
+
   fetch             fetch silo files for current HEAD.
 
     <path>...       fetch will be limited to the given paths.  Default paths can
                     be configured in remote.origin.silofetch.  See note on paths
                     below.
+
+    --dry-run       print what would be fetched.
 
   gc                delete silo files that are not directly referenced by
                     HEAD, tags or tips of branches.
