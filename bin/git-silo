@@ -630,12 +630,28 @@ updateGitattributes() {
     gitattributes="$dir/.gitattributes"
     tmpfile="$gitattributes-tmp$$"
 
+    if hasGitSiloAttributes "${p}"; then
+        return 0
+    fi
+
     local endl=$(getWorkingCopyEndl)
     [ -e "$gitattributes" ] || touch "$gitattributes"
     ( printf '/%s filter=silo -text'$endl "$(escapeSpacesForGitattributes "$base")" && cat "$gitattributes") |
         sort -u >"$tmpfile"
     mv "$tmpfile" "$gitattributes"
     git add "$gitattributes"
+}
+
+hasGitSiloAttributes() {
+    local p="${1}"
+    [[ $(getAttrValue text "${p}") == "unset" ]] &&
+        [[ $(getAttrValue filter "${p}") == silo ]]
+}
+
+getAttrValue() {
+    local attr="${1}"
+    local path="${2}"
+    git check-attr "${attr}" "${path}" | cut -d ' ' -f 3
 }
 
 getWorkingCopyEndl() {
