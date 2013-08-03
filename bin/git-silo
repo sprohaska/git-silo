@@ -497,23 +497,23 @@ cfg_silo_add() {
 
 cmd_filter_smudge() {
     local silodir sha1
-    read sha1
+    IFS= read -r -n 41 sha1
     validSha1 "$sha1" || die "Invalid input; expected sha1: $arg_file"
-    [ "$(head -c 1)" = "" ] || die "Input too large."
-    silodir=$(getSiloObjectDir)
-    objfile=$silodir/${sha1:0:2}/${sha1:2}
-    if [ -e $objfile ]; then
-        if [ $(fileSize $objfile) -lt 10000000 ]; then
-            cat $objfile
+    IFS= read -r -n 1 dummy && die "Input too large."
+    silodir="$(getSiloObjectDir)"
+    objfile="${silodir}/${sha1:0:2}/${sha1:2}"
+    if [ -e "${objfile}" ]; then
+        if [ $(fileSize "${objfile}") -lt 10000000 ]; then
+            cat "${objfile}"
         else
             printf "placeholder for file >10MB (use git-silo checkout): %s\n" \
-                $arg_file >&2
-            printf '%s\n' $sha1
+                "${arg_file}" >&2
+            printf '%s\n' ${sha1}
         fi
     else
         printf "missing silo content: %s\n" \
-            $arg_file >&2
-        printf '%s\n' $sha1
+            "${arg_file}" >&2
+        printf '%s\n' "${sha1}"
     fi
 }
 
