@@ -430,16 +430,16 @@ cmd_init() {
 }
 
 configFilters() {
-    local silobindir siloprg
+    local silobindir
     silobindir=$(getSiloBinDir)
-    siloprg=$(getSiloProgram)
     mkdir -p "${silobindir}"
-    cp -f "${siloprg}" "${silobindir}/filter"
     genprgFilterClean >"${silobindir}/clean"
     chmod a+x "${silobindir}/clean"
+    genprgFilterSmudge >"${silobindir}/smudge"
+    chmod a+x "${silobindir}/smudge"
     # The leading space is necessary to avoid msys path mangling.
     git config filter.silo.clean ' "$(git rev-parse --git-dir)/silo/bin/clean" %f'
-    git config filter.silo.smudge ' "$(git rev-parse --git-dir)/silo/bin/filter" filter_smudge %f'
+    git config filter.silo.smudge ' "$(git rev-parse --git-dir)/silo/bin/smudge" %f'
 }
 
 isBareRepo() {
@@ -482,6 +482,17 @@ genprgFilterClean() {
     genprgCallMain
 }
 
+genprgFilterSmudge() {
+    genprgShbang
+    genprgMainSmudge
+    genprgFunctions \
+        cmd_filter_smudge \
+        validSha1 \
+        getSiloObjectDir \
+        fileSize
+    genprgCallMain
+}
+
 genprgShbang() {
     cat <<\EOF
 #!/bin/bash
@@ -500,6 +511,17 @@ main() {
     (( $# == 1 )) || die "Require one argument with path to file."
     arg_file="${1}"
     cmd_filter_clean
+}
+
+EOF
+}
+
+genprgMainSmudge() {
+    cat <<\EOF
+main() {
+    (( $# == 1 )) || die "Require one argument with path to file."
+    arg_file="${1}"
+    cmd_filter_smudge
 }
 
 EOF
