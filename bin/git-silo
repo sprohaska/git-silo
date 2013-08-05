@@ -430,10 +430,14 @@ cmd_init() {
 }
 
 configFilters() {
+    local silobindir siloprg
+    silobindir=$(getSiloBinDir)
     siloprg=$(getSiloProgram)
+    mkdir -p "${silobindir}"
+    cp -f "${siloprg}" "${silobindir}/filter"
     # The leading space is necessary to avoid msys path mangling.
-    git config filter.silo.clean " \"$siloprg\" filter_clean %f"
-    git config filter.silo.smudge " \"$siloprg\" filter_smudge %f"
+    git config filter.silo.clean ' "$(git rev-parse --git-dir)/silo/bin/filter" filter_clean %f'
+    git config filter.silo.smudge ' "$(git rev-parse --git-dir)/silo/bin/filter" filter_smudge %f'
 }
 
 isBareRepo() {
@@ -530,6 +534,14 @@ validateHaveSilo() {
     local silodir
     silodir=$(getSiloObjectDir)
     [ -d "$silodir" ] || die "Missing silo '$silodir'; run 'git-silo init'."
+}
+
+getSiloBinDir() {
+    local silodir
+    silodir="$(git rev-parse --git-dir)"
+    silodir="$(cd "${silodir}" && pwd)"
+    silodir="${silodir}/silo/bin"
+    printf '%s' "${silodir}"
 }
 
 getSiloObjectDir() {
