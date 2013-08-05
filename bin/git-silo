@@ -435,8 +435,10 @@ configFilters() {
     siloprg=$(getSiloProgram)
     mkdir -p "${silobindir}"
     cp -f "${siloprg}" "${silobindir}/filter"
+    genprgFilterClean >"${silobindir}/clean"
+    chmod a+x "${silobindir}/clean"
     # The leading space is necessary to avoid msys path mangling.
-    git config filter.silo.clean ' "$(git rev-parse --git-dir)/silo/bin/filter" filter_clean %f'
+    git config filter.silo.clean ' "$(git rev-parse --git-dir)/silo/bin/clean" %f'
     git config filter.silo.smudge ' "$(git rev-parse --git-dir)/silo/bin/filter" filter_smudge %f'
 }
 
@@ -460,6 +462,60 @@ cmd_filter_clean() {
     else
         computeSha1AndStoreContentInSilo
     fi
+}
+
+genprgFilterClean() {
+    genprgShbang
+    genprgMainClean
+    genprgFunctions \
+        cmd_filter_clean \
+        validateHaveSilo \
+        getSiloObjectDir \
+        isSha1PlaceholderFile \
+        fileSize \
+        computeSha1AndStoreContentInSilo \
+        computeSha1 \
+        mkdirWithParentsPermissions \
+        isSharedDir \
+        cfg_silo_add \
+        die
+    genprgCallMain
+}
+
+genprgShbang() {
+    cat <<\EOF
+#!/bin/bash
+
+set -o errexit
+set -o nounset
+set -o pipefail
+set -o noglob
+
+EOF
+}
+
+genprgMainClean() {
+    cat <<\EOF
+main() {
+    (( $# == 1 )) || die "Require one argument with path to file."
+    arg_file="${1}"
+    cmd_filter_clean
+}
+
+EOF
+}
+
+genprgCallMain() {
+    cat <<\EOF
+main "$@"
+EOF
+}
+
+genprgFunctions() {
+    for f in "$@"; do
+        declare -f $f
+        echo
+    done
 }
 
 computeSha1AndStoreContentInSilo() {
