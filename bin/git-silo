@@ -16,10 +16,8 @@ git-silo fetch [--dry-run] [--] [<path>... | config remote.origin.silofetch]
 git-silo gc [--gitattributes] [-f|--force] [-n <number>] [--dry-run] [--no-tags]
 git-silo fsck
 git-silo dedup <repo>...
-git-silo filter_smudge <path>
-git-silo filter_clean <path>
 
-  init              initialize silo in gitdir.
+  init              initialize silo.  Install git clean and smudge filters.
 
   add               add untracked files for silo storage.  Creates hardlink or
                     copy depending on value of config silo.add (see below).
@@ -70,13 +68,6 @@ git-silo filter_clean <path>
 
   dedup             create hardlinks between repositories.  Repositories listed
                     later get linked to repositories listed earlier.
-
-  filter_smudge     smudge filter (see gitattributes); receives sha1 from git
-                    and expands it to corresponding content from silo.  Large
-                    files will not be expanded to avoid crashes with msysgit.
-
-  filter_clean      clean filter (see gitattributes); stores file in silo and
-                    returns sha1 to git.
 
 You must always either provide a path on the command line or via the config
 file for push and fetch, otherwise git-silo will refuse to transfer files to
@@ -266,27 +257,9 @@ argparse_filter_clean() {
 }
 
 argparse_filter() {
-    arg_file=
-    while [ $# -ge 1 ]; do
-        case "$1" in
-        -h|--help)
-            usage
-            exit 0
-            ;;
-        -*)
-            die "Unknown option $1"
-            ;;
-        *)
-            if test $arg_file; then
-                die "Wrong number of arguments"
-            else
-                arg_file=$1
-                shift
-            fi
-            ;;
-        esac
-    done
-    test "$arg_file" || die "Missing <path>."
+    (( $# == 1 )) || die "Missing <path>."
+    arg_file="${1}"
+    echo "Warning: using old-style git-silo filter, rerun 'git-silo init' to upgrade filters." >&2
 }
 
 argparse_add() {
