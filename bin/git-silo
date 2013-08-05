@@ -443,10 +443,10 @@ isBareRepo() {
 getSiloProgram() {
     local dir prgpath
     prgpath=$(tr '\\' / <<<"$0")
-    dir=$(dirname "$prgpath")
-    dir=$(cd $dir; pwd)
-    base=$(basename "$prgpath")
-    printf '%s/%s' "$dir" "$base"
+    dir="$(dirname "${prgpath}")"
+    dir="$(cd "${dir}"; pwd)"
+    base="$(basename "${prgpath}")"
+    printf '%s/%s' "${dir}" "${base}"
 }
 
 cmd_filter_clean() {

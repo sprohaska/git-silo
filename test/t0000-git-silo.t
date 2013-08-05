@@ -5,6 +5,13 @@ test_description="git-silo init"
 . ./_testinglib.sh
 
 test_expect_success \
+"setup user" \
+'
+    setup_user &&
+    setup_file a
+'
+
+test_expect_success \
 "'git-silo init' should succeed." \
 '
     mkdir single &&
@@ -48,6 +55,17 @@ test_expect_success \
         git silo add a 2>log &&
         ! grep error: log
     )
+'
+
+test_expect_success \
+"Spaces in path to git-silo should work." \
+'
+    cp "$(which git-silo)" . &&
+    export PATH=$(pwd):$PATH &&
+    setup_repo repospaces &&
+    setup_add_file repospaces a 2>err &&
+    ! grep -q "error: external filter" err &&
+    ( cd repospaces && git show HEAD:a ) | egrep -q "^[0-9a-f]{40}"
 '
 
 test_done
