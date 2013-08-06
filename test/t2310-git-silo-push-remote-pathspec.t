@@ -30,7 +30,7 @@ test_expect_success \
 '
 
 test_expect_success \
-'origin.remote.silopush pathspec should limit git push' \
+'remote.origin.silopush pathspec should limit git push' \
 '
     (
         cd repo2 &&
@@ -45,7 +45,7 @@ test_expect_success \
 '
 
 test_expect_success \
-'"git-silo push -- ." should override origin.remote.silopush' \
+'"git-silo push -- ." should override remote.origin.silopush' \
 '
     (
         cd repo2 &&
