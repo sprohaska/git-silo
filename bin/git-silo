@@ -11,8 +11,8 @@ git-silo init
 git-silo add [--] [<file>...]
 git-silo checkout [--copy] [--link] -- [<file>...]
 git-silo status [<path>...]
-git-silo push [--dry-run] [--] [<path>... | config remote.origin.silopush]
-git-silo fetch [--dry-run] [--] [<path>... | config remote.origin.silofetch]
+git-silo push [--dry-run] [<remote>] [--] [<path>... | config remote.<remote>.silopush]
+git-silo fetch [--dry-run] [<remote>] [--] [<path>... | config remote.<remote>.silofetch]
 git-silo gc [--gitattributes] [-f|--force] [-n <number>] [--dry-run] [--no-tags]
 git-silo fsck
 git-silo dedup <repo>...
@@ -32,17 +32,21 @@ git-silo dedup <repo>...
 
   push              push silo files for current HEAD.
 
+    <remote>        git remote to push to (default: origin).
+
     <path>...       push will be limited to the given paths.  Default paths can
-                    be configured in remote.origin.silopush.  See note on paths
-                    below.
+                    be configured in remote.<remote>.silopush.  See note on
+                    paths below.
 
     --dry-run       print what would be pushed.
 
   fetch             fetch silo files for current HEAD.
 
-    <path>...       fetch will be limited to the given paths.  Default paths can
-                    be configured in remote.origin.silofetch.  See note on paths
-                    below.
+    <remote>        git remote to fetch from (default: origin).
+
+    <path>...       fetch will be limited to the given paths.  Default paths
+                    can be configured in remote.<remote>.silofetch.  See note
+                    on paths below.
 
     --dry-run       print what would be fetched.
 
@@ -339,6 +343,7 @@ argparse_push() {
 argparse_sync() {
     opt_dry_run=
     arg_pathspec=
+    arg_remote=
     while [ $# -ge 1 ]; do
         case "$1" in
         -h|--help)
@@ -358,8 +363,13 @@ argparse_sync() {
             die "Unknown option $1"
             ;;
         *)
-            arg_pathspec=( "$@" )
-            return 0
+            if ! test $arg_remote; then
+                arg_remote=$1
+                shift
+            else
+                arg_pathspec=( "$@" )
+                return 0
+            fi
             ;;
         esac
     done
@@ -767,15 +777,17 @@ getSha1ForGitObject() {
 
 cmd_push() {
     local pathspec
+    local remote=origin
+    test "$arg_remote" && remote="$arg_remote"
     if test "$arg_pathspec"; then
         pathspec=( "${arg_pathspec[@]}" )
     else
         IFS=$'\n'
-        pathspec=( $(git config --get-all remote.origin.silopush) ) ||
+        pathspec=( $(git config --get-all remote."${remote}".silopush) ) ||
             pathspec=
         unset IFS
     fi
-    test "$pathspec" || die "Missing path.  Push requires a path, either on the command line or in the config remote.origin.silopush."
+    test "$pathspec" || die "Missing path.  Push requires a path, either on the command line or in the config 'remote.${remote}.silopush'."
     validateHaveSilo
     local url transport
     url=$(getRemoteSiloUrl)
@@ -787,15 +799,17 @@ cmd_push() {
 
 cmd_fetch() {
     local pathspec
+    local remote=origin
+    test "$arg_remote" && remote="$arg_remote"
     if test "$arg_pathspec"; then
         pathspec=( "${arg_pathspec[@]}" )
     else
         IFS=$'\n'
-        pathspec=( $(git config --get-all remote.origin.silofetch) ) ||
+        pathspec=( $(git config --get-all remote."${remote}".silofetch) ) ||
             pathspec=
         unset IFS
     fi
-    test "$pathspec" || die "Missing path.  Fetch requires a path, either on the command line or in the config remote.origin.silofetch."
+    test "$pathspec" || die "Missing path.  Fetch requires a path, either on the command line or in the config 'remote.${remote}.silofetch'."
     validateHaveSilo
     local url transport
     url=$(getRemoteSiloUrl)
@@ -1071,8 +1085,10 @@ lsSiloObjectsForHEAD() {
 
 getRemoteSiloUrl() {
     local url
-    url=$(git config remote.origin.url) ||
-        die "Failed to get URL of 'origin'."
+    local remote=origin
+    test "$arg_remote" && remote="$arg_remote"
+    url=$(git config remote."${remote}".url) ||
+        die "Failed to get URL of remote '${remote}'."
     if grep -q '^ssh://' <<< "$url"; then
         url=$(sed -e 's@ssh://@@' -e 's@/@:/@' -e 's@//@/@' \
             -e 's@:/~@:~@' <<< "$url")

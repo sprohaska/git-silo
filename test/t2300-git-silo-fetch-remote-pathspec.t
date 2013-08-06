@@ -65,4 +65,19 @@ test_expect_success \
     )
 '
 
+test_expect_success \
+'remote.<remote>.silofetch pathspec should limit git fetch' \
+'
+    git clone repo1 namedremote &&
+    (
+        cd namedremote &&
+        git-silo init &&
+        git remote rename origin org &&
+        git config remote.org.silofetch a &&
+        git-silo fetch org &&
+        git-silo checkout a &&
+        ! git-silo checkout b
+    )
+'
+
 test_done

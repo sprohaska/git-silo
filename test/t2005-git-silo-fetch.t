@@ -52,6 +52,22 @@ test_expect_success \
     ! grep -q first log
 '
 
+test_expect_success \
+"'git-silo fetch' should support named remote." \
+'
+    git clone repo1 namedorigin &&
+    (
+        cd namedorigin &&
+        git remote rename origin org &&
+        git-silo init &&
+        git silo fetch org -- .
+    ) && (
+        cd namedorigin/.git/silo/objects &&
+        find * -type f | sed -e "s@/@@"
+    ) >actual &&
+    test_cmp first.sha1 actual
+'
+
 if ! test_have_prereq LOCALHOST; then
     skip_all='skipping tests that require ssh to localhost.'
     test_done

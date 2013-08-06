@@ -56,4 +56,24 @@ test_expect_success \
     )
 '
 
+test_expect_success \
+'remote.<remote>.silopush pathspec should limit git push' \
+'
+    git clone repo1 namedremote &&
+    (
+        cd namedremote &&
+        git-silo init &&
+        echo "c" >c &&
+        git-silo add c &&
+        git commit -m "Add c" &&
+        git remote rename origin org &&
+        git config remote.org.silopush a &&
+        git-silo push org
+    ) && (
+        cd repo1 &&
+        git pull ../namedremote &&
+        ! git-silo checkout c
+    )
+'
+
 test_done

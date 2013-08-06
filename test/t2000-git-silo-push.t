@@ -39,6 +39,27 @@ test_expect_success \
 '
 
 test_expect_success \
+"'git-silo push' should support named remote." \
+'
+    git clone repo1 namedorigin &&
+    (
+        cd namedorigin &&
+        git remote rename origin org &&
+        git-silo init
+    ) &&
+    setup_add_file namedorigin first &&
+    ( cd namedorigin && git-silo push org -- . ) &&
+    ( cd repo1/.git/silo/objects && find * -type f | sed -e "s@/@@" ) >actual &&
+    test_cmp first.sha1 actual
+'
+
+test_expect_success \
+"cleanup" \
+'
+    rm -f repo1/.git/silo/objects/*/*
+'
+
+test_expect_success \
 "'git-silo push' should mention files that are pushed." \
 '
     ( cd cpclone && git-silo push -- . ) >log &&
