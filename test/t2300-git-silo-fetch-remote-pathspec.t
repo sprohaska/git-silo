@@ -43,7 +43,7 @@ test_expect_success \
 '
 
 test_expect_success \
-'origin.remote.silofetch pathspec should limit git fetch' \
+'remote.origin.silofetch pathspec should limit git fetch' \
 '
     (
         cd repo2 &&
@@ -56,7 +56,7 @@ test_expect_success \
 '
 
 test_expect_success \
-'"git-silo fetch -- ." should override origin.remote.silofetch' \
+'"git-silo fetch -- ." should override remote.origin.silofetch' \
 '
     (
         cd repo2 &&
