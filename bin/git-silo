@@ -916,15 +916,11 @@ transport_scp_fetch() {
         printSyncInfo COPY $p "$objPathMap"
         remotep=$(makeScpUrl "$url_host" "$url_dir/$p")
         if test $opt_dry_run; then
-            if test $opt_debug; then
-                echo Would have run: "$scp" "$remotep" "$silodir/$p"
-            fi
+            echo_debug Would have run: "$scp" "$remotep" "$silodir/$p"
         else
             dir="$(dirname "$p")"
             mkdirWithParentsPermissions "$silodir/$dir"
-            if test $opt_debug; then
-                echo "$scp" ...
-            fi
+            echo_debug "$scp" ...
             rm -f "$silodir/$p-tmp"
             # Avoid absolute local paths to work around msysgit limitation.
             # scp d:/... would fail.
@@ -959,9 +955,7 @@ transport_scp_push() {
         fi
         if test $opt_dry_run; then
             remotep=$(makeScpUrl "$url_host" "$url_dir/$p")
-            if test $opt_debug; then
-                echo Would have run: "$scp" "$silodir/$p" "$remotep"
-            fi
+            echo_echo Would have run: "$scp" "$silodir/$p" "$remotep"
         else
             dir=$(dirname $p)
 
@@ -979,7 +973,7 @@ fi
 EOFPRG
             die "Failed to create remote silo object subdirectory."
 
-            echo "$scp" ...
+            echo_debug "$scp" ...
             remotep=$(makeScpUrl "$url_host" "$url_dir/$p-tmp")
             # Avoid absolute local paths to work around msysgit limitation.
             # scp d:/... would fail.
@@ -1064,13 +1058,11 @@ transport_localcp_fetch() {
         fi
         printSyncInfo COPY $p "$objPathMap"
         if test $opt_dry_run; then
-            if test $opt_debug; then
-                echo Would have run: cp "$url/$p" "$silodir/$p"
-            fi
+            echo_debug Would have run: cp "$url/$p" "$silodir/$p"
         else
             dir="$(dirname "$p")"
             mkdirWithParentsPermissions "$silodir/$dir"
-            echo cp $p ...
+            echo_debug cp $p ...
             rm -f "$silodir/$p-tmp"
             cp "$url/$p" "$silodir/$p-tmp" || {
                 die "Failed to copy '$p'."
@@ -1100,13 +1092,11 @@ transport_localcp_push() {
             continue
         fi
         if test $opt_dry_run; then
-            if test $opt_debug; then
-                echo Would have run: cp "$silodir/$p" "$url/$p"
-            fi
+            echo_debug Would have run: cp "$silodir/$p" "$url/$p"
         else
             dir=$(dirname $p)
             mkdirWithParentsPermissions "$url/$dir"
-            echo cp ...
+            echo_debug cp ...
             rm -f "$url/$p-tmp"
             cp "$silodir/$p" "$url/$p-tmp"
             chmod a-w "$url/$p-tmp"
@@ -1482,6 +1472,12 @@ no_unstaged_changes() {
 die() {
     echo >&2 "Error (silo): $1"
     exit 1
+}
+
+echo_debug() {
+    if test $opt_debug; then
+        echo >&2 "$@"
+    fi
 }
 
 main "$@"
