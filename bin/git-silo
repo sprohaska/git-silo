@@ -12,11 +12,11 @@ git-silo add [--] [<file>...]
 git-silo checkout [--copy] [--link] -- [<file>...]
 git-silo status [<path>...]
 git-silo push \
-    [--dry-run] [--verbose] \
+    [--dry-run] [-v|--verbose] \
     [--include=<label>] [--exclude=<pattern>] [--all] \
     [<remote>] [--] [<path>... | config remote.<remote>.silopush]
 git-silo fetch \
-    [--dry-run] [--verbose] \
+    [--dry-run] [-v|--verbose] \
     [--include=<label>] [--exclude=<pattern>] [--all] \
     [<remote>] [--] [<path>... | config remote.<remote>.silofetch]
 git-silo gc [--gitattributes] [-f|--force] [-n <number>] [--dry-run] [--no-tags]
@@ -58,7 +58,7 @@ git-silo dedup <repo>...
 
     --dry-run       print what would be transferred.
 
-    --verbose       print more information, e.g. skipped files.
+    -v|--verbose    print more information, e.g. skipped files.
 
     --include=<pat> include files whose 'silo' attribute matches glob-style
                     pattern <pat>.  See TRANSFER FILTERS section.
@@ -405,7 +405,7 @@ argparse_sync() {
             opt_dry_run=--dry-run
             shift
             ;;
-        --verbose)
+        -v|--verbose)
             opt_verbose=t
             shift
             ;;
