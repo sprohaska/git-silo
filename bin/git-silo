@@ -22,6 +22,7 @@ git-silo fetch \
     [--include=<label>] [--exclude=<pattern>] [--all] \
     [<remote>] [--] [<path>... | config remote.<remote>.silofetch]
 git-silo gc [--gitattributes] [-f|--force] [-n <number>] [--dry-run] [--no-tags]
+git-silo purge [-f|--force] [--dry-run] [--] <path>...
 git-silo fsck
 git-silo dedup <repo>...
 
@@ -90,6 +91,17 @@ git-silo dedup <repo>...
 
     --dry-run       print only what would be deleted.
 
+  purge             replace files by placeholders and remove objects from silo.
+                    Since this is a very destructive operation (comparable to
+                    rm -rf), 'silo.ismasterstore=false' and the '--force' flag
+                    are both required to actually remove files.
+
+    <path>...       the files to remove.
+
+    -f|--force      required to actually remove files.
+
+    --dry-run       print only what would be removed.
+
   fsck              verify silo storage.
 
   dedup             create hardlinks between repositories.  Repositories listed
@@ -145,6 +157,9 @@ might be useful if you want to keep the file open in another application, like
 Word, and use 'git-silo add' repeatedly.  When creating a hardlink, the file
 permissions are changed to read-only, which might confuse applications like
 Word.
+
+silo.ismasterstore (default 'true'): Unless set to 'false', some destructive
+operations, such as 'purge', are not permitted.
 
 silo.scp (default unset): Tells git-silo which program to use for scp.
 
@@ -283,6 +298,40 @@ argparse_dedup() {
     done
     [ $# -ge 1 ] || die "Wrong number of arguments (expect at least two paths)."
     arg_repos=( "$@" )
+}
+
+argparse_purge() {
+    opt_force=
+    opt_dry_run=
+    arg_pathspec=()
+    while [ $# -ge 1 ]; do
+        case "$1" in
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        -f|--force)
+            opt_force=t
+            shift
+            ;;
+        --dry-run)
+            opt_dry_run=t
+            shift
+            ;;
+        --)
+            shift
+            [ $# -gt 0 ] && arg_pathspec=( "$@" )
+            break
+            ;;
+        -*)
+            die "Unknown option $1"
+            ;;
+        *)
+            arg_pathspec=( "$@" )
+            break
+            ;;
+        esac
+    done
 }
 
 argparse_default() {
@@ -459,7 +508,7 @@ validateGitVersion() {
 
 validateCmd() {
     case "$1" in
-    filter_smudge|filter_clean|add|status|push|fetch|init|checkout|gc|dedup|fsck)
+    filter_smudge|filter_clean|add|status|push|fetch|init|checkout|gc|dedup|fsck|purge)
         return 0
         ;;
     *)
@@ -630,6 +679,10 @@ cfg_silo_add() {
         ;;
     esac
     echo $option
+}
+
+cfg_ismasterstore() {
+    git config silo.ismasterstore || echo "true"
 }
 
 cmd_filter_smudge() {
@@ -868,6 +921,7 @@ cmd_push() {
     lsSiloTracked "${pathspec[@]}" |
         filterSiloAttr "${arg_filter[@]}" |
         uniqSha1s |
+        sha1sAsObjectPaths |
         transport_${transport}_push "$url"
 }
 
@@ -892,6 +946,7 @@ cmd_fetch() {
     lsSiloTracked "${pathspec[@]}" |
         filterSiloAttr "${arg_filter[@]}" |
         uniqSha1s |
+        sha1sAsObjectPaths |
         transport_${transport}_fetch "$url"
 }
 
@@ -1155,12 +1210,19 @@ parseUrl() {
 
 uniqSha1s() {
     cut -b 1-40 |
-    sort -u |
+    sort -u
+}
+
+sha1sAsObjectPaths() {
     while read sha1; do
         [ "$sha1" = "" ] && continue
-        objfile=${sha1:0:2}/${sha1:2}
-        printf '%s\n' "$objfile"
+        sha1AsObjectPath "${sha1}"
     done
+}
+
+sha1AsObjectPath() {
+    local sha1="$1"
+    echo ${sha1:0:2}/${sha1:2}
 }
 
 filterSiloAttr() {
@@ -1270,6 +1332,113 @@ gcSiloObjects() {
         xargs rm -f <<< "$delete" &&
         rmdir * 2>/dev/null ||
         true )
+}
+
+cmd_purge() {
+    validateHaveSilo
+
+    local orphanSha1s silodir remove_object sha1 path objpath
+    local msg_remove msg_placeholder
+
+    [[ $(cfg_ismasterstore) == "false" ]] ||
+        die "purge requires silo.ismasterstore=false."
+
+    test $opt_force || test $opt_dry_run ||
+        die "purge requires either -f or --dry-run."
+
+    (( ${#arg_pathspec[@]} )) ||
+        die "purge requires a path."
+
+    validateNoStagedChanges
+    validateNoUnstagedChanges
+
+    if test $opt_force; then
+        msg_remove="Removing"
+        msg_placeholder="Using placeholder"
+    else
+        msg_remove="Would remove"
+        msg_placeholder="Would use placeholder"
+    fi
+
+    orphanSha1s="$(orphanSha1sWithoutPaths "${arg_pathspec[@]}")"
+    silodir=$(getSiloObjectDir)
+
+    lsSiloTracked "${arg_pathspec[@]}" |
+    while read -r sha1 path; do
+        [ "${sha1}" = "" ] && continue
+
+        objpath="${silodir}/$(sha1AsObjectPath "${sha1}")"
+        if [ -f "${objpath}" ] && grep -q -F "${sha1}" <<<"${orphanSha1s}"; then
+            remove_object=t
+            printf "%s %s %s\n" "${msg_remove}" "${sha1}" "${path}"
+        elif ! isSha1PlaceholderFile "${path}"; then
+            remove_object=
+            printf "%s %s %s\n" "${msg_placeholder}" "${sha1}" "${path}"
+        else
+            continue
+        fi
+
+        if ! test $opt_force; then
+            continue
+        fi
+
+        rm -f "${path}"
+        printf '%s\n' "${sha1}" >"${path}"
+        git add -u "${path}"
+
+        if ! test $remove_object; then
+            continue;
+        fi
+
+        rm -f "${objpath}"
+    done
+
+    find "${silodir}" -type d -empty -mindepth 1 -maxdepth 1 -exec rmdir '{}' ';' || true
+}
+
+# Count how often a sha1 is used (1) by all files of HEAD and (2) when files
+# are restricted to paths.  Join counts on sha1 and keep only sha1s that are
+# present in both sets with same count.  These sha1s become orphans when the
+# paths are removed.
+orphanSha1sWithoutPaths() {
+    (
+        lsSiloTracked | sha1Counts &&
+        lsSiloTracked "$@" | sha1Counts
+    ) |
+    joinCounts |
+    sha1sWithEqualCounts
+}
+
+# Join counts from consecutive lines with equal sha1.
+joinCounts() {
+    local sha1 c prevc
+    local prevsha1=
+
+    sed -e 's/^ *//' |
+    sort -s -k 2 |
+    while read -r c sha1; do
+        [ "${sha1}" = "" ] && continue
+        if [ "${sha1}" = "${prevsha1}" ]; then
+            printf "%s %s %s\n" "${sha1}" "${prevc}" "${c}"
+        fi
+        prevsha1="${sha1}"
+        prevc="${c}"
+    done
+}
+
+sha1sWithEqualCounts() {
+    local sha1 c1 c2
+    while read -r sha1 c1 c2; do
+        [ "${sha1}" = "" ] && continue
+        (( $c1 != $c2 )) && continue
+        printf '%s\n' "${sha1}"
+    done
+}
+
+sha1Counts() {
+    cut -b 1-40 |
+    sort |
+    uniq -c
 }
 
 lsDir() {
