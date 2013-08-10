@@ -27,8 +27,8 @@ git-silo dedup <repo>...
                     silo.  See also WILDCARD SETUP section.
 
   add               add untracked files for silo storage.  Creates hardlink or
-                    copy depending on value of config silo.add.  See
-                    CONFIGURATION VARIABLES section.
+                    copy depending on value of 'silo.add'.  See CONFIGURATION
+                    VARIABLES section.
 
   checkout          replace placeholders with full content.
 
@@ -43,7 +43,7 @@ git-silo dedup <repo>...
     <remote>        git remote to push to (default: origin).
 
     <path>...       push will be limited to the given paths.  Default paths can
-                    be configured in remote.<remote>.silopush.  See PATHS
+                    be configured with 'remote.<remote>.silopush'.  See PATHS
                     section.
 
   fetch             fetch silo files for current HEAD.
@@ -51,8 +51,8 @@ git-silo dedup <repo>...
     <remote>        git remote to fetch from (default: origin).
 
     <path>...       fetch will be limited to the given paths.  Default paths
-                    can be configured in remote.<remote>.silofetch.  See PATHS
-                    section.
+                    can be configured with 'remote.<remote>.silofetch'.  See
+                    PATHS section.
 
   common options for push and fetch
 
@@ -73,11 +73,11 @@ git-silo dedup <repo>...
   gc                delete silo files that are not directly referenced by
                     HEAD, tags or tips of branches.
 
-    --gitattributes Also remove unused entries from .gitattributes and create a
-                    commit if .gitattributes has been changed.
+    --gitattributes Also remove unused entries from '.gitattributes' and create
+                    a commit if '.gitattributes' has been changed.
 
     -f|--force      run gc even with unstaged changes.  Note that gc might
-                    modify and commit .gitattributes.
+                    modify and commit '.gitattributes'.
 
     -n <number>     keep only objects reachable from the latest <number>
                     commits at each local head, including tags.  Note that
@@ -98,8 +98,8 @@ git-silo dedup <repo>...
 Git can be told to use git silo for all files of a certain type (based on a glob
 pattern).  This avoids the need to explicitly call 'git silo add' when a file is
 added for the first time; a simple 'git add' will directly use git silo.  For
-example, the following line in .gitattributes tells git to handle all mov files
-using git silo:
+example, the following line in '.gitattributes' tells git to handle all mov
+files using git silo:
 
     *.mov filter=silo -text
 
@@ -123,7 +123,7 @@ Each entry of the comma-separated list in gitattribute 'silo' is matched against
 the glob-style <pattern>.  '--all' includes all files.  Filter order matters.
 The first match decides.
 
-For example, with gitattributes
+For example, with the following line in '.gitattributes'
 
     /path silo=foo,bar,local
 
