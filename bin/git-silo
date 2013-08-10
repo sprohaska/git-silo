@@ -959,7 +959,9 @@ transport_scp_push() {
         fi
         if test $opt_dry_run; then
             remotep=$(makeScpUrl "$url_host" "$url_dir/$p")
-            echo Would have run: "$scp" "$silodir/$p" "$remotep"
+            if test $opt_debug; then
+                echo Would have run: "$scp" "$silodir/$p" "$remotep"
+            fi
         else
             dir=$(dirname $p)
 
@@ -1062,7 +1064,9 @@ transport_localcp_fetch() {
         fi
         printSyncInfo COPY $p "$objPathMap"
         if test $opt_dry_run; then
-            echo Would have run: cp "$url/$p" "$silodir/$p"
+            if test $opt_debug; then
+                echo Would have run: cp "$url/$p" "$silodir/$p"
+            fi
         else
             dir="$(dirname "$p")"
             mkdirWithParentsPermissions "$silodir/$dir"
@@ -1096,7 +1100,9 @@ transport_localcp_push() {
             continue
         fi
         if test $opt_dry_run; then
-            echo Would have run: cp "$silodir/$p" "$url/$p"
+            if test $opt_debug; then
+                echo Would have run: cp "$silodir/$p" "$url/$p"
+            fi
         else
             dir=$(dirname $p)
             mkdirWithParentsPermissions "$url/$dir"
