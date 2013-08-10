@@ -1171,7 +1171,7 @@ filterSiloAttr() {
         [ "${sha1}" = "" ] && continue
         attr=$(getAttrValue "silo" "${path}")
         if ! passFilter "$attr" "$@"; then
-            test $opt_verbose && printf "skipping: %s\n" "${path}" >&2
+            test $opt_verbose && printf "    skipping %s\n" "${path}" >&2
             continue
         fi
         printf '%s %s\n' "${sha1}" "${path}"
