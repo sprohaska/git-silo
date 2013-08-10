@@ -13,7 +13,7 @@ test_expect_success \
 '
 
 test_expect_success \
-"git-silo add should not use CRLF when core.autocrlf is input." \
+"git-silo add should not use CRLF for core.autocrlf=input." \
 '
     (
         cd input &&
@@ -25,7 +25,7 @@ test_expect_success \
 '
 
 test_expect_success \
-"git-silo add should use CRLF when core.autocrlf is true." \
+"git-silo add should use CRLF for core.autocrlf=true." \
 '
     (
         cd crlf &&
