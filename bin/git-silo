@@ -6,13 +6,19 @@ set -o pipefail
 set -o noglob
 
 usage() {
-    cat <<EOFTXT
+    cat <<\EOF
 git-silo init
 git-silo add [--] [<file>...]
 git-silo checkout [--copy] [--link] -- [<file>...]
 git-silo status [<path>...]
-git-silo push [--dry-run] [<remote>] [--] [<path>... | config remote.<remote>.silopush]
-git-silo fetch [--dry-run] [<remote>] [--] [<path>... | config remote.<remote>.silofetch]
+git-silo push \
+    [--dry-run] [--verbose] \
+    [--include=<label>] [--exclude=<pattern>] [--all] \
+    [<remote>] [--] [<path>... | config remote.<remote>.silopush]
+git-silo fetch \
+    [--dry-run] [--verbose] \
+    [--include=<label>] [--exclude=<pattern>] [--all] \
+    [<remote>] [--] [<path>... | config remote.<remote>.silofetch]
 git-silo gc [--gitattributes] [-f|--force] [-n <number>] [--dry-run] [--no-tags]
 git-silo fsck
 git-silo dedup <repo>...
@@ -38,8 +44,6 @@ git-silo dedup <repo>...
                     be configured in remote.<remote>.silopush.  See note on
                     paths below.
 
-    --dry-run       print what would be pushed.
-
   fetch             fetch silo files for current HEAD.
 
     <remote>        git remote to fetch from (default: origin).
@@ -48,7 +52,21 @@ git-silo dedup <repo>...
                     can be configured in remote.<remote>.silofetch.  See note
                     on paths below.
 
-    --dry-run       print what would be fetched.
+  common options for push and fetch
+
+    --dry-run       print what would be transferred.
+
+    --verbose       print more information, e.g. skipped files.
+
+    --include=<pat> include files whose 'silo' attribute matches glob-style
+                    pattern <pat>.  See TRANSFER FILTERS section.
+
+    --exclude=<pat> exclude files whose 'silo' attribute matches glob-styl
+                    pattern <pat>.  See TRANSFER FILTERS section.
+
+    --all           include all files.  The default is to skip files whose
+                    gitattributes 'silo' contains an entry 'local'.  See
+                    TRANSFER FILTERS section.
 
   gc                delete silo files that are not directly referenced by
                     HEAD, tags or tips of branches.
@@ -85,6 +103,30 @@ example, add the following line to .gitattributes to handle all mov files using
 git silo:
 
     *.mov filter=silo -text
+
+# TRANSFER FILTERS
+
+The gitattribute 'silo' can be used to limit file transfer.  Per default, files
+that carry the label 'local' are not transferred.  This can be useful to handle
+less important files.  They can be tracked locally, for example on a scratch
+filesystem, without transferring them to a central, probably more reliable but
+perhaps space-limited, storage.
+
+'--include=<pattern>' and '--exclude=<pattern>' can be used to select files.
+Each entry of the comma-separated list in gitattribute 'silo' is matched against
+the glob-style <pattern>.  '--all' includes all files.  Filter order matters.
+The first match decides.
+
+For example, with gitattributes
+
+    /path silo=foo,bar,local
+
+'path' will be
+
+    excluded by default
+    included for '--all'
+    included for '--include=ba*'
+    excluded for '--exclude=fo* --include=ba*'
 
 # Configuration variables
 
@@ -127,7 +169,7 @@ instead of ssh.
     32-bit executable, which fails for large files in some situations.  There is
     now known workaround.
 
-EOFTXT
+EOF
 }
 
 main() {
@@ -341,9 +383,12 @@ argparse_push() {
 }
 
 argparse_sync() {
+    local arg dummy
     opt_dry_run=
+    opt_verbose=
     arg_pathspec=
     arg_remote=
+    arg_filter=()
     while [ $# -ge 1 ]; do
         case "$1" in
         -h|--help)
@@ -354,10 +399,28 @@ argparse_sync() {
             opt_dry_run=--dry-run
             shift
             ;;
+        --verbose)
+            opt_verbose=t
+            shift
+            ;;
+        --include=*)
+            IFS='=' read -r dummy arg <<<"$1"
+            shift
+            arg_filter+=( "+ $arg" )
+            ;;
+        --exclude=*)
+            IFS='=' read -r dummy arg <<<"$1"
+            shift
+            arg_filter+=( "- $arg" )
+            ;;
+        --all)
+            arg_filter=( '+ *' )
+            shift
+            ;;
         --)
             shift
             [ $# -gt 0 ] && arg_pathspec=( "$@" )
-            return 0
+            break
             ;;
         -*)
             die "Unknown option $1"
@@ -368,11 +431,12 @@ argparse_sync() {
                 shift
             else
                 arg_pathspec=( "$@" )
-                return 0
+                break
             fi
             ;;
         esac
     done
+    (( ${#arg_filter[@]} )) || arg_filter=( '- local' )
 }
 
 validateGitVersion() {
@@ -793,7 +857,9 @@ cmd_push() {
     url=$(getRemoteSiloUrl)
     transport=$(getTransport "$url")
     echo "pushing silo to $url"
-    lsSiloObjectsForHEAD "${pathspec[@]}" |
+    lsSiloTracked "${pathspec[@]}" |
+        filterSiloAttr "${arg_filter[@]}" |
+        uniqSha1s |
         transport_${transport}_push "$url"
 }
 
@@ -815,7 +881,9 @@ cmd_fetch() {
     url=$(getRemoteSiloUrl)
     transport=$(getTransport "$url")
     echo "fetching silo from $url"
-    lsSiloObjectsForHEAD "${pathspec[@]}" |
+    lsSiloTracked "${pathspec[@]}" |
+        filterSiloAttr "${arg_filter[@]}" |
+        uniqSha1s |
         transport_${transport}_fetch "$url"
 }
 
@@ -1075,12 +1143,50 @@ parseUrl() {
     sed -e 's/:/ /' <<< "$1"
 }
 
-lsSiloObjectsForHEAD() {
+uniqSha1s() {
+    cut -b 1-40 |
+    sort -u |
     while read sha1; do
         [ "$sha1" = "" ] && continue
         objfile=${sha1:0:2}/${sha1:2}
         printf '%s\n' "$objfile"
-    done <<< "$(lsSiloTracked "$@" | cut -b 1-40 | sort -u)"
+    done
+}
+
+filterSiloAttr() {
+    local attr
+    while read -r sha1 path; do
+        [ "${sha1}" = "" ] && continue
+        attr=$(getAttrValue "silo" "${path}")
+        if ! passFilter "$attr" "$@"; then
+            test $opt_verbose && printf "skipping: %s\n" "${path}" >&2
+            continue
+        fi
+        printf '%s %s\n' "${sha1}" "${path}"
+    done
+}
+
+passFilter() {
+    local attr=$1
+    shift
+    for f in "$@"; do
+        read -r cmd label <<<"${f}"
+        case ",${attr}," in
+        *,${label},*)
+            case "${cmd}" in
+            +)
+                return 0
+                ;;
+            -)
+                return 1
+                ;;
+            *)
+                die "Invalid filter command in filter rule '${cmd} ${label}'."
+            esac
+            ;;
+        esac
+    done
+    return 0
 }
 
 getRemoteSiloUrl() {
