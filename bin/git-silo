@@ -5,6 +5,8 @@ set -o nounset
 set -o pipefail
 set -o noglob
 
+opt_debug=
+
 usage() {
     cat <<\EOF
 git-silo init
@@ -914,11 +916,15 @@ transport_scp_fetch() {
         printSyncInfo COPY $p "$objPathMap"
         remotep=$(makeScpUrl "$url_host" "$url_dir/$p")
         if test $opt_dry_run; then
-            echo Would have run: "$scp" "$remotep" "$silodir/$p"
+            if test $opt_debug; then
+                echo Would have run: "$scp" "$remotep" "$silodir/$p"
+            fi
         else
             dir="$(dirname "$p")"
             mkdirWithParentsPermissions "$silodir/$dir"
-            echo "$scp" ...
+            if test $opt_debug; then
+                echo "$scp" ...
+            fi
             rm -f "$silodir/$p-tmp"
             # Avoid absolute local paths to work around msysgit limitation.
             # scp d:/... would fail.
