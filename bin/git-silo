@@ -674,7 +674,7 @@ cfg_silo_add() {
     link|copy)
         ;;  # OK
     *)
-        printf "Warning: invalid option silo.add = '%s'; using 'link'.\n" >&2 "$option"
+        printf "Warning: invalid option silo.add = '%s'; using 'link'.\n" "$option" >&2
         option=link
         ;;
     esac
@@ -790,16 +790,16 @@ cmd_checkout() {
                     ! test -w "$path" ||
                     chmod a-w "$path" >/dev/null 2>&1 || (
                         test $opt_link &&
-                        echo "Warning: failed to set read-only permissions, falling back to copy '$path'." &&
+                        echo "Warning: failed to set read-only permissions, falling back to copy '$path'." >&2 &&
                         false
                     )
                 ) &&
-                echo "    LINK" $sha1 "$path"
+                printf "Linking %s %s" "${sha1}" "${path}"
             ) || (
                 rm -f "$path" &&
                 cp "$objfile" "$path" &&
                 chmod u+w "$path" &&
-                echo "    COPY" $sha1 "$path"
+                printf "Copying %s %s\n" "${sha1}" "${path}"
             ) || {
                 printf >&2 "Failed to copy '%s' to '%s'.\n" "$objfile" "$path"
                 err=t
@@ -917,7 +917,7 @@ cmd_push() {
     local url transport
     url=$(getRemoteSiloUrl)
     transport=$(getTransport "$url")
-    echo "pushing silo to $url"
+    echo "Pushing silo to $url"
     lsSiloTracked "${pathspec[@]}" |
         filterSiloAttr "${arg_filter[@]}" |
         uniqSha1s |
@@ -942,7 +942,7 @@ cmd_fetch() {
     local url transport
     url=$(getRemoteSiloUrl)
     transport=$(getTransport "$url")
-    echo "fetching silo from $url"
+    echo "Fetching silo from $url"
     lsSiloTracked "${pathspec[@]}" |
         filterSiloAttr "${arg_filter[@]}" |
         uniqSha1s |
@@ -965,17 +965,17 @@ transport_scp_fetch() {
         [ -f "$silodir/$p" ] && continue
         if ! findLineIn "$p" "$remoteObjs"; then
             missing=t
-            printSyncInfo MISSING $p "$objPathMap"
+            printSyncInfo "Warning: missing" "$p" "$objPathMap" >&2
             continue
         fi
-        printSyncInfo COPY $p "$objPathMap"
+        printSyncInfo "Fetching" "$p" "$objPathMap"
         remotep=$(makeScpUrl "$url_host" "$url_dir/$p")
         if test $opt_dry_run; then
-            echo_debug Would have run: "$scp" "$remotep" "$silodir/$p"
+            echo_debug "Would have run:" "$scp" "$remotep" "$silodir/$p"
         else
             dir="$(dirname "$p")"
             mkdirWithParentsPermissions "$silodir/$dir"
-            echo_debug "$scp" ...
+            echo_debug "$scp" "..."
             rm -f "$silodir/$p-tmp"
             # Avoid absolute local paths to work around msysgit limitation.
             # scp d:/... would fail.
@@ -1003,14 +1003,14 @@ transport_scp_push() {
     while read p; do
         [ "$p" = "" ] && continue
         findLineIn "$p" "$existing" && continue
-        printSyncInfo COPY $p "$objPathMap"
         if ! [ -f "$silodir/$p" ]; then
-            printf 'Warning: %s not in silo store, skipping.\n' >&2 $p
+            printSyncInfo "Warning: missing" "$p" "$objPathMap" >&2
             continue
         fi
+        printSyncInfo "Pushing" "$p" "$objPathMap"
         if test $opt_dry_run; then
             remotep=$(makeScpUrl "$url_host" "$url_dir/$p")
-            echo_echo Would have run: "$scp" "$silodir/$p" "$remotep"
+            echo_debug "Would have run:" "$scp" "$silodir/$p" "$remotep"
         else
             dir=$(dirname $p)
 
@@ -1108,16 +1108,16 @@ transport_localcp_fetch() {
         [ -f "$silodir/$p" ] && continue
         if ! [ -e "$url/$p" ]; then
             missing=t
-            printSyncInfo MISSING $p "$objPathMap"
+            printSyncInfo "Warning: missing" "$p" "$objPathMap" >&2
             continue
         fi
-        printSyncInfo COPY $p "$objPathMap"
+        printSyncInfo "Fetching" "$p" "$objPathMap"
         if test $opt_dry_run; then
-            echo_debug Would have run: cp "$url/$p" "$silodir/$p"
+            echo_debug "Would have run: cp" "$url/$p" "$silodir/$p"
         else
             dir="$(dirname "$p")"
             mkdirWithParentsPermissions "$silodir/$dir"
-            echo_debug cp $p ...
+            echo_debug "cp $p ..."
             rm -f "$silodir/$p-tmp"
             cp "$url/$p" "$silodir/$p-tmp" || {
                 die "Failed to copy '$p'."
@@ -1141,17 +1141,17 @@ transport_localcp_push() {
     while read p; do
         [ "$p" = "" ] && continue
         [ -f "$url/$p" ] && continue
-        printSyncInfo COPY $p "$objPathMap"
         if ! [ -f "$silodir/$p" ]; then
-            printf 'Warning: %s not in silo store, skipping.\n' >&2 $p
+            printSyncInfo "Warning: missing" "$p" "$objPathMap" >&2
             continue
         fi
+        printSyncInfo "Pushing" "$p" "$objPathMap"
         if test $opt_dry_run; then
-            echo_debug Would have run: cp "$silodir/$p" "$url/$p"
+            echo_debug "Would have run: cp" "$silodir/$p" "$url/$p"
         else
             dir=$(dirname $p)
             mkdirWithParentsPermissions "$url/$dir"
-            echo_debug cp ...
+            echo_debug "cp ..."
             rm -f "$url/$p-tmp"
             cp "$silodir/$p" "$url/$p-tmp"
             chmod a-w "$url/$p-tmp"
@@ -1167,7 +1167,7 @@ printSyncInfo() {
     local objPathMap=$3
     local sha1=$(cut -b 1-2,4-41 <<<"$p")
     grep $sha1 <<<"$objPathMap" |
-        sed -e "s/^/    $msg /"
+        sed -e "s/^/$msg /"
 }
 
 mkdirWithParentsPermissions() {
@@ -1592,7 +1592,7 @@ cmd_dedup() {
         ln "$src" "$tmp" &&
         mv -f "$tmp" "$dest" || {
             printf "Warning: Failed to link '%s' from '%s' to '%s'.\n" \
-                "$key" "$prev_dir" "$dir"
+                "$key" "$prev_dir" "$dir" >&2
         }
     done
 }
