@@ -73,7 +73,7 @@ git-silo dedup <repo>...
                     gitattributes 'silo' contains an entry 'local'.  See
                     TRANSFER FILTERS section.
 
-  gc                delete silo files that are not directly referenced by
+  gc                remove silo files that are not directly referenced by
                     HEAD, tags or tips of branches.
 
     --gitattributes Also remove unused entries from '.gitattributes' and create
@@ -84,12 +84,12 @@ git-silo dedup <repo>...
 
     -n <number>     keep only objects reachable from the latest <number>
                     commits at each local head, including tags.  Note that
-                    objects that are reachable only from a remote tracking
-                    branch will be deleted.
+                    objects that are only reachable from a remote tracking
+                    branch will be removed.
 
     --no-tags       remove objects that are reachable only via a tag.
 
-    --dry-run       print only what would be deleted.
+    --dry-run       print only what would be removed.
 
   purge             replace files by placeholders and remove objects from silo.
                     Since this is a very destructive operation (comparable to
@@ -1312,23 +1312,20 @@ cmd_gc() {
 }
 
 gcSiloObjects() {
-    local silodir current stored delete
+    local silodir current stored remove
     current=$(allCurrentSiloObjects)
     current=$(convertToObjectSubdirPaths <<< "$current")
 
     silodir=$(getSiloObjectDir)
     stored=$(lsDir "$silodir")
 
-    delete=$(setminus "$stored" "$current")
+    remove=$(setminus "$stored" "$current")
     if test $opt_dry_run; then
-        if [ "$delete" != "" ]; then
-            printf "Would delete:\n%s\n" "$delete"
-        else
-            printf "Would not delete any objects.\n"
-        fi
+        sed -e 's/^/Would remove /' <<<"${remove}"
         return 0
     fi
-    ( cd "$silodir" && xargs rm -f ) <<<"$delete"
+    ( cd "$silodir" && xargs rm -vf ) <<<"${remove}" |
+        sed -e 's/^/Removing /'
     find "${silodir}" -type d -empty -mindepth 1 -maxdepth 1 -exec rmdir '{}' ';' || true
 }
 

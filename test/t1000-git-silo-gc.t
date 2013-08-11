@@ -62,7 +62,7 @@ test_expect_success \
 test_expect_success \
 "'git-silo gc --dry-run' should report objects that would be deleted." \
 '
-    git silo gc --dry-run | egrep ^[0-9a-f/]{41}
+    git silo gc --dry-run | egrep -i "would remove.*[0-9a-f/]{41}"
 '
 
 test_expect_success \
