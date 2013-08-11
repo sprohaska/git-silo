@@ -1131,6 +1131,8 @@ isSharedDir() {
     test -g "$1"
 }
 
+# Lines must not contain special basic regex characters.
+# SHA1s are ok.  Relative silo object paths 'xx/xxx...' are also ok.
 findLineIn() {
     grep -q "^$1\$" <<< "$2"
 }
@@ -1335,6 +1337,8 @@ convertToObjectSubdirPaths() {
     sed -e 's@^\(.\{2\}\)@\1/@'
 }
 
+# Lines must not contain special basic regex characters.
+# SHA1s are ok.  Relative silo object paths 'xx/xxx...' are also ok.
 setminus() {
     while read l; do
         findLineIn "$l" "$2" && continue
