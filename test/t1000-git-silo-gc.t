@@ -17,13 +17,10 @@ test_expect_success \
     touch .gitignore &&
     git add .gitignore &&
     git commit -m 'initial commit' &&
-    git-silo init
-    echo a >a &&
-    ( openssl sha1 a | cut -d ' ' -f 2 > a.sha1 ) &&
-    echo b >b &&
-    ( openssl sha1 b | cut -d ' ' -f 2 > b.sha1 ) &&
-    echo c >c &&
-    ( openssl sha1 c | cut -d ' ' -f 2 > c.sha1 ) &&
+    git-silo init &&
+    setup_file a &&
+    setup_file b &&
+    setup_file c &&
     ( cat a.sha1 b.sha1 | sort -u >ab.sha1 ) &&
     ( cat b.sha1 c.sha1 | sort -u >bc.sha1 ) &&
     ( cat a.sha1 b.sha1 c.sha1 | sort -u >abc.sha1 )
@@ -69,12 +66,17 @@ test_expect_success \
 '
 
 test_expect_success \
-"'git-silo gc' should collect objects that are unreachable." \
-"
+"'git-silo gc' should collect objects that are unreachable..." \
+'
     git silo gc &&
-    ( cd .git/silo/objects && find * -type f | sed -e 's@/@@' ) >actual &&
+    ( cd .git/silo/objects && find * -type f | sed -e "s@/@@" ) >actual &&
     test_cmp ab.sha1 actual
-"
+'
+test_expect_success \
+"... and remove empty directories." \
+'
+    [ "$(find .git/silo/objects -type d -empty -mindepth 1 -maxdepth 1)" == "" ]
+'
 
 test_expect_success \
 "'git-silo gc -n 1' should keep latest objects reachable by tag." \

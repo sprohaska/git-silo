@@ -1328,10 +1328,8 @@ gcSiloObjects() {
         fi
         return 0
     fi
-    ( cd "$silodir" &&
-        xargs rm -f <<< "$delete" &&
-        rmdir * 2>/dev/null ||
-        true )
+    ( cd "$silodir" && xargs rm -f ) <<<"$delete"
+    find "${silodir}" -type d -empty -mindepth 1 -maxdepth 1 -exec rmdir '{}' ';' || true
 }
 
 cmd_purge() {
