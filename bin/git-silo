@@ -909,10 +909,10 @@ cmd_push() {
     else
         IFS=$'\n'
         pathspec=( $(git config --get-all remote."${remote}".silopush) ) ||
-            pathspec=
+            pathspec=()
         unset IFS
     fi
-    test "$pathspec" || die "Missing path.  Push requires a path, either on the command line or in the config 'remote.${remote}.silopush'."
+    (( ${#pathspec[@]} )) || dieMissingPath "push"
     validateHaveSilo
     local url transport
     url=$(getRemoteSiloUrl)
@@ -934,10 +934,10 @@ cmd_fetch() {
     else
         IFS=$'\n'
         pathspec=( $(git config --get-all remote."${remote}".silofetch) ) ||
-            pathspec=
+            pathspec=()
         unset IFS
     fi
-    test "$pathspec" || die "Missing path.  Fetch requires a path, either on the command line or in the config 'remote.${remote}.silofetch'."
+    (( ${#pathspec[@]} )) || dieMissingPath "fetch"
     validateHaveSilo
     local url transport
     url=$(getRemoteSiloUrl)
@@ -1266,7 +1266,7 @@ getRemoteSiloUrl() {
     local remote=origin
     test "$arg_remote" && remote="$arg_remote"
     url=$(git config remote."${remote}".url) ||
-        die "Failed to get URL of remote '${remote}'."
+        die "Failed to get URL of remote '${remote}'.  If you meant '${remote}' to be a path, separate it by a double dash: '-- ${remote} ...'."
     if grep -q '^ssh://' <<< "$url"; then
         url=$(sed -e 's@ssh://@@' -e 's@/@:/@' -e 's@//@/@' \
             -e 's@:/~@:~@' <<< "$url")
@@ -1635,6 +1635,15 @@ no_staged_changes() {
 
 no_unstaged_changes() {
     git diff-files --quiet
+}
+
+dieMissingPath() {
+    local what="$1"
+    msg="Missing path.  '${what}' requires a path, either on the command line or in 'remote.<remote>.silo${what}'."
+    if test "${arg_remote}"; then
+        msg="$msg  The first argument '${arg_remote}' was interpreted as a remote.  If you meant to use remote 'origin' and ${what} a path, separate the argument by a double dash: '-- ${arg_remote}'."
+    fi
+    die "${msg}"
 }
 
 die() {
