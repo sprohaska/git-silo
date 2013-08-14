@@ -794,7 +794,7 @@ cmd_checkout() {
                         false
                     )
                 ) &&
-                printf "Linking %s %s" "${sha1}" "${path}"
+                printf "Linking %s %s\n" "${sha1}" "${path}"
             ) || (
                 rm -f "$path" &&
                 cp "$objfile" "$path" &&
