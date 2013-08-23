@@ -214,11 +214,11 @@ argparse() {
             die "Unknown option $1"
             ;;
         *)
-            if test $arg_cmd; then
+            if test "$arg_cmd"; then
                 die "Wrong number of arguments"
             else
                 validateCmd "$1"
-                arg_cmd=$1
+                arg_cmd="$1"
                 shift
                 argparse_$arg_cmd "$@"
                 return
@@ -226,7 +226,7 @@ argparse() {
             ;;
         esac
     done
-    test $arg_cmd || die "Missing command."
+    test "$arg_cmd" || die "Missing command."
 }
 
 argparse_init() {
@@ -483,8 +483,8 @@ argparse_sync() {
             die "Unknown option $1"
             ;;
         *)
-            if ! test $arg_remote; then
-                arg_remote=$1
+            if ! test "$arg_remote"; then
+                arg_remote="$1"
                 shift
             else
                 arg_pathspec=( "$@" )
@@ -766,9 +766,9 @@ cmd_add() {
 
 cmd_checkout() {
     validateHaveSilo
-    local sha1 path err silodir objfile
+    local sha1 path silodir objfile
     silodir=$(getSiloObjectDir)
-    err=
+    local haveErr=
     while read sha1 path; do
         [ "$path" = "" ] && continue
         if ! [ -e "$path" ] ||
@@ -779,7 +779,7 @@ cmd_checkout() {
             objfile=$silodir/${sha1:0:2}/${sha1:2}
             if ! test -e "$objfile"; then
                 printf >&2 "missing silo content: %s\n" "$path"
-                err=t
+                haveErr=t
                 continue
             fi
             mkdir -p "$(dirname "$path")"
@@ -802,13 +802,13 @@ cmd_checkout() {
                 printf "Copying %s %s\n" "${sha1}" "${path}"
             ) || {
                 printf >&2 "Failed to copy '%s' to '%s'.\n" "$objfile" "$path"
-                err=t
+                haveErr=t
                 continue
             }
             git add -u -- "$path"  # Update index, so that 'git status' is clean.
         fi
     done <<< "$(lsSiloTracked "${arg_pathspec[@]}")"
-    test $err && die "There have been problems during silo checkout (see above)."
+    test $haveErr && die "There have been problems during silo checkout (see above)."
     true
 }
 
@@ -959,12 +959,12 @@ transport_scp_fetch() {
     objPathMap=$(lsSiloTracked "${pathspec[@]}")
     silodir=$(getSiloObjectDir)
     remoteObjs=$(lsRemoteDir "$url_host" "$url_dir")
-    missing=
+    local areMissing=
     while read p; do
         [ "$p" = "" ] && continue
         [ -f "$silodir/$p" ] && continue
         if ! findLineIn "$p" "$remoteObjs"; then
-            missing=t
+            areMissing=t
             printSyncInfo "Warning: missing" "$p" "$objPathMap" >&2
             continue
         fi
@@ -988,7 +988,7 @@ transport_scp_fetch() {
             mv "$silodir/$p-tmp" "$silodir/$p"
         fi
     done
-    test $missing && die "Some files are missing at remote (see above)."
+    test $areMissing && die "Some files are missing at remote (see above)."
     true
 }
 
@@ -1102,12 +1102,12 @@ transport_localcp_fetch() {
     url=$1
     objPathMap=$(lsSiloTracked "${pathspec[@]}")
     silodir=$(getSiloObjectDir)
-    missing=
+    local areMissing=
     while read p; do
         [ "$p" = "" ] && continue
         [ -f "$silodir/$p" ] && continue
         if ! [ -e "$url/$p" ]; then
-            missing=t
+            areMissing=t
             printSyncInfo "Warning: missing" "$p" "$objPathMap" >&2
             continue
         fi
@@ -1126,7 +1126,7 @@ transport_localcp_fetch() {
             mv "$silodir/$p-tmp" "$silodir/$p"
         fi
     done
-    test $missing && die "Some files are missing at remote (see above)."
+    test $areMissing && die "Some files are missing at remote (see above)."
     true
 }
 
@@ -1332,7 +1332,7 @@ gcSiloObjects() {
 cmd_purge() {
     validateHaveSilo
 
-    local orphanSha1s silodir remove_object sha1 path objpath
+    local orphanSha1s silodir shouldRemoveObject sha1 path objpath
     local msg_remove msg_placeholder
 
     [[ $(cfg_ismasterstore) == "false" ]] ||
@@ -1364,10 +1364,10 @@ cmd_purge() {
 
         objpath="${silodir}/$(sha1AsObjectPath "${sha1}")"
         if [ -f "${objpath}" ] && grep -q -F "${sha1}" <<<"${orphanSha1s}"; then
-            remove_object=t
+            shouldRemoveObject=t
             printf "%s %s %s\n" "${msg_remove}" "${sha1}" "${path}"
         elif ! isSha1PlaceholderFile "${path}"; then
-            remove_object=
+            shouldRemoveObject=
             printf "%s %s %s\n" "${msg_placeholder}" "${sha1}" "${path}"
         else
             continue
@@ -1381,7 +1381,7 @@ cmd_purge() {
         printf '%s\n' "${sha1}" >"${path}"
         git add -u "${path}"
 
-        if ! test $remove_object; then
+        if ! test $shouldRemoveObject; then
             continue;
         fi
 
@@ -1548,10 +1548,10 @@ lsGitattributes() {
 }
 
 cmd_fsck() {
-    local silodir expected_sha1 actual_sha1 err
+    local silodir expected_sha1 actual_sha1
     validateHaveSilo
     silodir="$(getSiloObjectDir)"
-    err=
+    local haveErr=
     while read -r p; do
         expected_sha1=${p/\//}
         actual_sha1=$(computeSha1 <"$silodir/$p") ||
@@ -1559,10 +1559,10 @@ cmd_fsck() {
         if [ $expected_sha1 != $actual_sha1 ]; then
             printf 'Error: %s corrupted, has wrong sha1 %s\n' \
                 "$p" "$actual_sha1"
-            err=t
+            haveErr=t
         fi
     done <<<"$(lsSiloObjectsInDir "$silodir")"
-    test $err && die "There have been errors (see above)."
+    test $haveErr && die "There have been errors (see above)."
     echo ok
 }
 
