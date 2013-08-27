@@ -1612,9 +1612,10 @@ lsAllDedupCandidates() {
 lsDedupCandidates() {
     local abspath
     abspath=$( cd "$1" && cd "$(getSiloObjectDir)" && pwd )
+    # '|| true' avoids pipefail without match.
     (
     lsDir "$abspath" |
-    egrep '^[0-9a-f]{2}/[0-9a-f]{38}$'
+    ( egrep '^[0-9a-f]{2}/[0-9a-f]{38}$' || true )
     ) |
     while read -r line; do
         printf '%s %s\n' "$line" "$abspath"
