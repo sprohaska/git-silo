@@ -19,6 +19,12 @@ test_expect_success \
     setup_user
 '
 
+test_expect_success "'git-silo dedup' should succeed with empty silos." '
+    setup_repo empty1 &&
+    setup_repo empty2 &&
+    git-silo dedup empty1 empty2
+'
+
 test_expect_success \
 "git dedup should create hardlinks between two repositories in expected order" \
 '

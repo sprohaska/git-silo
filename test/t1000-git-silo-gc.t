@@ -10,14 +10,22 @@ test_expect_success \
     setup_user
 '
 
-test_expect_success \
-"Setup" \
+test_expect_success "setup repo" \
 "
     git init &&
     touch .gitignore &&
     git add .gitignore &&
     git commit -m 'initial commit' &&
-    git-silo init &&
+    git-silo init
+"
+
+test_expect_success "'git-silo gc' should succeed with empty silo." \
+'
+    git-silo gc
+'
+
+test_expect_success "setup add files" \
+"
     setup_file a &&
     setup_file b &&
     setup_file c &&
