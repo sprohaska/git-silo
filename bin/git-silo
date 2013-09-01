@@ -1591,6 +1591,10 @@ cmd_dedup() {
         fi
         src=$prev_dir/$key
         dest=$dir/$key
+        # Skip if files already use same inode.
+        if [ "$(inodeNumber "${src}")" = "$(inodeNumber "${dest}")" ]; then
+            continue
+        fi
         tmp=$dest-$$
         ln "$src" "$tmp" &&
         mv -f "$tmp" "$dest" || {
@@ -1598,6 +1602,10 @@ cmd_dedup() {
                 "$key" "$prev_dir" "$dir" >&2
         }
     done
+}
+
+inodeNumber() {
+    ls -i "$1" | cut -d ' ' -f 1
 }
 
 validateHaveSiloAt() {
