@@ -106,4 +106,24 @@ test_expect_success \
     ! grep -q first log
 '
 
+test_expect_success \
+"'git-silo fetch' should report error with invalid remote path." \
+'
+    (
+        cd scpclone &&
+        git remote add invalid ssh://localhost/invalid/path &&
+        ! git silo fetch invalid -- .
+    )
+'
+
+test_expect_success \
+"'git-silo fetch' should ignore missing remote silo/objects." \
+'
+    rm -rf repo1/.git/silo/objects &&
+    (
+        cd scpclone &&
+        git silo fetch -- .
+    )
+'
+
 test_done
