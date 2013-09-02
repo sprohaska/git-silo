@@ -1329,7 +1329,7 @@ gcSiloObjects() {
     fi
     ( cd "$silodir" && xargs rm -vf ) <<<"${remove}" |
         sed -e 's/^/Removing /'
-    find "${silodir}" -type d -empty -mindepth 1 -maxdepth 1 -exec rmdir '{}' ';' || true
+    find "${silodir}" -mindepth 1 -maxdepth 1 -type d -empty -exec rmdir '{}' ';' || true
 }
 
 cmd_purge() {
@@ -1391,7 +1391,7 @@ cmd_purge() {
         rm -f "${objpath}"
     done
 
-    find "${silodir}" -type d -empty -mindepth 1 -maxdepth 1 -exec rmdir '{}' ';' || true
+    find "${silodir}" -mindepth 1 -maxdepth 1 -type d -empty -exec rmdir '{}' ';' || true
 }
 
 # Count how often a sha1 is used (1) by all files of HEAD and (2) when files
