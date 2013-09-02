@@ -1264,7 +1264,7 @@ passFilter() {
 }
 
 getRemoteSiloUrl() {
-    local url
+    local url reurl
     local remote=origin
     test "$arg_remote" && remote="$arg_remote"
     url=$(git config remote."${remote}".url) ||
@@ -1275,8 +1275,9 @@ getRemoteSiloUrl() {
     elif grep -q '^[^:]*://' <<< "$url"; then
         die "Don't know how to use $url."
     fi
-    url=$(resolveGitDir "$url")
-    printf '%s/silo/objects\n' "$url"
+    reurl=$(resolveGitDir "$url") ||
+        die "Failed to resolve git-dir for '$url'."
+    printf '%s/silo/objects\n' "$reurl"
 }
 
 resolveGitDir() {
@@ -1296,7 +1297,7 @@ cd '$url_dir'
 cd "\$(git rev-parse --git-dir)"
 pwd
 EOFPRG
-        )
+        ) || die "Failed 'ssh $url_host bash ...' to determine git-dir."
         url=$url_host:$url_dir
         ;;
     esac
@@ -1445,11 +1446,13 @@ lsDir() {
 lsRemoteDir() {
     exec_ssh "$1" bash -s <<EOFPRG |
 set -o errexit
-test -e '$2'
-cd '$2'
-find . -type f
+if test -e '$2'; then
+    cd '$2'
+    find . -type f
+fi
 EOFPRG
-    sed -e 's@^\./@@' || true
+    sed -e 's@^\./@@' ||
+        die "Failed to list silo objects at '$1' in '$2'."
 }
 
 allCurrentSiloObjects() {
