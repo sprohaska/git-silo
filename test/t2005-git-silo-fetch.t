@@ -45,6 +45,19 @@ test_expect_success \
 '
 
 test_expect_success \
+"'git-silo fetch --dry-run' report files without fetching." '
+    ( cd cpclone && git-silo fetch --dry-run -- . ) >log &&
+    grep -q first log &&
+    printf "" >expected &&
+    ( find cpclone/.git/silo/objects -type f ) >actual &&
+    test_cmp expected actual
+'
+
+test_expect_success "cleanup" '
+    rm -f cpclone/.git/silo/objects/*/*
+'
+
+test_expect_success \
 "'git-silo fetch' should mention files that are fetched." \
 '
     ( cd cpclone && git-silo fetch -- . ) >log &&

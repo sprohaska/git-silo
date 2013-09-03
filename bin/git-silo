@@ -1116,29 +1116,29 @@ transport_localcp_fetch() {
             continue
         fi
         printSyncInfo "Fetching" "$p" "$objPathMap"
+
         if test $opt_dry_run; then
-            if ! test -w "${src}"; then
-                echo_debug "Would have run: ln" "${src}" "${dest}"
-            else
-                echo_debug "Would have run: cp" "${src}" "${dest}"
-            fi
-        else
-            dir="$(dirname "$p")"
-            mkdirWithParentsPermissions "$silodir/$dir"
-            echo_debug "cp $p ..."
-            tmp="${dest}-tmp"
-            rm -f "${tmp}"
-            # Try to link, but only if source has correct permissions.
-            if ! test -w "${src}"; then
-                if ln "${src}" "${dest}" >/dev/null 2>&1; then
-                    continue
-                fi
-            fi
-            cp "${src}" "${tmp}" ||
-                die "Failed to copy '$p'."
-            chmod a-w "${tmp}"
-            mv "${tmp}" "${dest}"
+           continue
         fi
+
+        dir="$(dirname "$p")"
+        mkdirWithParentsPermissions "$silodir/$dir"
+
+        # Try to link, but only if source has correct permissions.
+        if ! test -w "${src}"; then
+            echo_debug "ln $src ..."
+            if ln "${src}" "${dest}" >/dev/null 2>&1; then
+                continue
+            fi
+        fi
+
+        echo_debug "cp ${src} ..."
+        tmp="${dest}-tmp"
+        rm -f "${tmp}"
+        cp "${src}" "${tmp}" ||
+            die "Failed to copy '$p'."
+        chmod a-w "${tmp}"
+        mv "${tmp}" "${dest}"
     done
     test $areMissing && die "Some files are missing at remote (see above)."
     true
