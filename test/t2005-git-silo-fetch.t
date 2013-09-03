@@ -32,6 +32,12 @@ test_expect_success \
     test_cmp first.sha1 actual
 "
 
+test_expect_success "local fetch should use hardlinks" '
+    echo 3 >expected &&
+    linkCount cpclone/.git/silo/objects/*/* >actual &&
+    test_cmp expected actual
+'
+
 test_expect_success \
 "cleanup" \
 '

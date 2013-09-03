@@ -1100,32 +1100,44 @@ makeScpUrl() {
 }
 
 transport_localcp_fetch() {
-    local silodir url dir objPathMap
+    local silodir url dir objPathMap src dest tmp
     url=$1
     objPathMap=$(lsSiloTracked "${pathspec[@]}")
     silodir=$(getSiloObjectDir)
     local areMissing=
     while read p; do
         [ "$p" = "" ] && continue
-        [ -f "$silodir/$p" ] && continue
-        if ! [ -e "$url/$p" ]; then
+        src="${url}/${p}"
+        dest="${silodir}/${p}"
+        [ -f "${dest}" ] && continue
+        if ! [ -e "${src}" ]; then
             areMissing=t
             printSyncInfo "Warning: missing" "$p" "$objPathMap" >&2
             continue
         fi
         printSyncInfo "Fetching" "$p" "$objPathMap"
         if test $opt_dry_run; then
-            echo_debug "Would have run: cp" "$url/$p" "$silodir/$p"
+            if ! test -w "${src}"; then
+                echo_debug "Would have run: ln" "${src}" "${dest}"
+            else
+                echo_debug "Would have run: cp" "${src}" "${dest}"
+            fi
         else
             dir="$(dirname "$p")"
             mkdirWithParentsPermissions "$silodir/$dir"
             echo_debug "cp $p ..."
-            rm -f "$silodir/$p-tmp"
-            cp "$url/$p" "$silodir/$p-tmp" || {
+            tmp="${dest}-tmp"
+            rm -f "${tmp}"
+            # Try to link, but only if source has correct permissions.
+            if ! test -w "${src}"; then
+                if ln "${src}" "${dest}" >/dev/null 2>&1; then
+                    continue
+                fi
+            fi
+            cp "${src}" "${tmp}" ||
                 die "Failed to copy '$p'."
-            }
-            chmod a-w "$silodir/$p-tmp"
-            mv "$silodir/$p-tmp" "$silodir/$p"
+            chmod a-w "${tmp}"
+            mv "${tmp}" "${dest}"
         fi
     done
     test $areMissing && die "Some files are missing at remote (see above)."

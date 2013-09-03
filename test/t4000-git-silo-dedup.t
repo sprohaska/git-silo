@@ -25,13 +25,17 @@ test_expect_success "'git-silo dedup' should succeed with empty silos." '
     git-silo dedup empty1 empty2
 '
 
-test_expect_success \
+ssh localhost true 2>/dev/null && test_set_prereq LOCALHOST
+
+# setup_clone_ssh is used to create repo2 in order to avoid local copy, which
+# would immediately create hard links.
+test_expect_success LOCALHOST \
 "git dedup should create hardlinks between two repositories in expected order" \
 '
     setup_file a &&
     setup_repo repo1 &&
     setup_add_file repo1 a &&
-    git clone repo1 repo2 &&
+    setup_clone_ssh repo1 repo2 &&
     (
         cd repo2 &&
         git-silo init &&
