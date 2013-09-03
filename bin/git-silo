@@ -29,15 +29,15 @@ git-silo dedup <repo>...
   init              initialize silo.  Install clean and smudge git filters for
                     silo.  See also WILDCARD SETUP section.
 
-  add               add untracked files for silo storage.  Creates hardlink or
+  add               add untracked files for silo storage.  Creates hard link or
                     copy depending on value of 'silo.add'.  See CONFIGURATION
                     VARIABLES section.
 
   checkout          replace placeholders with full content.
 
-    --copy          copy files instead of using hardlinks.
+    --copy          copy files instead of using hard link
 
-    --link          replace checked-out copies with hardlinks.
+    --link          replace checked-out copies with hard link
 
   status            print status of files stored in silo.
 
@@ -104,7 +104,7 @@ git-silo dedup <repo>...
 
   fsck              verify silo storage.
 
-  dedup             create hardlinks between repositories.  Repositories listed
+  dedup             create hard links between repositories.  Repositories listed
                     later get linked to repositories listed earlier.
 
 # WILDCARD SETUP
@@ -151,10 +151,10 @@ For example, with the following line in '.gitattributes'
 # CONFIGURATION VARIABLES
 
 silo.add (default 'link'): Controls behaviour of 'git silo add'.  If set to
-'link', a hardlink is stored and the original file's permissions set to
+'link', a hard link is stored and the original file's permissions set to
 read-only.  If set to 'copy', a copy will be stored.  Always storing a copy
 might be useful if you want to keep the file open in another application, like
-Word, and use 'git-silo add' repeatedly.  When creating a hardlink, the file
+Word, and use 'git-silo add' repeatedly.  When creating a hard link, the file
 permissions are changed to read-only, which might confuse applications like
 Word.
 
@@ -529,7 +529,7 @@ cmd_init() {
         }
     fi
     if ! isBareRepo; then
-        # git-silo uses hardlinks operations, which modify ctime.  Tell git to
+        # git-silo uses hard link operations, which modify ctime.  Tell git to
         git config core.trustctime false
         configFilters
     fi
