@@ -106,6 +106,9 @@ git-silo dedup <repo>...
 
   dedup             create hard links between repositories.  Repositories listed
                     later get linked to repositories listed earlier.
+                    Deduplication might be incomplete if silo objects are owned
+                    by different users and the OS restricts creation of hard
+                    links.  See KNOWN ISSUES section.
 
 # WILDCARD SETUP
 
@@ -191,6 +194,11 @@ instead of ssh.
   - git might fail with mmap out-of-memory on Windows.  Git on Windows is a
     32-bit executable, which fails for large files in some situations.  There is
     now known workaround.
+
+  - If creation of hard links between different users is restricted, some
+    operations might report warnings (like 'dedup') or copy data as a fall back
+    ('fetch' from local filesystem).  Since Linux 3.6, the restrictions can be
+    controlled with '/proc/sys/fs/protected_hardlinks' (see proc(5)).
 
 EOF
 }
