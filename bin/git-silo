@@ -191,6 +191,10 @@ instead of ssh.
 
     You should now see transfer rates of several 10 MB/s on a local network.
 
+  - scp in msysgit has been observed to fail during file transfer from Linux for
+    unknown reasons.  scp of the same file from a Unix machine worked.  PuTTY's
+    scp also worked.  If you experience such a problem, consider using PuTTY.
+
   - git might fail with mmap out-of-memory on Windows.  Git on Windows is a
     32-bit executable, which fails for large files in some situations.  There is
     now known workaround.
