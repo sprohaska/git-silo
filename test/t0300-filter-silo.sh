@@ -1,6 +1,8 @@
 #!/bin/bash
 
-test_description="git-silo (basic)"
+test_description='
+Test that git filters to handle silo content work as expected.
+'
 
 . ./_testinglib.sh
 

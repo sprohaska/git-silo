@@ -1,6 +1,8 @@
 #!/bin/bash
 
-test_description="git-silo fetch to shared repo"
+test_description='
+Test that "silo fetch" maintains shared permissions.
+'
 
 . ./_testinglib.sh
 

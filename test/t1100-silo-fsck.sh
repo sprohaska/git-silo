@@ -1,6 +1,8 @@
 #!/bin/bash
 
-test_description="git-silo gc"
+test_description='
+Test "silo fsck" to verify consistency of silo store.
+'
 
 . ./_testinglib.sh
 

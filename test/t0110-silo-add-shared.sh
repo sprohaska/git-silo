@@ -1,6 +1,8 @@
 #!/bin/bash
 
-test_description="git-silo (basic)"
+test_description='
+Test that "silo add" maintains shared permissions.
+'
 
 . ./_testinglib.sh
 

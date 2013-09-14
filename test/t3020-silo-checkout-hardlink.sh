@@ -1,6 +1,8 @@
 #!/bin/bash
 
-test_description="git-silo checkout"
+test_description='
+Test that "silo checkout" uses hard links as expected.
+'
 
 . ./_testinglib.sh
 
@@ -11,7 +13,7 @@ test_expect_success \
 '
 
 test_expect_success \
-"git checkout should use hardlink." \
+"git checkout should use hard links." \
 '
     git init &&
     touch .gitignore &&
@@ -28,7 +30,7 @@ test_expect_success \
 '
 
 test_expect_success \
-"git checkout --copy should not use hardlink." \
+"git checkout --copy should not use hard links." \
 '
     git-silo checkout --copy a &&
     test $(linkCount a) -eq 1 &&
@@ -36,7 +38,7 @@ test_expect_success \
 '
 
 test_expect_success \
-"git checkout --link should replace copy with hardlink." \
+"git checkout --link should replace copy with hard links." \
 '
     git-silo checkout --link a &&
     test $(linkCount a) -eq 2 &&

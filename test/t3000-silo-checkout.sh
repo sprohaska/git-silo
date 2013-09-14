@@ -1,6 +1,8 @@
 #!/bin/bash
 
-test_description="git-silo checkout"
+test_description='
+Test basic "silo checkout" operations.
+'
 
 . ./_testinglib.sh
 

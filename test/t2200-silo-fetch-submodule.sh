@@ -1,6 +1,9 @@
 #!/bin/bash
 
-test_description="git-silo dedup"
+test_description='
+Test that "silo fetch" correctly handles submodules that use a ".git" file to
+redirect to the real repository location.
+'
 
 . ./_testinglib.sh
 

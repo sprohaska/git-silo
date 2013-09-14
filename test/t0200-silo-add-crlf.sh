@@ -1,6 +1,8 @@
 #!/bin/bash
 
-test_description="git-silo (basic)"
+test_description='
+Test interaction with "core.autocrlf".
+'
 
 . ./_testinglib.sh
 

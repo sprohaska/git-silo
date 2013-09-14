@@ -1,6 +1,8 @@
 #!/bin/bash
 
-test_description="git-silo fetch"
+test_description='
+Test basic "silo fetch" operations.
+'
 
 . ./_testinglib.sh
 

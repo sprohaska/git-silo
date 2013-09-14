@@ -1,6 +1,8 @@
 #!/bin/bash
 
-test_description="git-silo purge"
+test_description='
+Test purge operations of files from working copy and silo store.
+'
 
 . ./_testinglib.sh
 

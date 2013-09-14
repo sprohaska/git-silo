@@ -1,6 +1,8 @@
 #!/bin/bash
 
-test_description="pathspec to limit fetch"
+test_description='
+Test that "silo fetch" selects path based on gitattribute "silo".
+'
 
 . ./_testinglib.sh
 

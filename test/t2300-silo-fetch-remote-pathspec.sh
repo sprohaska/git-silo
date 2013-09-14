@@ -1,6 +1,8 @@
 #!/bin/bash
 
-test_description="pathspec to limit fetch"
+test_description='
+Test that "silo fetch" supports config "remote.*.silofetch".
+'
 
 . ./_testinglib.sh
 

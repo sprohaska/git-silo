@@ -1,6 +1,8 @@
 #!/bin/bash
 
-test_description="git-silo push"
+test_description='
+Test basic "silo push" operations.
+'
 
 . ./_testinglib.sh
 

@@ -1,6 +1,8 @@
 #!/bin/bash
 
-test_description="git-silo push"
+test_description='
+Test that "silo push" properly maintains shared permissions.
+'
 
 . ./_testinglib.sh
 

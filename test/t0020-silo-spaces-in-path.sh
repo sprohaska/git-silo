@@ -1,6 +1,8 @@
 #!/bin/bash
 
-test_description="git-silo with spaces in path"
+test_description='
+Test spaces in path to "silo" executable.
+'
 
 . ./_testinglib.sh
 

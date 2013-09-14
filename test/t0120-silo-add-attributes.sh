@@ -1,6 +1,8 @@
 #!/bin/bash
 
-test_description="git-silo (basic)"
+test_description='
+Test support for wildcard gitattributes.
+'
 
 . ./_testinglib.sh
 

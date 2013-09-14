@@ -1,6 +1,8 @@
 #!/bin/bash
 
-test_description="git-silo init"
+test_description='
+Test git silo initialization.
+'
 
 . ./_testinglib.sh
 

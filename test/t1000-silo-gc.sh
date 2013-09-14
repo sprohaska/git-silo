@@ -1,6 +1,8 @@
 #!/bin/bash
 
-test_description="git-silo gc"
+test_description='
+Test basic garbage collection.
+'
 
 . ./_testinglib.sh
 

@@ -1,6 +1,9 @@
 #!/bin/bash
 
-test_description="git-silo dependencies"
+test_description='
+Test that silo verifies expectations about environment, e.g. minimal git
+version.
+'
 
 . ./_testinglib.sh
 

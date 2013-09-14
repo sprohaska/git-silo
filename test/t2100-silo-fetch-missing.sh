@@ -1,6 +1,8 @@
 #!/bin/bash
 
-test_description="git-silo fetch missing"
+test_description='
+Test that "silo fetch" handles missing files.
+'
 
 . ./_testinglib.sh
 

@@ -1,6 +1,8 @@
 #!/bin/bash
 
-test_description="git-silo add (hardlink)"
+test_description='
+Test that "silo add" uses hard links as expected.
+'
 
 . ./_testinglib.sh
 
@@ -11,7 +13,7 @@ test_expect_success \
 '
 
 test_expect_success \
-"git add should use hardlink per default" \
+"git add should use hard link per default" \
 '
     setup_repo default &&
     (
@@ -24,7 +26,7 @@ test_expect_success \
 '
 
 test_expect_success \
-"git add should use hardlink when silo.add = link" \
+"git add should use hard link when silo.add=link" \
 '
     setup_repo link &&
     (
@@ -38,7 +40,7 @@ test_expect_success \
 '
 
 test_expect_success \
-"git add should use copy when silo.add = copy" \
+"git add should use copy when silo.add=copy" \
 '
     setup_repo copy &&
     (

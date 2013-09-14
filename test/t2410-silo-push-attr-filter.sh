@@ -1,6 +1,8 @@
 #!/bin/bash
 
-test_description="pathspec to limit push"
+test_description='
+Test that "silo push" selects paths based on gitattribute "silo".
+'
 
 . ./_testinglib.sh
 

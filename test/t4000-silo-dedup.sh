@@ -1,6 +1,8 @@
 #!/bin/bash
 
-test_description="git-silo dedup"
+test_description='
+Test deduplication.
+'
 
 . ./_testinglib.sh
 

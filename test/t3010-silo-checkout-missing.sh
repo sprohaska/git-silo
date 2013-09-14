@@ -1,6 +1,8 @@
 #!/bin/bash
 
-test_description="git-silo checkout (missing)"
+test_description='
+Test "silo checkout" with missing objects.
+'
 
 . ./_testinglib.sh
 

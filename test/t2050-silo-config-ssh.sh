@@ -1,6 +1,9 @@
 #!/bin/bash
 
-test_description="git-silo fetch"
+test_description='
+Test that ssh operations can be configured.  In particular, test that PuTTy is
+supported.
+'
 
 . ./_testinglib.sh
 

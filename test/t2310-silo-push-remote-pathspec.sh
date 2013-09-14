@@ -1,6 +1,8 @@
 #!/bin/bash
 
-test_description="pathspec to limit push"
+test_description='
+Test that "silo push" supports config "remote.*.silopush".
+'
 
 . ./_testinglib.sh
 
