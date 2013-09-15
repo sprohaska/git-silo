@@ -1,0 +1,30 @@
+#!/bin/bash
+
+set -o errexit -o nounset -o pipefail -o noglob
+
+(( $# == 1 )) || {
+    echo >&2 "Error: Missing URL to pull from."
+    exit 1
+}
+url=$1
+
+git fetch "${url}"
+git merge FETCH_HEAD || true
+git checkout ORIG_HEAD -- t/.gitignore
+git rm -f t/sharness
+git rm -f .gitmodules
+git mv -f bin/git-silo git-silo.sh
+
+sed -i -e '/SCRIPT_SH += git-request-pull/a\
+SCRIPT_SH += git-silo.sh
+' Makefile
+git add Makefile
+rm -f Makefile-e
+
+sed -i -e '/git-show-ref/a\
+/git-silo
+' .gitignore
+git add .gitignore
+rm -r .gitignore-e
+
+git commit -m "Merge 'git-silo.git'"
