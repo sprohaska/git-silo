@@ -1,0 +1,20 @@
+#!/bin/bash
+
+set -o nounset -o errexit -o pipefail -o noglob
+
+src="$(pwd)/bin/git-silo"
+dest="$(git --exec-path)/git-silo"
+
+if ! [ -e "${src}" ]; then
+    echo "Error: missing '${src}'."
+    exit 1
+fi
+
+echo "    INSTALL ${dest}"
+echo "    ... to execute '${src}'."
+cat <<EOF >"${dest}"
+#!/bin/bash
+
+exec "${src}" "\$@"
+EOF
+chmod a+x "${dest}"
