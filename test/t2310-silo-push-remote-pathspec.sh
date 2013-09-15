@@ -4,7 +4,7 @@ test_description='
 Test that "silo push" supports config "remote.*.silopush".
 '
 
-. ./_testinglib.sh
+. ./lib-silo.sh
 
 test_expect_success \
 "setup user" \

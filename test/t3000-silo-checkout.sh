@@ -4,7 +4,7 @@ test_description='
 Test basic "silo checkout" operations.
 '
 
-. ./_testinglib.sh
+. ./lib-silo.sh
 
 test_expect_success \
 "setup" \

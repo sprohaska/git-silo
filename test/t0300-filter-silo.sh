@@ -4,7 +4,7 @@ test_description='
 Test that git filters to handle silo content work as expected.
 '
 
-. ./_testinglib.sh
+. ./lib-silo.sh
 
 test_expect_success \
 "setup user" \

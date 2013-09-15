@@ -4,7 +4,7 @@ test_description='
 Test "silo fsck" to verify consistency of silo store.
 '
 
-. ./_testinglib.sh
+. ./lib-silo.sh
 
 test_expect_success \
 "setup user" \

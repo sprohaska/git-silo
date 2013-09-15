@@ -4,7 +4,7 @@ test_description='
 Test "silo checkout" with missing objects.
 '
 
-. ./_testinglib.sh
+. ./lib-silo.sh
 
 test_expect_success \
 "setup user" \

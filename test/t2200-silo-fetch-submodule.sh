@@ -5,7 +5,7 @@ Test that "silo fetch" correctly handles submodules that use a ".git" file to
 redirect to the real repository location.
 '
 
-. ./_testinglib.sh
+. ./lib-silo.sh
 
 test_expect_success \
 "setup user" \

@@ -4,7 +4,7 @@ test_description='
 Test support for wildcard gitattributes.
 '
 
-. ./_testinglib.sh
+. ./lib-silo.sh
 
 test_expect_success \
 "setup user" \

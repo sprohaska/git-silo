@@ -4,7 +4,7 @@ test_description='
 Test that "silo push" selects paths based on gitattribute "silo".
 '
 
-. ./_testinglib.sh
+. ./lib-silo.sh
 
 test_expect_success \
 "setup user" \

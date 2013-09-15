@@ -4,7 +4,7 @@ test_description='
 Test purge operations of files from working copy and silo store.
 '
 
-. ./_testinglib.sh
+. ./lib-silo.sh
 
 test_expect_success \
 "setup" \

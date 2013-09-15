@@ -4,7 +4,7 @@ test_description='
 Test deduplication.
 '
 
-. ./_testinglib.sh
+. ./lib-silo.sh
 
 assertLinkCount() {
     local path=$1

@@ -5,7 +5,7 @@ Test that silo verifies expectations about environment, e.g. minimal git
 version.
 '
 
-. ./_testinglib.sh
+. ./lib-silo.sh
 
 cat >git <<EOFTXT
 #!/bin/bash

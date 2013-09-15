@@ -4,7 +4,7 @@ test_description='
 Test that "silo fetch" maintains shared permissions.
 '
 
-. ./_testinglib.sh
+. ./lib-silo.sh
 
 test_expect_success \
 "setup" \

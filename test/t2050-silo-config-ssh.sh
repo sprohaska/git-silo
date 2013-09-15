@@ -5,7 +5,7 @@ Test that ssh operations can be configured.  In particular, test that PuTTy is
 supported.
 '
 
-. ./_testinglib.sh
+. ./lib-silo.sh
 
 ssh localhost true 2>/dev/null && test_set_prereq LOCALHOST
 

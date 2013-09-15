@@ -4,7 +4,7 @@ test_description='
 Test that "silo push" handles missing files.
 '
 
-. ./_testinglib.sh
+. ./lib-silo.sh
 
 ssh localhost true 2>/dev/null && test_set_prereq LOCALHOST
 

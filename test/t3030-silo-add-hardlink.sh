@@ -4,7 +4,7 @@ test_description='
 Test that "silo add" uses hard links as expected.
 '
 
-. ./_testinglib.sh
+. ./lib-silo.sh
 
 test_expect_success \
 "setup" \

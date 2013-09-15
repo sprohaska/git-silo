@@ -4,7 +4,7 @@ test_description='
 Test spaces in path to "silo" executable.
 '
 
-. ./_testinglib.sh
+. ./lib-silo.sh
 
 cp "$(which git-silo)" git-silo
 

@@ -4,7 +4,7 @@ test_description='
 Test git silo initialization.
 '
 
-. ./_testinglib.sh
+. ./lib-silo.sh
 
 test_expect_success \
 "setup user" \

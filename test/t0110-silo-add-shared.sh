@@ -4,7 +4,7 @@ test_description='
 Test that "silo add" maintains shared permissions.
 '
 
-. ./_testinglib.sh
+. ./lib-silo.sh
 
 test_expect_success \
 "setup user" \
