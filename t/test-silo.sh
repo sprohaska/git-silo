@@ -2,7 +2,7 @@
 
 cd $(dirname "$0")
 err=
-for t in t????-*.sh; do
+for t in t89??-*.sh; do
     echo
     echo "# $t"
     ./$t || err=t
