@@ -20,7 +20,7 @@ test_expect_success \
     echo "*.ext -text filter=silo" >.gitattributes &&
     mkdir subdir &&
     touch subdir/a.ext &&
-    git-silo add subdir/a.ext &&
+    git silo add subdir/a.ext &&
     ! [ -e subdir/.gitattributes ]
 '
 

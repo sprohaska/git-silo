@@ -15,11 +15,12 @@ EOFTXT
 chmod a+x git
 
 test_expect_success \
-"git-silo should fail if git version too low." \
+"git silo should fail if git version too low." \
 '
-    git init
-    export PATH=.:$PATH
-    ! git-silo init 2>errmsg &&
+    git_silo="$(locate_git_silo)" &&
+    git init &&
+    export PATH=.:$PATH &&
+    ! "${git_silo}" init 2>errmsg &&
     grep -q "version too low" errmsg
 '
 

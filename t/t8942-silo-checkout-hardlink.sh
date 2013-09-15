@@ -19,12 +19,12 @@ test_expect_success \
     touch .gitignore &&
     git add .gitignore &&
     git commit -m "initial commit" &&
-    git-silo init
+    git silo init
     echo a >a &&
-    git-silo add a &&
+    git silo add a &&
     git commit -m "Add a" &&
     rm a &&
-    git-silo checkout a &&
+    git silo checkout a &&
     test $(linkCount a) -eq 2 &&
     ! test -w a
 '
@@ -32,7 +32,7 @@ test_expect_success \
 test_expect_success \
 "git checkout --copy should not use hard links." \
 '
-    git-silo checkout --copy a &&
+    git silo checkout --copy a &&
     test $(linkCount a) -eq 1 &&
     test -w a
 '
@@ -40,7 +40,7 @@ test_expect_success \
 test_expect_success \
 "git checkout --link should replace copy with hard links." \
 '
-    git-silo checkout --link a &&
+    git silo checkout --link a &&
     test $(linkCount a) -eq 2 &&
     ! test -w a
 '
@@ -51,7 +51,7 @@ test_expect_success \
     chmod u+w .git/silo/objects/*/* &&
     test -w a &&
     rm a &&
-    git-silo checkout --link a &&
+    git silo checkout --link a &&
     ! test -w a
 '
 

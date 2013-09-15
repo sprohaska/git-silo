@@ -40,29 +40,29 @@ if ! test_have_prereq LOCALHOST; then
 fi
 
 test_expect_success \
-"'git-silo fetch' (scp) should use custom pscp when specified and call it without double quotes" \
+"'git silo fetch' (scp) should use custom pscp when specified and call it without double quotes" \
 "
     setup_clone_ssh origrepo clonefetch &&
     (
         cd clonefetch &&
-        git-silo init &&
+        git silo init &&
         git config silo.scp '$PSCP' &&
-        git-silo fetch -- .
+        git silo fetch -- .
     ) &&
     test -e pscp-arg1 &&
     egrep -q 'localhost:[^\"]*[0-9a-f]{38}$' pscp-arg1
 "
 
 test_expect_success \
-"'git-silo push' (scp) should use custom pscp when specified and call it without double quotes" \
+"'git silo push' (scp) should use custom pscp when specified and call it without double quotes" \
 "
     setup_clone_ssh origrepo clonepush &&
-    ( cd clonepush && git-silo init ) &&
+    ( cd clonepush && git silo init ) &&
     setup_add_file clonepush second &&
     (
         cd clonepush &&
         git config silo.scp '$PSCP' &&
-        git-silo push -- .
+        git silo push -- .
     ) &&
     test -e pscp-arg2 &&
     egrep -q 'localhost:[^\"]*[0-9a-f]{38}(-tmp)?$' pscp-arg2
@@ -87,24 +87,24 @@ chmod a+x "$PLINK"
 export GIT_SSH=$PLINK
 
 test_expect_success \
-"'git-silo fetch' (scp) should use custom plink from GIT_SSH." \
+"'git silo fetch' (scp) should use custom plink from GIT_SSH." \
 "
     (
         cd clonefetch &&
-        git-silo init &&
+        git silo init &&
         rm -f plink-called &&
-        git-silo fetch -- . &&
+        git silo fetch -- . &&
         test -e plink-called
     )
 "
 
 test_expect_success \
-"'git-silo push' (scp) should use custom plink from GIT_SSH." \
+"'git silo push' (scp) should use custom plink from GIT_SSH." \
 "
     (
         cd clonepush &&
         rm -f plink-called &&
-        git-silo push -- . &&
+        git silo push -- . &&
         test -e plink-called
     )
 "

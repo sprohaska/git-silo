@@ -17,19 +17,19 @@ test_expect_success \
 '
 
 test_expect_success \
-"'git-silo push' should refuse to push without path." \
+"'git silo push' should refuse to push without path." \
 "
     git clone repo1 refuse &&
-    ( cd refuse && git-silo init && ! git-silo push )
+    ( cd refuse && git silo init && ! git silo push )
 "
 
 test_expect_success \
-"'git-silo push' (cp) should push." \
+"'git silo push' (cp) should push." \
 "
     git clone repo1 cpclone &&
-    ( cd cpclone && git-silo init) &&
+    ( cd cpclone && git silo init) &&
     setup_add_file cpclone first &&
-    ( cd cpclone && git-silo push -- .) &&
+    ( cd cpclone && git silo push -- .) &&
     ( cd repo1/.git/silo/objects && find * -type f | sed -e 's@/@@' ) >actual &&
     test_cmp first.sha1 actual
 "
@@ -41,16 +41,16 @@ test_expect_success \
 '
 
 test_expect_success \
-"'git-silo push' should support named remote." \
+"'git silo push' should support named remote." \
 '
     git clone repo1 namedorigin &&
     (
         cd namedorigin &&
         git remote rename origin org &&
-        git-silo init
+        git silo init
     ) &&
     setup_add_file namedorigin first &&
-    ( cd namedorigin && git-silo push org -- . ) &&
+    ( cd namedorigin && git silo push org -- . ) &&
     ( cd repo1/.git/silo/objects && find * -type f | sed -e "s@/@@" ) >actual &&
     test_cmp first.sha1 actual
 '
@@ -62,16 +62,16 @@ test_expect_success \
 '
 
 test_expect_success \
-"'git-silo push' should mention files that are pushed." \
+"'git silo push' should mention files that are pushed." \
 '
-    ( cd cpclone && git-silo push -- . ) >log &&
+    ( cd cpclone && git silo push -- . ) >log &&
     grep -q first log
 '
 
 test_expect_success \
-"'git-silo push' should not mention files that are already up-to-date." \
+"'git silo push' should not mention files that are already up-to-date." \
 '
-    ( cd cpclone && git-silo push -- . ) >log &&
+    ( cd cpclone && git silo push -- . ) >log &&
     ! grep -q first log
 '
 
@@ -87,12 +87,12 @@ if ! test_have_prereq LOCALHOST; then
 fi
 
 test_expect_success \
-"'git-silo push' (scp) should push." \
+"'git silo push' (scp) should push." \
 "
     setup_clone_ssh repo1 scpclone &&
-    ( cd scpclone && git-silo init) &&
+    ( cd scpclone && git silo init) &&
     setup_add_file scpclone first &&
-    ( cd scpclone && git-silo push -- .) &&
+    ( cd scpclone && git silo push -- .) &&
     ( cd repo1/.git/silo/objects && find * -type f | sed -e 's@/@@' ) >actual &&
     test_cmp first.sha1 actual
 "
@@ -104,16 +104,16 @@ test_expect_success \
 '
 
 test_expect_success \
-"'git-silo push' should mention files that are pushed." \
+"'git silo push' should mention files that are pushed." \
 '
-    ( cd scpclone && git-silo push -- . ) >log &&
+    ( cd scpclone && git silo push -- . ) >log &&
     grep -q first log
 '
 
 test_expect_success \
-"'git-silo push' should not mention files that are already up-to-date." \
+"'git silo push' should not mention files that are already up-to-date." \
 '
-    ( cd scpclone && git-silo push -- . ) >log &&
+    ( cd scpclone && git silo push -- . ) >log &&
     ! grep -q first log
 '
 

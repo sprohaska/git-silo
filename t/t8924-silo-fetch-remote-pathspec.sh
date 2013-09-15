@@ -23,7 +23,7 @@ test_expect_success \
     (
         cd repo1 &&
         git init &&
-        git-silo init &&
+        git silo init &&
         touch .gitignore &&
         git add .gitignore &&
         git commit -m "initial commit"
@@ -32,15 +32,15 @@ test_expect_success \
     (
         cd repo1 &&
         cp ../a a &&
-        git-silo add a &&
+        git silo add a &&
         git commit -m "Add a" &&
         cp ../b b &&
-        git-silo add b &&
+        git silo add b &&
         git commit -m "Add b"
     ) &&
     (
         cd repo2 &&
-        git-silo init
+        git silo init
     )
 '
 
@@ -51,19 +51,19 @@ test_expect_success \
         cd repo2 &&
         git config remote.origin.silofetch a &&
         git pull &&
-        git-silo fetch &&
-        git-silo checkout a &&
-        ! git-silo checkout b
+        git silo fetch &&
+        git silo checkout a &&
+        ! git silo checkout b
     )
 '
 
 test_expect_success \
-'"git-silo fetch -- ." should override remote.origin.silofetch' \
+'"git silo fetch -- ." should override remote.origin.silofetch' \
 '
     (
         cd repo2 &&
-        git-silo fetch -- . &&
-        git-silo checkout b
+        git silo fetch -- . &&
+        git silo checkout b
     )
 '
 
@@ -73,12 +73,12 @@ test_expect_success \
     git clone repo1 namedremote &&
     (
         cd namedremote &&
-        git-silo init &&
+        git silo init &&
         git remote rename origin org &&
         git config remote.org.silofetch a &&
-        git-silo fetch org &&
-        git-silo checkout a &&
-        ! git-silo checkout b
+        git silo fetch org &&
+        git silo checkout a &&
+        ! git silo checkout b
     )
 '
 

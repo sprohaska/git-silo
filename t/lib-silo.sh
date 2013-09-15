@@ -38,7 +38,7 @@ setup_repo() {
     (
         cd $repo &&
         git init "$@" &&
-        git-silo init &&
+        git silo init &&
         touch .gitignore &&
         git add .gitignore &&
         git commit -m 'initial commit'
@@ -51,7 +51,7 @@ setup_add_file() {
     (
         cd $repo &&
         cp ../$file $file &&
-        git-silo add $file &&
+        git silo add $file &&
         git commit -m "Add $file"
     )
 }
@@ -75,4 +75,13 @@ isSharedDir() {
 
 linkCount() {
     ls -l $1 | sed -e 's/  */ /' | cut -d ' ' -f 2
+}
+
+locate_git_silo() {
+    local p
+    p="$(git --exec-path)"/git-silo
+    if ! [ -x "${p}" ]; then
+        p=$(which git-silo) || return 1
+    fi
+    echo "${p}"
 }

@@ -14,33 +14,33 @@ test_expect_success \
 '
 
 test_expect_success \
-"'git-silo init' should succeed." \
+"'git silo init' should succeed." \
 '
     mkdir single &&
-    ( cd single && git init && git-silo init )
+    ( cd single && git init && git silo init )
 '
 
 test_expect_success UNIX \
-"'git-silo init' should use shared permissions when repo is shared." \
+"'git silo init' should use shared permissions when repo is shared." \
 '
     mkdir shared &&
     (
         cd shared &&
         git init --shared &&
-        git-silo init &&
+        git silo init &&
         ( ls -ld .git/silo/objects | grep -q "^drwxrws" )
     )
 '
 
 test_expect_success UNIX \
-"'git-silo init' should preserve read-only permissions of files when run twice." \
+"'git silo init' should preserve read-only permissions of files when run twice." \
 '
     (
         cd shared &&
         touch a &&
         git silo add a &&
         ( ls -ld .git/silo/objects/*/* | grep -q "^-r--r--" ) &&
-        git-silo init &&
+        git silo init &&
         ( ls -ld .git/silo/objects/*/* | grep -q "^-r--r--" )
     )
 '
@@ -60,9 +60,9 @@ test_expect_success \
 '
 
 test_expect_success \
-"Spaces in path to git-silo should work." \
+"Spaces in path to git silo should work." \
 '
-    cp "$(which git-silo)" . &&
+    cp "$(locate_git_silo)" ./git-silo &&
     export PATH=$(pwd):$PATH &&
     setup_repo repospaces &&
     setup_add_file repospaces a 2>err &&

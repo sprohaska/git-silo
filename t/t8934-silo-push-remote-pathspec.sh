@@ -21,12 +21,12 @@ test_expect_success \
     git clone repo1 repo2 &&
     (
         cd repo2 &&
-        git-silo init &&
+        git silo init &&
         cp ../a a &&
-        git-silo add a &&
+        git silo add a &&
         git commit -m "Add a" &&
         cp ../b b &&
-        git-silo add b &&
+        git silo add b &&
         git commit -m "Add b"
     )
 '
@@ -37,24 +37,24 @@ test_expect_success \
     (
         cd repo2 &&
         git config remote.origin.silopush a &&
-        git-silo push
+        git silo push
     ) && (
         cd repo1 &&
         git pull ../repo2 &&
-        git-silo checkout a &&
-        ! git-silo checkout b
+        git silo checkout a &&
+        ! git silo checkout b
     )
 '
 
 test_expect_success \
-'"git-silo push -- ." should override remote.origin.silopush' \
+'"git silo push -- ." should override remote.origin.silopush' \
 '
     (
         cd repo2 &&
-        git-silo push -- .
+        git silo push -- .
     ) && (
         cd repo1 &&
-        git-silo checkout b
+        git silo checkout b
     )
 '
 
@@ -64,17 +64,17 @@ test_expect_success \
     git clone repo1 namedremote &&
     (
         cd namedremote &&
-        git-silo init &&
+        git silo init &&
         echo "c" >c &&
-        git-silo add c &&
+        git silo add c &&
         git commit -m "Add c" &&
         git remote rename origin org &&
         git config remote.org.silopush a &&
-        git-silo push org
+        git silo push org
     ) && (
         cd repo1 &&
         git pull ../namedremote &&
-        ! git-silo checkout c
+        ! git silo checkout c
     )
 '
 

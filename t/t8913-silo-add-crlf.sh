@@ -15,25 +15,25 @@ test_expect_success \
 '
 
 test_expect_success \
-"git-silo add should not use CRLF for core.autocrlf=input." \
+"git silo add should not use CRLF for core.autocrlf=input." \
 '
     (
         cd input &&
         git config core.autocrlf input &&
         touch a &&
-        git-silo add a 2>err &&
+        git silo add a 2>err &&
         ! grep -q warning err
     )
 '
 
 test_expect_success \
-"git-silo add should use CRLF for core.autocrlf=true." \
+"git silo add should use CRLF for core.autocrlf=true." \
 '
     (
         cd crlf &&
         git config core.autocrlf true &&
         touch a &&
-        git-silo add a 2>err &&
+        git silo add a 2>err &&
         ! grep -q warning err
     )
 '

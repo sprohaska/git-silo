@@ -6,22 +6,22 @@ Test spaces in path to "silo" executable.
 
 . ./lib-silo.sh
 
-cp "$(which git-silo)" git-silo
+cp "$(locate_git_silo)" git-silo
 
 test_expect_success \
-"'git-silo init' should succeed when path to git-silo contains spaces." \
+"'git silo init' should succeed when path to git silo contains spaces." \
 '
     git init &&
     export PATH=.:$PATH &&
-    git-silo init
+    git silo init
 '
 
 test_expect_success \
-"'git-silo add' should succeed when path to git-silo contains spaces." \
+"'git silo add' should succeed when path to git silo contains spaces." \
 '
     export PATH=.:$PATH &&
     touch a &&
-    git-silo add a 2>stderr &&
+    git silo add a 2>stderr &&
     ! grep "error:" stderr
 '
 

@@ -21,10 +21,10 @@ test_expect_success \
     setup_user
 '
 
-test_expect_success "'git-silo dedup' should succeed with empty silos." '
+test_expect_success "'git silo dedup' should succeed with empty silos." '
     setup_repo empty1 &&
     setup_repo empty2 &&
-    git-silo dedup empty1 empty2
+    git silo dedup empty1 empty2
 '
 
 ssh localhost true 2>/dev/null && test_set_prereq LOCALHOST
@@ -40,19 +40,19 @@ test_expect_success LOCALHOST \
     setup_clone_ssh repo1 repo2 &&
     (
         cd repo2 &&
-        git-silo init &&
-        git-silo fetch -- . &&
-        git-silo checkout .
+        git silo init &&
+        git silo fetch -- . &&
+        git silo checkout .
     ) &&
     assertLinkCount repo1/a 2 &&
     assertLinkCount repo2/a 2 &&
-    git-silo dedup repo2 repo1 &&
+    git silo dedup repo2 repo1 &&
     assertLinkCount repo1/a 1 &&
     assertLinkCount repo2/a 3 &&
     (
         cd repo1 &&
         rm -r a &&
-        git-silo checkout .
+        git silo checkout .
     ) &&
     assertLinkCount repo2/a 4
 '

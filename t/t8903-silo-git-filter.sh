@@ -28,10 +28,10 @@ test_expect_success \
 '
 
 test_expect_success \
-"git repo should continue functioning when git-silo executable is removed" \
+"git repo should continue functioning when git silo executable is removed" \
 '
     rm -f git-silo &&
-    cp "$(which git-silo)" . &&
+    cp "$(locate_git_silo)" ./git-silo &&
     export PATH=$(pwd):$PATH &&
     setup_repo repomv &&
     rm git-silo &&

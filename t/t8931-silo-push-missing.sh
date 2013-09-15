@@ -21,11 +21,11 @@ test_expect_success \
 '
 
 test_expect_success \
-    "'git-silo push' (cp) should skip missing files." \
+    "'git silo push' (cp) should skip missing files." \
 '
-    ( cd cpclone && git-silo init && git-silo fetch -- a ) &&
+    ( cd cpclone && git silo init && git silo fetch -- a ) &&
     rm -rf repo1/.git/silo/objects/* &&
-    ( cd cpclone && git-silo push -- . )
+    ( cd cpclone && git silo push -- . )
 '
 
 if ! test_have_prereq LOCALHOST; then
@@ -34,12 +34,12 @@ if ! test_have_prereq LOCALHOST; then
 fi
 
 test_expect_success \
-"'git-silo push' (scp) should skip missing files." \
+"'git silo push' (scp) should skip missing files." \
 '
     setup_clone_ssh repo1 scpclone &&
-    ( cd scpclone && git-silo init && git-silo fetch -- a ) &&
+    ( cd scpclone && git silo init && git silo fetch -- a ) &&
     rm -rf repo1/.git/silo/objects/* &&
-    ( cd scpclone && git-silo push -- . )
+    ( cd scpclone && git silo push -- . )
 '
 
 test_done

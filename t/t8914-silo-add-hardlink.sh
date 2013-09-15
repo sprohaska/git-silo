@@ -19,7 +19,7 @@ test_expect_success \
     (
         cd default &&
         echo a >a &&
-        git-silo add a &&
+        git silo add a &&
         ( test $(linkCount a) -eq 2 || ( echo "Wrong link count." && false ) ) &&
         ! test -w a
     )
@@ -33,7 +33,7 @@ test_expect_success \
         cd link &&
         git config silo.add link &&
         echo a >a &&
-        git-silo add a &&
+        git silo add a &&
         ( test $(linkCount a) -eq 2 || ( echo "Wrong link count." && false ) ) &&
         ! test -w a
     )
@@ -47,7 +47,7 @@ test_expect_success \
         cd copy &&
         git config silo.add copy &&
         echo a >a &&
-        git-silo add a &&
+        git silo add a &&
         ( test $(linkCount a) -eq 1 || ( echo "Wrong link count." && false ) ) &&
         test -w a
     )
@@ -61,7 +61,7 @@ test_expect_success \
         cd invalid &&
         git config silo.add invalid-option-value &&
         echo a >a &&
-        git-silo add a 2>err &&
+        git silo add a 2>err &&
         grep -q -i warning err &&
         ( test $(linkCount a) -eq 2 || ( echo "Wrong link count." && false ) ) &&
         ! test -w a
