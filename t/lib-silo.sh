@@ -1,4 +1,15 @@
-. ./sharness/sharness.sh
+sharness=./sharness/sharness.sh
+gittestlib=./test-lib.sh
+
+if [ -e ${gittestlib} ]; then
+    TEST_NO_CREATE_REPO=NoThanks
+    . ${gittestlib}
+elif [ -e ${sharness} ]; then
+    . ${sharness}
+else
+    echo >&2 "Error: Could neither find sharness nor git's test-lib.sh."
+    exit 1
+fi
 
 case $(uname) in
     MINGW*)
