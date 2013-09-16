@@ -158,6 +158,16 @@ Word, and use 'git-silo add' repeatedly.  When creating a hard link, the file
 permissions are changed to read-only, which might confuse applications like
 Word.
 
+silo.contentLimit (default '10M'): If the content for a file that is stored in
+silo is smaller than the limit or the limit is 0, the content will be used
+during normal git operations, such as 'git checkout', 'git reset', or 'git
+archive'.  Otherwise, placeholders will be used.  The postfixes 'K', 'M', 'G'
+can be used to specify a limit.  'git silo checkout' always uses the content
+and can will replace placeholders in the working copy with the file content.
+Note that placeholders can be temporarily deactivated by using git's '-c'
+switch.  For example, the following command will always create an archive
+with full content: 'git -c silo.contentLimit=0 archive HEAD >a.tar'
+
 silo.ismasterstore (default 'true'): Unless set to 'false', some destructive
 operations, such as 'purge', are not permitted.
 
@@ -602,6 +612,7 @@ genprgFilterSmudge() {
     genprgMainSmudge
     genprgFunctions \
         cmd_filter_smudge \
+        cfg_contentLimit \
         validSha1 \
         getSiloObjectDir \
         fileSize
@@ -704,18 +715,33 @@ cmd_filter_smudge() {
     silodir="$(getSiloObjectDir)"
     objfile="${silodir}/${sha1:0:2}/${sha1:2}"
     if [ -e "${objfile}" ]; then
-        if [ $(fileSize "${objfile}") -lt 10000000 ]; then
+        local contentLimit=$(cfg_contentLimit)
+        if [ $contentLimit -eq 0 ] ||
+            [ $(fileSize "${objfile}") -lt $contentLimit ]; then
             cat "${objfile}"
         else
-            printf "placeholder for file >10MB (use git-silo checkout): %s\n" \
-                "${arg_file}" >&2
+            printf >&2 "using placeholder: %s\n" "${arg_file}"
             printf '%s\n' ${sha1}
         fi
     else
-        printf "missing silo content: %s\n" \
-            "${arg_file}" >&2
+        printf >&2 "missing silo content: %s\n" "${arg_file}"
         printf '%s\n' "${sha1}"
     fi
+}
+
+cfg_contentLimit() {
+    local limit
+    local defaultlimit=10M
+    limit=$(git config silo.contentLimit) || limit=${defaultlimit}
+    if ! egrep -q '^(0|[1-9][0-9]*)[KMG]?$' <<<"${limit}"; then
+        printf >&2 \
+            "Warning: invalid silo.contentLimit=%s, using default.\n" "${limit}"
+        limit=${defaultlimit}
+    fi
+    # Expand postfix and evaluate.
+    limit=$(sed \
+        -e 's/K/*1024/' -e 's/M/*1048576/' -e 's/G/*1073741824/' <<<"${limit}")
+    printf "%d" $(( ${limit} ))
 }
 
 # Determine file size for large files on Mac, Linux and msysgit.
