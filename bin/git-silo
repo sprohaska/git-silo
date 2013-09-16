@@ -204,7 +204,7 @@ instead of ssh.
 
   - git might fail with mmap out-of-memory on Windows.  Git on Windows is a
     32-bit executable, which fails for large files in some situations.  There is
-    now known workaround.
+    no known workaround.
 
   - If creation of hard links between different users is restricted, some
     operations might report warnings (like 'dedup') or copy data as a fall back
