@@ -1,9 +1,6 @@
 #!/bin/bash
 
-set -o errexit
-set -o nounset
-set -o pipefail
-set -o noglob
+set -o nounset -o errexit -o pipefail -o noglob
 
 opt_debug=
 
