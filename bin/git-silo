@@ -20,6 +20,8 @@ git-silo fetch \
     [<remote>] [--] [<path>... | config remote.<remote>.silofetch]
 git-silo gc [--gitattributes] [-f|--force] [-n <number>] [--dry-run] [--no-tags]
 git-silo purge [-f|--force] [--dry-run] [--] <path>...
+git-silo pack [--keep|--remove]
+git-silo unpack [--] [<path>...]
 git-silo fsck
 git-silo dedup <repo>...
 
@@ -101,6 +103,19 @@ git-silo dedup <repo>...
 
   fsck              verify silo storage.
 
+  pack              pack loose silo objects into 7z archives.  Loose objects
+                    are kept unless '--remove' is specified.  Packed objects
+                    are not automatically unpacked by operations such as
+                    'checkout.' Use 'unpack' to explicitly unpack objects.
+
+    --keep          Keep loose objects.
+
+    --remove        Remove loose objects that have been packed.
+
+  unpack            unpack loose objects that are used by HEAD.
+
+    <path>...       limit unpacking to these files (default: all).
+
   dedup             create hard links between repositories.  Repositories listed
                     later get linked to repositories listed earlier.
                     Deduplication might be incomplete if silo objects are owned
@@ -167,6 +182,9 @@ placeholders in the working copy with the file content.  Note that placeholders
 can be temporarily deactivated by using git's '-c' switch.  For example, the
 following command will always create an archive with full content: 'git -c
 silo.contentSizeLimit=0 archive HEAD >a.tar'
+
+silo.packSizeLimit (default '50G'): The maximum size of a pack.  The suffixes
+'K', 'M', 'G' can be used.
 
 silo.ismasterstore (default 'true'): Unless set to 'false', some destructive
 operations, such as 'purge', are not permitted.
@@ -298,6 +316,36 @@ argparse_gc() {
 
 argparse_fsck() {
     argparse_default "$@"
+}
+
+argparse_pack() {
+    opt_keep=t
+    while [ $# -ge 1 ]; do
+        case "$1" in
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        --keep)
+            opt_keep=t
+            shift
+            ;;
+        --remove)
+            opt_keep=
+            shift
+            ;;
+        -*)
+            die "Unknown option $1"
+            ;;
+        *)
+            die "Wrong number of arguments"
+            ;;
+        esac
+    done
+}
+
+argparse_unpack() {
+    argparse_pathspec "$@"
 }
 
 argparse_dedup() {
@@ -527,7 +575,7 @@ validateGitVersion() {
 
 validateCmd() {
     case "$1" in
-    filter_smudge|filter_clean|add|status|push|fetch|init|checkout|gc|dedup|fsck|purge)
+    filter_smudge|filter_clean|add|status|push|fetch|init|checkout|gc|dedup|fsck|pack|unpack|purge)
         return 0
         ;;
     *)
@@ -613,6 +661,7 @@ genprgFilterSmudge() {
     genprgFunctions \
         cmd_filter_smudge \
         cfg_contentSizeLimit \
+        getCfgSizeVarWithDefault \
         validSha1 \
         getSiloObjectDir \
         fileSize
@@ -730,18 +779,28 @@ cmd_filter_smudge() {
 }
 
 cfg_contentSizeLimit() {
-    local limit
-    local defaultlimit=10M
-    limit=$(git config silo.contentSizeLimit) || limit=${defaultlimit}
-    if ! egrep -q '^(0|[1-9][0-9]*)[KMG]?$' <<<"${limit}"; then
+    getCfgSizeVarWithDefault "contentSizeLimit" "10M"
+}
+
+cfg_packSizeLimit() {
+    getCfgSizeVarWithDefault "packSizeLimit" "50G"
+}
+
+getCfgSizeVarWithDefault() {
+    local var="$1"
+    local default="$2"
+    local size
+    size=$(git config silo.${var}) || size=${default}
+    if ! egrep -q '^(0|[1-9][0-9]*)[kKmMgG]?$' <<<"${size}"; then
         printf >&2 \
-            "Warning: invalid silo.contentSizeLimit=%s, using default.\n" "${limit}"
-        limit=${defaultlimit}
+            "Warning: invalid silo.%s=%s, using default.\n" "${var}" "${size}"
+        size=${default}
     fi
-    # Expand postfix and evaluate.
-    limit=$(sed \
-        -e 's/K/*1024/' -e 's/M/*1048576/' -e 's/G/*1073741824/' <<<"${limit}")
-    printf "%d" $(( ${limit} ))
+    # Expand potential suffix and compute size.
+    size=$(sed \
+        -e 's/[kK]/*1024/' -e 's/[mM]/*1048576/' -e 's/[gG]/*1073741824/' \
+        <<<"${size}")
+    printf "%d" $(( ${size} ))
 }
 
 # Determine file size for large files on Mac, Linux and msysgit.
@@ -773,6 +832,14 @@ getSiloObjectDir() {
     silodir=$(cd "$silodir" && pwd)
     silodir="$silodir/silo/objects"
     printf '%s' "$silodir"
+}
+
+getSiloPackDir() {
+    local dir
+    dir=$(git rev-parse --git-dir)
+    dir=$(cd "${dir}" && pwd)
+    dir="${dir}/silo/packs"
+    printf '%s' "${dir}"
 }
 
 computeSha1() {
@@ -1264,11 +1331,19 @@ uniqSha1s() {
     sort -u
 }
 
+# Add slash after every second prefix hexdigit if followed by another hexdigit.
+slashedPrefix() {
+    sed -E -e 's@([0-9a-f]{2})([0-9a-f])@\1/\2@g' <<<"$1"
+
+}
+
+# Add slash after first two hexdigits if followed by another hexdigit.
+slashedOnce() {
+    sed -E -e 's@([0-9a-f]{2})([0-9a-f])@\1/\2@'
+}
+
 sha1sAsObjectPaths() {
-    while read sha1; do
-        [ "$sha1" = "" ] && continue
-        sha1AsObjectPath "${sha1}"
-    done
+    slashedOnce
 }
 
 sha1AsObjectPath() {
@@ -1378,7 +1453,12 @@ gcSiloObjects() {
     fi
     ( cd "$silodir" && xargs rm -vf ) <<<"${remove}" |
         sed -e 's/^/Removing /'
-    find "${silodir}" -mindepth 1 -maxdepth 1 -type d -empty -exec rmdir '{}' ';' || true
+    removeEmptyObjectDirs
+}
+
+removeEmptyObjectDirs() {
+    find "$(getSiloObjectDir)" \
+        -mindepth 1 -maxdepth 1 -type d -empty -exec rmdir '{}' ';' || true
 }
 
 cmd_purge() {
@@ -1440,7 +1520,7 @@ cmd_purge() {
         rm -f "${objpath}"
     done
 
-    find "${silodir}" -mindepth 1 -maxdepth 1 -type d -empty -exec rmdir '{}' ';' || true
+    removeEmptyObjectDirs
 }
 
 # Count how often a sha1 is used (1) by all files of HEAD and (2) when files
@@ -1490,6 +1570,25 @@ sha1Counts() {
 
 lsDir() {
     cd "$1" && find . -type f | sed -e 's@^\./@@'
+}
+
+lsSiloObjectsInDirWithSize() {
+    lsDirWithSize "$1" |
+    egrep ' [0-9a-f]{2}/[0-9a-f]{38}$' || true
+}
+
+# Use find to determine correct file size on msysgit.  Use sed to normalize
+# output of 'find -ls' (compress whitespace, remove everything before
+# permission field).  Use sed to remove leading './' See also note at
+# fileSize().
+lsDirWithSize() {
+    (
+        cd "$1" &&
+        find . -type f -ls |
+        sed -e 's/  */ /g' -e 's/^[^-]*-/-/' |
+        cut -d ' ' -f 5,9 |
+        sed -e 's@\./@@'
+    )
 }
 
 lsRemoteDir() {
@@ -1620,6 +1719,338 @@ cmd_fsck() {
     done <<<"$(lsSiloObjectsInDir "$silodir")"
     test $haveErr && die "There have been errors (see above)."
     echo ok
+}
+
+cmd_pack() {
+    validateHaveSilo
+    mkSiloPackDir
+
+    # packtool=zip
+    # packext=zip
+    packtool=7z
+    packext=7z
+
+    lsObjectsWithPackPrefix |
+    sort -k 1 |
+    forEachGroup updatePack
+
+    removePackedObjects
+}
+
+cmd_unpack() {
+    validateHaveSilo
+
+    packtool=7z
+    packext=7z
+
+    lsSiloTracked "${arg_pathspec[@]}" |
+    cut -d ' ' -f 1 |
+    dropSha1sOfLooseObjects |
+    lookupPacksForObjects |
+    sort -k 1 |
+    forEachGroup unpackObjects
+}
+
+dropSha1sOfLooseObjects() {
+    local objectdir="$(getSiloObjectDir)"
+    while IFS= read -r sha1; do
+        [ -z "${sha1}" ] && continue
+        [ -e "${objectdir}/$(sha1AsObjectPath ${sha1})" ] && continue
+        printf '%s\n' "${sha1}"
+    done
+}
+
+lookupPacksForObjects() {
+    local sha1
+    local packidx="$(lsPacksWithObjects)"
+    while IFS= read -r sha1; do
+        [ -z "${sha1}" ] && continue
+        grep "${sha1}$" <<<"${packidx}" ||
+            printf 'nopack %s\n' "${sha1}"
+    done
+}
+
+unpackObjects() {
+    local pack="$1"
+    local objs="$2"
+    local objectdir="$(getSiloObjectDir)"
+    local packdir="$(getSiloPackDir)"
+
+    [ "$pack" == "nopack" ] && return 0
+
+    printf '%s' "${objs}" | slashedOnce | (
+        cd "${objectdir}" &&
+        packtool_${packtool}_extract "${packdir}/${pack}"
+    )
+}
+
+removePackedObjects() {
+    local packedobjs=$(lsPackedObjects)
+    local objectdir="$(getSiloObjectDir)"
+    lsSiloObjectsInDir "${objectdir}" |
+    while IFS= read -r path; do
+        if grep -q -F "${path/\//}" <<<"${packedobjs}"; then
+            if test $opt_keep; then
+                echo "Would remove ${path}"
+            else
+                echo "Removing ${path}"
+                rm -f "${objectdir}/${path}"
+            fi
+        else
+            if test $opt_keep; then
+                echo "Would keep ${path}"
+            else
+                echo "Keeping ${path}"
+            fi
+        fi
+    done
+    removeEmptyObjectDirs
+}
+
+mkSiloPackDir() {
+    local packdir="$(getSiloPackDir)"
+    mkdirWithParentsPermissions "${packdir}"
+}
+
+# Determine pack prefix for loose objects.  Output: <prefix><SPACE><object>.
+# Example:
+#
+#    _ aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+#    b_ bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+#    nopack cccccccccccccccccccccccccccccccccccccccc
+#
+# 'nopack' indicates that object is too large to pack.
+# 'packed' indicates that object is contained in existing pack.
+lsObjectsWithPackPrefix() {
+    local threshold=$(cfg_packSizeLimit)
+    local packedobjs=$(lsPackedObjects)
+    local prefixes
+    for i in {0..39}; do
+        prefixes[${i}]=''
+    done
+    local cumsums
+    lsSiloObjectsInDirWithSize "$(getSiloObjectDir)" |
+    sed -e 's@/@@' |
+    sort -k 2 |
+    while read -r size name; do
+        [ -z "${name}" ] && continue
+        # Debugging code:
+        # printf >&2 "%s " "${prefixes[@]}"
+        # echo >&2
+        # printf >&2 "%d " "${cumsums[@]}"
+        # echo >&2
+
+        if grep -q -F "${name}" <<<"${packedobjs}"; then
+            echo packed ${name}
+            continue
+        fi
+
+        if (( ${size} > ${threshold} )); then
+            echo nopack ${name}
+            continue
+        fi
+
+        for level in {0..39}; do
+            curprefix="${name:0:${level}}_"
+            if [ "${prefixes[${level}]}" != "${curprefix}" ]; then
+                prefixes[${level}]=${curprefix}
+                cumsums[${level}]=0
+                oldpack=$(findPackWithPrefix "${curprefix}")
+                if [ -n "${oldpack}" ]; then
+                    cumsums[${level}]=$(fileSize "${oldpack}")
+                fi
+            fi
+            newsize=$(( ${cumsums[${level}]} + ${size} ))
+            if (( ${newsize} < ${threshold} )); then
+                echo ${curprefix} ${name}
+                cumsums[${level}]=${newsize}
+                continue 2
+            fi
+        done
+        echo nopack ${name}
+    done
+}
+
+forEachGroup() {
+    local prefix=
+    local group
+    while read -r p o; do
+        [ -z "${p}" ] && continue
+        if [ "${p}" != "${prefix}" ]; then
+            if [ -n "${prefix}" ]; then
+                "$@" "${prefix}" "${group}"
+            fi
+            prefix="${p}"
+            group=
+        fi
+        group="${group}${o}
+"
+    done
+    if [ -n "${prefix}" ]; then
+        "$@" "${prefix}" "${group}"
+    fi
+}
+
+updatePack() {
+    local objectdir="$(getSiloObjectDir)"
+    local packdir="$(getSiloPackDir)"
+    local prefix="$1"
+    local objs="$2"
+
+    # Skip objects that are too large to be packed.
+    [ "${prefix}" == "nopack" ] && return 0
+
+    # Skip objects that are already packed.
+    [ "${prefix}" == "packed" ] && return 0
+
+    oldpack=$(findPackWithPrefix "${prefix}")
+    packid="$(
+        (
+            if [ -n "${oldpack}" ]; then
+                packtool_${packtool}_ls "${oldpack}"
+            fi &&
+            printf '%s' "${objs}"
+        ) |
+        sed -e 's@/@@' |
+        sort -u |
+        computeSha1
+        )"
+
+    # Skip packing if old and new pack file have same id.
+    [ "${packid}" == "$(packIdOfFile "${oldpack}")" ] && return 0
+
+    # Prepare tmp pack.
+    packfile="${packdir}/$(slashedPrefix "${prefix}")${packid}.${packext}"
+    mkdirWithParentsPermissions "$(dirname "${packfile}")"
+    tmppackfile="${packfile}-tmp"
+    rm -f "${tmppackfile}"
+
+    # Add objects
+    printf '%s' "${objs}" | slashedOnce | (
+        cd "${objectdir}" &&
+        packtool_${packtool}_add "${oldpack}" "${tmppackfile}"
+    )
+
+    # Move in place and clean up.
+    chmod a-w "${tmppackfile}"
+    verifyPackfileId "${tmppackfile}"
+    mv "${tmppackfile}" "${packfile}"
+    if [ -n "${oldpack}" ]; then
+        rm -f "${oldpack}"
+    fi
+}
+
+packtool_zip_add() {
+    local src="$1"
+    local dest="$2"
+    if [ -n "${src}" ]; then
+        zip "${src}" -@ --out "${dest}"
+    else
+        zip "${dest}" -@
+    fi
+}
+
+packtool_zip_ls() {
+    # Select rows that contain file listing (separated by lines that contain
+    # '---').  Drop listing separators.  isolate file names by removing start
+    # of line up to space (assuming file names w/o spaces).
+    unzipIgnoreWarnings -l "$1" |
+    sed -n -e '/---/,/---/p' |
+    sed -e '1d' -e '$d' |
+    sed -e 's/^.* //'
+}
+
+# exit code 1: warnings occured, but processing was successful, see unzip(1).
+unzipIgnoreWarnings() {
+    unzip "$@"
+    local e=$?
+    case ${e} in
+    0|1)
+        return 0
+        ;;
+    esac
+    return ${e}
+}
+
+packtool_7z_add() {
+    local src="$1"
+    local dest="$2"
+    local lst="${dest}.lst"
+    cat >"${lst}"
+    if [ -n "${src}" ]; then
+        7zr a -t7z -m0=LZMA2 "${src}" "-u-" "-u!${dest}" "@${lst}"
+    else
+        7zr a -t7z -m0=LZMA2 "${dest}" "@${lst}"
+    fi
+    rm -f "${lst}"
+}
+
+packtool_7z_extract() {
+    local pack="$1"
+    xargs 7zr x "${pack}"
+}
+
+packtool_7z_ls() {
+    # Select rows that contain file listing (separated by lines that contain
+    # '---').  Drop listing separators.  isolate file names by removing start
+    # of line up to space (assuming file names w/o spaces).
+    7zr l "$1" |
+    sed -n -e '/---/,/---/p' |
+    sed -e '1d' -e '$d' |
+    sed -e 's/^.* //'
+}
+
+lsPackedObjects() {
+    packdir="$(getSiloPackDir)"
+    find "${packdir}" -type f -name "*_*.${packext}" |
+    while IFS= read -r pack; do
+        packtool_${packtool}_ls "${pack}" |
+        sed -e 's@/@@'
+    done
+}
+
+lsPacksWithObjects() {
+    (
+        cd "$(getSiloPackDir)" &&
+        find . -type f -name "*_*.${packext}" |
+        sed -e 's@^./@@' |
+        while IFS= read -r pack; do
+            [ -z "${pack}" ] && continue
+            packtool_${packtool}_ls "${pack}" |
+            sed -e 's@/@@' -e "s@^@$pack @"
+        done
+    )
+}
+
+findPackWithPrefix() {
+    local prefix="$(slashedPrefix "$1")"
+    (
+        set +o noglob &&
+        shopt -s nullglob &&
+        printf '%s' "$(getSiloPackDir)"/${prefix}*.${packext}
+    )
+}
+
+verifyPackfileId() {
+    local packfile="$1"
+    local contentId
+    contentId="$(
+        packtool_${packtool}_ls "$packfile" |
+        sed -e 's@/@@' |
+        sort |
+        computeSha1
+        )"
+    packid="$(packIdOfFile "${packfile}")"
+    if [ "${packid}" != "${contentId}" ]; then
+        die "content id '${contentId}' does not match packfile name '$(basename "${packfile}")'."
+    fi
+}
+
+packIdOfFile() {
+    local packfile="$1"
+    local packid="${packfile##*_}"
+    packid="${packid%%.*}"
+    printf '%s' "${packid}"
 }
 
 lsSiloObjectsInDir() {
