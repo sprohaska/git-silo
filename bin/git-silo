@@ -1606,6 +1606,7 @@ cmd_fsck() {
     silodir="$(getSiloObjectDir)"
     local haveErr=
     while read -r p; do
+        [ "$p" = "" ] && continue
         expected_sha1=${p/\//}
         actual_sha1=$(computeSha1 <"$silodir/$p") ||
             die "Failed to compute sha1 for '$p'."
@@ -1621,7 +1622,7 @@ cmd_fsck() {
 
 lsSiloObjectsInDir() {
     lsDir "$1" |
-    egrep '^[0-9a-f]{2}/[0-9a-f]{38}$'
+    egrep '^[0-9a-f]{2}/[0-9a-f]{38}$' || true
 }
 
 cmd_dedup() {
