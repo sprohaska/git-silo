@@ -1,8 +1,8 @@
 #!/bin/bash
 
 test_description='
-Test that config silo.contentLimit controls whether placeholder or content is
-used.
+Test that config silo.contentSizeLimit controls whether placeholder or content
+is used.
 '
 
 . ./lib-silo.sh
@@ -35,7 +35,7 @@ assertPlaceholder() {
 }
 
 test_expect_success \
-'content for 1KB, 1MB; placeholder for 1GB when silo.contentLimit is unset' '
+'content 1KB, 1MB; placeholder 1GB when silo.contentSizeLimit is unset' '
     (
         cd repo &&
         rm -f 1KB 1MB 1GB &&
@@ -47,11 +47,11 @@ test_expect_success \
 '
 
 test_expect_success \
-'placeholder for 1KB, 1MB, 1GB when silo.contentLimit=1024' '
+'placeholder 1KB, 1MB, 1GB when silo.contentSizeLimit=1024' '
     (
         cd repo &&
         rm -f 1KB 1MB 1GB &&
-        git config silo.contentLimit 1024 &&
+        git config silo.contentSizeLimit 1024 &&
         git reset --hard HEAD &&
         assertPlaceholder 1KB &&
         assertPlaceholder 1MB &&
@@ -60,11 +60,11 @@ test_expect_success \
 '
 
 test_expect_success \
-'content for 1KB; placeholder for 1MB, 1GB when silo.contentLimit=1048576' '
+'content 1KB; placeholder 1MB, 1GB when silo.contentSizeLimit=1048576' '
     (
         cd repo &&
         rm -f 1KB 1MB 1GB &&
-        git config silo.contentLimit 1048576 &&
+        git config silo.contentSizeLimit 1048576 &&
         git reset --hard HEAD &&
         assertContent 1KB &&
         assertPlaceholder 1MB &&
@@ -73,11 +73,11 @@ test_expect_success \
 '
 
 test_expect_success \
-'content for 1KB, 1MB; placeholder for 1GB when silo.contentLimit=1073741824' '
+'content 1KB, 1MB; placeholder 1GB when silo.contentSizeLimit=1073741824' '
     (
         cd repo &&
         rm -f 1KB 1MB 1GB &&
-        git config silo.contentLimit 1073741824 &&
+        git config silo.contentSizeLimit 1073741824 &&
         git reset --hard HEAD &&
         assertContent 1KB &&
         assertContent 1MB &&
@@ -85,11 +85,11 @@ test_expect_success \
     )
 '
 
-test_expect_success 'placeholder for 1KB, 1MB, 1GB when silo.contentLimit=1K' '
+test_expect_success 'placeholder 1KB, 1MB, 1GB when silo.contentSizeLimit=1K' '
     (
         cd repo &&
         rm -f 1KB 1MB 1GB &&
-        git config silo.contentLimit 1K &&
+        git config silo.contentSizeLimit 1K &&
         git reset --hard HEAD &&
         assertPlaceholder 1KB &&
         assertPlaceholder 1MB &&
@@ -98,11 +98,11 @@ test_expect_success 'placeholder for 1KB, 1MB, 1GB when silo.contentLimit=1K' '
 '
 
 test_expect_success \
-'content for 1KB; placeholder for 1MB, 1GB when silo.contentLimit=1M' '
+'content 1KB; placeholder 1MB, 1GB when silo.contentSizeLimit=1M' '
     (
         cd repo &&
         rm -f 1KB 1MB 1GB &&
-        git config silo.contentLimit 1M &&
+        git config silo.contentSizeLimit 1M &&
         git reset --hard HEAD &&
         assertContent 1KB &&
         assertPlaceholder 1MB &&
@@ -111,11 +111,11 @@ test_expect_success \
 '
 
 test_expect_success \
-'content for 1KB, 1MB; placeholder for 1GB when silo.contentLimit=1G' '
+'content 1KB, 1MB; placeholder 1GB when silo.contentSizeLimit=1G' '
     (
         cd repo &&
         rm -f 1KB 1MB 1GB &&
-        git config silo.contentLimit 1G &&
+        git config silo.contentSizeLimit 1G &&
         git reset --hard HEAD &&
         assertContent 1KB &&
         assertContent 1MB &&
@@ -123,11 +123,11 @@ test_expect_success \
     )
 '
 
-test_expect_success 'content for 1KB, 1MB, 1GB when silo.contentLimit=0' '
+test_expect_success 'content 1KB, 1MB, 1GB when silo.contentSizeLimit=0' '
     (
         cd repo &&
         rm -f 1KB 1MB 1GB &&
-        git config silo.contentLimit 0 &&
+        git config silo.contentSizeLimit 0 &&
         git reset --hard HEAD &&
         assertContent 1KB &&
         assertContent 1MB &&
