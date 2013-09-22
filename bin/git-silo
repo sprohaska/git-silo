@@ -1975,14 +1975,11 @@ unzipIgnoreWarnings() {
 packtool_7z_add() {
     local src="$1"
     local dest="$2"
-    local lst="${dest}.lst"
-    cat >"${lst}"
     if [ -n "${src}" ]; then
-        7zr a -t7z -m0=LZMA2 "${src}" "-u-" "-u!${dest}" "@${lst}"
-    else
-        7zr a -t7z -m0=LZMA2 "${dest}" "@${lst}"
+        cp "${src}" "${dest}"
+        chmod u+w "${dest}"
     fi
-    rm -f "${lst}"
+    xargs 7zr a -t7z -m0=LZMA2 "${dest}"
 }
 
 packtool_7z_extract() {
