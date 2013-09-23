@@ -6,14 +6,26 @@ Test packing (WIP)
 
 . ./lib-silo.sh
 
-numObjects() {
-    find .git/silo/objects -type f |
-    wc -l |
-    sed -e 's/ *//g'
+assertNumObjects() {
+    assertNumFilesIn '.git/silo/objects' $1
 }
 
-assertNumObjects() {
-    [ $(numObjects) == $1 ]
+assertNumPacks() {
+    assertNumFilesIn '.git/silo/packs' $1
+}
+
+assertNumFilesIn() {
+    local dir=$1
+    local expected=$2
+    local actual=$(numFilesIn "${dir}")
+    [ $expected == $actual ] && return 0
+    error "Wrong number of files in '${dir}': expected ${expected}, actual ${actual}."
+}
+
+numFilesIn() {
+    find "$1" -type f |
+    wc -l |
+    sed -e 's/ *//g'
 }
 
 test_expect_success 'setup' '
@@ -41,10 +53,11 @@ test_expect_success 'setup files (1..5)' '
     )
 '
 
-test_expect_success 'pack should succeed.' '
+test_expect_success 'pack should create expected number of packs.' '
     (
         cd repo &&
-        git silo pack
+        git silo pack &&
+        assertNumPacks 3
     )
 '
 
