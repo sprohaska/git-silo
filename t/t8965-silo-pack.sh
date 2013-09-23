@@ -104,7 +104,8 @@ test_expect_success 'setup files (6..10)' '(
 
 test_expect_success 'pack should succeed.' '(
     cd repo &&
-    git silo pack
+    git silo pack &&
+    assertNumPacks 4
 )'
 
 test_expect_success 'setup files (11..99)' '(
@@ -120,16 +121,17 @@ test_expect_success 'setup files (11..99)' '(
 test_expect_success "'pack --remove' should keep 2 (large) loose objects." '(
     cd repo &&
     git silo pack --remove &&
-    assertNumObjects 2
+    assertNumObjects 2 &&
+    assertNumPacks 68
 )'
 
-test_expect_success "'unpack' should create all 99 loose object." '(
+test_expect_success "'unpack' should create all loose object." '(
     cd repo &&
     git silo unpack &&
     assertNumObjects 99
 )'
 
-test_expect_success "'unpack' should only create loose objects used by HEAD." '(
+test_expect_success "'unpack' should create loose objects for HEAD." '(
     cd repo &&
     git rm 9? &&
     git commit -m "remove 9?" &&
