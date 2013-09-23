@@ -41,7 +41,7 @@ test_expect_success 'setup files (1..5)' '
     )
 '
 
-test_expect_success 'pack' '
+test_expect_success 'pack should succeed.' '
     (
         cd repo &&
         git silo pack
@@ -80,6 +80,21 @@ test_expect_success "'unpack' should create all 5 loose object." '
     )
 '
 
+test_expect_success "setup shared repo." '
+    setup_repo sharedrepo --shared &&
+    setup_file a &&
+    setup_add_file sharedrepo a
+'
+
+test_expect_success "'unpack' should maintain shared permissions." '
+    (
+        cd sharedrepo &&
+        git silo pack --remove &&
+        git silo unpack &&
+        isSharedDir .git/silo/objects/$(cut -b 1-2 ../a.sha1)
+    )
+'
+
 test_expect_success 'setup files (6..10)' '
     (
         cd repo &&
@@ -92,14 +107,14 @@ test_expect_success 'setup files (6..10)' '
     )
 '
 
-test_expect_success 'pack' '
+test_expect_success 'pack should succeed.' '
     (
         cd repo &&
         git silo pack
     )
 '
 
-test_expect_success 'setup files (11.99)' '
+test_expect_success 'setup files (11..99)' '
     (
         cd repo &&
         for i in $(seq 11 99); do

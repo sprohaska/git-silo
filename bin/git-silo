@@ -1744,11 +1744,24 @@ cmd_unpack() {
     packext=7z
 
     lsSiloTracked "${arg_pathspec[@]}" |
+    cut -b 1-2 |
+    sort -u |
+    mkSiloObjectSubdirs
+
+    lsSiloTracked "${arg_pathspec[@]}" |
     cut -d ' ' -f 1 |
     dropSha1sOfLooseObjects |
     lookupPacksForObjects |
     sort -k 1 |
     forEachGroup unpackObjects
+}
+
+mkSiloObjectSubdirs() {
+    local objectdir="$(getSiloObjectDir)"
+    while IFS= read -r d; do
+        [ -z "${d}" ] && continue
+        mkdirWithParentsPermissions "${objectdir}/${d}"
+    done
 }
 
 dropSha1sOfLooseObjects() {
