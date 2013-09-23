@@ -142,4 +142,16 @@ test_expect_success "'unpack' should create all 99 loose object." '
     )
 '
 
+test_expect_success "'unpack' should only create loose objects used by HEAD." '
+    (
+        cd repo &&
+        git rm 9? &&
+        git commit -m "remove 9?" &&
+        git silo pack --remove &&
+        assertNumObjects 2 &&
+        git silo unpack &&
+        assertNumObjects 89
+    )
+'
+
 test_done
