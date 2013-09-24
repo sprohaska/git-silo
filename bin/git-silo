@@ -1769,8 +1769,6 @@ cmd_fsck() {
 }
 
 cmd_pack() {
-    # packtool=zip
-    # packext=zip
     packtool=7z
     packext=7z
 
@@ -2034,38 +2032,6 @@ updatePack() {
     if [ -n "${oldpack}" ]; then
         rm -f "${oldpack}"
     fi
-}
-
-packtool_zip_add() {
-    local src="$1"
-    local dest="$2"
-    if [ -n "${src}" ]; then
-        zip "${src}" -@ --out "${dest}"
-    else
-        zip "${dest}" -@
-    fi
-}
-
-packtool_zip_ls() {
-    # Select rows that contain file listing (separated by lines that contain
-    # '---').  Drop listing separators.  isolate file names by removing start
-    # of line up to space (assuming file names w/o spaces).
-    unzipIgnoreWarnings -l "$1" |
-    sed -n -e '/---/,/---/p' |
-    sed -e '1d' -e '$d' |
-    sed -e 's/^.* //'
-}
-
-# exit code 1: warnings occured, but processing was successful, see unzip(1).
-unzipIgnoreWarnings() {
-    unzip "$@"
-    local e=$?
-    case ${e} in
-    0|1)
-        return 0
-        ;;
-    esac
-    return ${e}
 }
 
 packtool_7z_add() {
