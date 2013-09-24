@@ -6,15 +6,12 @@ Test that "silo add" maintains shared permissions.
 
 . ./lib-silo.sh
 
-test_expect_success \
-"setup user" \
-'
+test_expect_success "setup user" '
     setup_user
 '
 
 test_expect_success UNIX \
-"'git silo add' should create subdir with shared permissions in shared repo." \
-'
+"'git silo add' should create subdir with shared permissions in shared repo." '
     git init --shared &&
     touch .gitignore &&
     git add .gitignore &&

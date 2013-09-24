@@ -14,9 +14,7 @@ echo git version 1.7.0
 EOFTXT
 chmod a+x git
 
-test_expect_success \
-"git silo should fail if git version too low." \
-'
+test_expect_success "git silo should fail if git version too low." '
     git_silo="$(locate_git_silo)" &&
     git init &&
     export PATH=.:$PATH &&

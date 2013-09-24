@@ -66,8 +66,7 @@ test_expect_success \
 
 test_expect_success \
 "'git silo fetch' should support named remote." '
-    git clone repo1 namedorigin &&
-    (
+    git clone repo1 namedorigin && (
         cd namedorigin &&
         git remote rename origin org &&
         git silo init &&
@@ -86,8 +85,7 @@ fi
 
 test_expect_success \
 "'git silo fetch' (scp) should fetch" '
-    setup_clone_ssh repo1 scpclone &&
-    (
+    setup_clone_ssh repo1 scpclone && (
         cd scpclone &&
         git silo init &&
         git silo fetch -- .
@@ -113,18 +111,15 @@ test_expect_success \
 '
 
 test_expect_success \
-"'git silo fetch' should report error with invalid remote path." '
-    (
-        cd scpclone &&
-        git remote add invalid ssh://localhost/invalid/path &&
-        ! git silo fetch invalid -- .
-    )
-'
+"'git silo fetch' should report error with invalid remote path." '(
+    cd scpclone &&
+    git remote add invalid ssh://localhost/invalid/path &&
+    ! git silo fetch invalid -- .
+)'
 
 test_expect_success \
 "'git silo fetch' should ignore missing remote silo/objects." '
-    rm -rf repo1/.git/silo/objects &&
-    (
+    rm -rf repo1/.git/silo/objects && (
         cd scpclone &&
         git silo fetch -- .
     )

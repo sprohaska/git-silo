@@ -6,23 +6,18 @@ Test git silo initialization.
 
 . ./lib-silo.sh
 
-test_expect_success \
-"setup user" \
-'
+test_expect_success "setup user" '
     setup_user &&
     setup_file a
 '
 
-test_expect_success \
-"'git silo init' should succeed." \
-'
+test_expect_success "'git silo init' should succeed." '
     mkdir single &&
     ( cd single && git init && git silo init )
 '
 
 test_expect_success UNIX \
-"'git silo init' should use shared permissions when repo is shared." \
-'
+"'git silo init' should use shared permissions when repo is shared." '
     mkdir shared &&
     (
         cd shared &&
@@ -33,23 +28,18 @@ test_expect_success UNIX \
 '
 
 test_expect_success UNIX \
-"'git silo init' should preserve read-only permissions of files when run twice." \
-'
-    (
-        cd shared &&
-        touch a &&
-        git silo add a &&
-        ( ls -ld .git/silo/objects/*/* | grep -q "^-r--r--" ) &&
-        git silo init &&
-        ( ls -ld .git/silo/objects/*/* | grep -q "^-r--r--" )
-    )
-'
+"'git silo init' should preserve read-only file permissions when run twice." '(
+    cd shared &&
+    touch a &&
+    git silo add a &&
+    ( ls -ld .git/silo/objects/*/* | grep -q "^-r--r--" ) &&
+    git silo init &&
+    ( ls -ld .git/silo/objects/*/* | grep -q "^-r--r--" )
+)'
 
 test_expect_success \
-"'git silo init' should set up correct filter path, in particular on Windows." \
-'
-    mkdir win &&
-    (
+"'git silo init' should set up filter path, in particular on Windows." '
+    mkdir win && (
         cd win &&
         git init &&
         git silo init &&
@@ -59,9 +49,7 @@ test_expect_success \
     )
 '
 
-test_expect_success \
-"Spaces in path to git silo should work." \
-'
+test_expect_success "Spaces in path to git silo should work." '
     cp "$(locate_git_silo)" ./git-silo &&
     export PATH=$(pwd):$PATH &&
     setup_repo repospaces &&

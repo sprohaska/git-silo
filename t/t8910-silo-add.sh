@@ -6,15 +6,11 @@ Test basic "silo add" operations.
 
 . ./lib-silo.sh
 
-test_expect_success \
-"setup user" \
-'
+test_expect_success "setup user" '
     setup_user
 '
 
-test_expect_success \
-"'git silo add' should handle paths with spaces." \
-'
+test_expect_success "'git silo add' should handle paths with spaces." '
     git init &&
     touch .gitignore &&
     git add .gitignore &&
@@ -27,16 +23,13 @@ test_expect_success \
 '
 
 test_expect_success \
-"'git checkout' of silo content should handle paths with spaces." \
-'
+"'git checkout' of silo content should handle paths with spaces." '
     rm "a a" &&
     git checkout "a a" &&
     test -e "a a"
 '
 
-test_expect_success \
-"'git silo checkout' should handle paths with spaces." \
-'
+test_expect_success "'git silo checkout' should handle paths with spaces." '
     rm "a a" &&
     git silo checkout "a a" &&
     test -e "a a"

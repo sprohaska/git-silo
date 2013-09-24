@@ -8,9 +8,7 @@ Test that "silo push" handles missing files.
 
 ssh localhost true 2>/dev/null && test_set_prereq LOCALHOST
 
-test_expect_success \
-"setup" \
-'
+test_expect_success "setup" '
     setup_user &&
     setup_file a &&
     setup_file b &&
@@ -20,12 +18,16 @@ test_expect_success \
     git clone repo1 cpclone
 '
 
-test_expect_success \
-    "'git silo push' (cp) should skip missing files." \
-'
-    ( cd cpclone && git silo init && git silo fetch -- a ) &&
-    rm -rf repo1/.git/silo/objects/* &&
-    ( cd cpclone && git silo push -- . )
+test_expect_success "'git silo push' (cp) should skip missing files." '
+    (
+        cd cpclone &&
+        git silo init &&
+        git silo fetch -- a
+    ) &&
+    rm -rf repo1/.git/silo/objects/* && (
+        cd cpclone &&
+        git silo push -- .
+    )
 '
 
 if ! test_have_prereq LOCALHOST; then
@@ -33,13 +35,16 @@ if ! test_have_prereq LOCALHOST; then
     test_done
 fi
 
-test_expect_success \
-"'git silo push' (scp) should skip missing files." \
-'
-    setup_clone_ssh repo1 scpclone &&
-    ( cd scpclone && git silo init && git silo fetch -- a ) &&
-    rm -rf repo1/.git/silo/objects/* &&
-    ( cd scpclone && git silo push -- . )
+test_expect_success "'git silo push' (scp) should skip missing files." '
+    setup_clone_ssh repo1 scpclone && (
+        cd scpclone &&
+        git silo init &&
+        git silo fetch -- a
+    ) &&
+    rm -rf repo1/.git/silo/objects/* && (
+        cd scpclone &&
+        git silo push -- .
+    )
 '
 
 test_done

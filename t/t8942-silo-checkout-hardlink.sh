@@ -6,15 +6,11 @@ Test that "silo checkout" uses hard links as expected.
 
 . ./lib-silo.sh
 
-test_expect_success \
-"setup user" \
-'
+test_expect_success "setup user" '
     setup_user
 '
 
-test_expect_success \
-"git checkout should use hard links." \
-'
+test_expect_success "git checkout should use hard links." '
     git init &&
     touch .gitignore &&
     git add .gitignore &&
@@ -29,25 +25,20 @@ test_expect_success \
     ! test -w a
 '
 
-test_expect_success \
-"git checkout --copy should not use hard links." \
-'
+test_expect_success "git checkout --copy should not use hard links." '
     git silo checkout --copy a &&
     test $(linkCount a) -eq 1 &&
     test -w a
 '
 
-test_expect_success \
-"git checkout --link should replace copy with hard links." \
-'
+test_expect_success "git checkout --link should replace copy with hard links." '
     git silo checkout --link a &&
     test $(linkCount a) -eq 2 &&
     ! test -w a
 '
 
 test_expect_success \
-"git checkout --link should fix wrong write permissions in silo store." \
-'
+"git checkout --link should fix wrong write permissions in silo store." '
     chmod u+w .git/silo/objects/*/* &&
     test -w a &&
     rm a &&

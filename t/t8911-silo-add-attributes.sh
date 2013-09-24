@@ -6,22 +6,19 @@ Test support for wildcard gitattributes.
 
 . ./lib-silo.sh
 
-test_expect_success \
-"setup user" \
-'
+test_expect_success "setup user" '
     setup_user &&
     setup_repo wildcard
 '
 
 test_expect_success \
-"git add should not create .gitattributes if wildcard attributes are ok." \
-'
+"git add should not create .gitattributes if wildcard attributes are ok." '(
     cd wildcard &&
     echo "*.ext -text filter=silo" >.gitattributes &&
     mkdir subdir &&
     touch "subdir/a a.ext" &&
     git silo add "subdir/a a.ext" &&
     ! [ -e subdir/.gitattributes ]
-'
+)'
 
 test_done

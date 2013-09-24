@@ -6,9 +6,7 @@ Test that "silo fetch" maintains shared permissions.
 
 . ./lib-silo.sh
 
-test_expect_success \
-"setup" \
-'
+test_expect_success "setup" '
     setup_user &&
     setup_file a &&
     setup_repo repo1 &&
@@ -16,16 +14,16 @@ test_expect_success \
 '
 
 test_expect_success UNIX \
-"local fetch to shared repo should create subdir with shared permission" \
-'
-    mkdir repo2 &&
-    cd repo2 &&
-    git init --shared &&
-    git remote add origin ../repo1 &&
-    git silo init &&
-    git pull origin master &&
-    git silo fetch -- . &&
-    isSharedDir .git/silo/objects/$(cut -b 1-2 ../a.sha1)
+"local fetch to shared repo should create subdir with shared permission" '
+    mkdir repo2 && (
+        cd repo2 &&
+        git init --shared &&
+        git remote add origin ../repo1 &&
+        git silo init &&
+        git pull origin master &&
+        git silo fetch -- . &&
+        isSharedDir .git/silo/objects/$(cut -b 1-2 ../a.sha1)
+    )
 '
 
 test_done

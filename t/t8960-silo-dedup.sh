@@ -15,9 +15,7 @@ assertLinkCount() {
     fi
 }
 
-test_expect_success \
-"setup user" \
-'
+test_expect_success "setup user" '
     setup_user
 '
 
@@ -32,13 +30,11 @@ ssh localhost true 2>/dev/null && test_set_prereq LOCALHOST
 # setup_clone_ssh is used to create repo2 in order to avoid local copy, which
 # would immediately create hard links.
 test_expect_success LOCALHOST \
-"git dedup should create hardlinks between two repositories in expected order" \
-'
+"git dedup should create hardlinks between two repositories in expected order" '
     setup_file a &&
     setup_repo repo1 &&
     setup_add_file repo1 a &&
-    setup_clone_ssh repo1 repo2 &&
-    (
+    setup_clone_ssh repo1 repo2 && (
         cd repo2 &&
         git silo init &&
         git silo fetch -- . &&
@@ -48,8 +44,7 @@ test_expect_success LOCALHOST \
     assertLinkCount repo2/a 2 &&
     git silo dedup repo2 repo1 &&
     assertLinkCount repo1/a 1 &&
-    assertLinkCount repo2/a 3 &&
-    (
+    assertLinkCount repo2/a 3 && (
         cd repo1 &&
         rm -r a &&
         git silo checkout .

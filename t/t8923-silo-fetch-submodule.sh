@@ -7,24 +7,18 @@ redirect to the real repository location.
 
 . ./lib-silo.sh
 
-test_expect_success \
-"setup user" \
-'
+test_expect_success "setup user" '
     setup_user
 '
 
-test_expect_success \
-"Setup submodule" \
-'
-    mkdir super &&
-    (
+test_expect_success "Setup submodule" '
+    mkdir super && (
         cd super &&
         git init &&
         touch .gitignore &&
         git add .gitignore &&
         git commit -m "initial commit" &&
-        mkdir sub &&
-        (
+        mkdir sub && (
             cd sub &&
             git init &&
             touch .gitignore &&
@@ -38,11 +32,9 @@ test_expect_success \
         git submodule add ./sub &&
         git commit -m "add sub"
     ) &&
-    git clone super super2 &&
-    (
+    git clone super super2 && (
         cd super2 &&
-        git submodule update --init &&
-        (
+        git submodule update --init && (
             cd sub &&
             git silo init &&
             git silo fetch -- .
@@ -51,10 +43,8 @@ test_expect_success \
 '
 
 test_expect_success \
-"local fetch should correctly handle submodule that uses 'gitdir: ...' redirect." \
-'
-    git clone super2/sub sublocal &&
-    (
+"local fetch should handle submodule that uses 'gitdir: ...' redirect." '
+    git clone super2/sub sublocal && (
         cd sublocal &&
         git silo init &&
         git silo fetch -- . &&
@@ -72,10 +62,8 @@ if ! test_have_prereq LOCALHOST; then
 fi
 
 test_expect_success \
-"ssh fetch should correctly handle submodule that uses 'gitdir: ...' redirect." \
-'
-    setup_clone_ssh super2/sub subssh &&
-    (
+"ssh fetch should handle submodule that uses 'gitdir: ...' redirect." '
+    setup_clone_ssh super2/sub subssh && (
         cd subssh &&
         git silo init &&
         git silo fetch -- . &&

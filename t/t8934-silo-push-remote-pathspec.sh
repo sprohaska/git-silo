@@ -6,20 +6,15 @@ Test that "silo push" supports config "remote.*.silopush".
 
 . ./lib-silo.sh
 
-test_expect_success \
-"setup user" \
-'
+test_expect_success "setup user" '
     setup_user
 '
 
-test_expect_success \
-'setup' \
-'
+test_expect_success 'setup' '
     setup_file a &&
     setup_file b &&
     setup_repo repo1 &&
-    git clone repo1 repo2 &&
-    (
+    git clone repo1 repo2 && (
         cd repo2 &&
         git silo init &&
         cp ../a a &&
@@ -31,9 +26,7 @@ test_expect_success \
     )
 '
 
-test_expect_success \
-'remote.origin.silopush pathspec should limit git push' \
-'
+test_expect_success 'remote.origin.silopush pathspec should limit git push' '
     (
         cd repo2 &&
         git config remote.origin.silopush a &&
@@ -47,8 +40,7 @@ test_expect_success \
 '
 
 test_expect_success \
-'"git silo push -- ." should override remote.origin.silopush' \
-'
+'"git silo push -- ." should override remote.origin.silopush' '
     (
         cd repo2 &&
         git silo push -- .
@@ -58,11 +50,8 @@ test_expect_success \
     )
 '
 
-test_expect_success \
-'remote.<remote>.silopush pathspec should limit git push' \
-'
-    git clone repo1 namedremote &&
-    (
+test_expect_success 'remote.<remote>.silopush pathspec should limit git push' '
+    git clone repo1 namedremote && (
         cd namedremote &&
         git silo init &&
         echo "c" >c &&

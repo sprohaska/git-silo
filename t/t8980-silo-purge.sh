@@ -6,9 +6,7 @@ Test purge operations of files from working copy and silo store.
 
 . ./lib-silo.sh
 
-test_expect_success \
-"setup" \
-'
+test_expect_success "setup" '
     setup_user &&
     setup_file a &&
     setup_file b
@@ -33,45 +31,30 @@ cdNewMasterRepo() {
 }
 
 test_expect_success \
-"'git silo purge' should refuse to run if silo.ismasterstore is unset." \
-'
-    (
-        cdNewMasterRepo &&
-        ! git silo purge -f -- a
-    )
-'
+"'git silo purge' should refuse to run if silo.ismasterstore is unset." '(
+    cdNewMasterRepo &&
+    ! git silo purge -f -- a
+)'
 
 test_expect_success \
-"'git silo purge' should refuse to run if silo.ismasterstore=true." \
-'
-    (
-        cdNewMasterRepo &&
-        git config silo.ismasterstore true &&
-        ! git silo purge -f -- a
-    )
-'
+"'git silo purge' should refuse to run if silo.ismasterstore=true." '(
+    cdNewMasterRepo &&
+    git config silo.ismasterstore true &&
+    ! git silo purge -f -- a
+)'
+
+test_expect_success "'git silo purge' should refuse to run without '-f'." '(
+    cdNewRepo &&
+    ! git silo purge -- a
+)'
+
+test_expect_success "'git silo purge' should refuse to run without pathspec." '(
+    cdNewRepo &&
+    ! git silo purge -f
+)'
 
 test_expect_success \
-"'git silo purge' should refuse to run without '-f'." \
-'
-    (
-        cdNewRepo &&
-        ! git silo purge -- a
-    )
-'
-
-test_expect_success \
-"'git silo purge' should refuse to run without pathspec." \
-'
-    (
-        cdNewRepo &&
-        ! git silo purge -f
-    )
-'
-
-test_expect_success \
-"'git silo purge --dry-run -- <path>' should report path." \
-'
+"'git silo purge --dry-run -- <path>' should report path." '
     (
         cdNewRepo &&
         git silo purge --dry-run -- b >../log 2>&1
@@ -79,64 +62,48 @@ test_expect_success \
     grep -q -i "would remove.*b" log
 '
 
-test_expect_success \
-"'git silo purge -f -- <path>' should purge path" \
-'
-    (
-        cdNewRepo &&
-        git silo purge -f -- b &&
-        test_cmp ../b.sha1 b &&
-        rm b &&
-        ! git silo checkout -- b
-    )
-'
+test_expect_success "'git silo purge -f -- <path>' should purge path" '(
+    cdNewRepo &&
+    git silo purge -f -- b &&
+    test_cmp ../b.sha1 b &&
+    rm b &&
+    ! git silo checkout -- b
+)'
 
 test_expect_success \
-"'git silo purge -- <path>' should be quiet if nothing to do." \
-'
-    (
-        cdNewRepo &&
-        git silo purge -f -- . &&
-        [ "$(git silo purge -f -- .)" == "" ]
-    )
-'
+"'git silo purge -- <path>' should be quiet if nothing to do." '(
+    cdNewRepo &&
+    git silo purge -f -- . &&
+    [ "$(git silo purge -f -- .)" == "" ]
+)'
 
 test_expect_success \
-"'git silo purge -f -- <path>' should leave workspace in clean state." \
-'
-    (
-        cdNewRepo &&
-        git silo purge -f -- b &&
-        [ "$(git status --porcelain)" == "" ]
-    )
-'
+"'git silo purge -f -- <path>' should leave workspace in clean state." '(
+    cdNewRepo &&
+    git silo purge -f -- b &&
+    [ "$(git status --porcelain)" == "" ]
+)'
 
 test_expect_success \
-"'git silo purge -f -- <path>' should remove empty silo/object subdirs." \
-'
-    (
-        cdNewRepo &&
-        git silo purge -f -- . &&
-        [ "$(find .git/silo/objects -mindepth 1 -maxdepth 1)" == "" ] &&
-        git silo purge -f -- . &&
-        [ -d .git/silo/objects ]
-    )
-'
+"'git silo purge -f -- <path>' should remove empty silo/object subdirs." '(
+    cdNewRepo &&
+    git silo purge -f -- . &&
+    [ "$(find .git/silo/objects -mindepth 1 -maxdepth 1)" == "" ] &&
+    git silo purge -f -- . &&
+    [ -d .git/silo/objects ]
+)'
 
 test_expect_success \
-"'git silo purge -f -- <path>' should replace content with placeholder but keep aliased object." \
-'
-    (
-        cdNewRepo &&
-        cp b b2 &&
-        git silo add b2 &&
-        git commit -m "Add b2" &&
-        git silo purge -f -- b &&
-        test_cmp ../b.sha1 b &&
-        test_cmp ../b b2 &&
-        rm b2 &&
-        git silo checkout -- b2
-    )
-'
+"'git silo purge -f -- <path>' should replace content with placeholder but keep aliased object." '(
+    cdNewRepo &&
+    cp b b2 &&
+    git silo add b2 &&
+    git commit -m "Add b2" &&
+    git silo purge -f -- b &&
+    test_cmp ../b.sha1 b &&
+    test_cmp ../b b2 &&
+    rm b2 &&
+    git silo checkout -- b2
+)'
 
 test_done

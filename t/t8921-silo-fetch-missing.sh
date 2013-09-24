@@ -13,31 +13,24 @@ if ! test_have_prereq LOCALHOST; then
     test_done
 fi
 
-test_expect_success \
-"setup user" \
-'
+test_expect_success "setup user" '
     setup_user
 '
 
-test_expect_success \
-"setup original repo" \
-'
+test_expect_success "setup original repo" '
     setup_file a &&
     setup_file b &&
     setup_repo orig &&
     setup_add_file orig a &&
-    setup_add_file orig b &&
-    (
+    setup_add_file orig b && (
         cd orig &&
         rm -rf .git/silo/objects/$(cut -b 1-2 ../a.sha1)
     )
 '
 
 test_expect_success \
-"'git silo fetch' (scp) should not abort on missing objects." \
-'
-    setup_clone_ssh orig reposcp &&
-    (
+"'silo fetch' (scp) should continue even if some objects are missing." '
+    setup_clone_ssh orig reposcp && (
         cd reposcp &&
         git silo init &&
         ( git silo fetch -- . || true ) &&
@@ -47,10 +40,8 @@ test_expect_success \
 '
 
 test_expect_success \
-"'git silo fetch' (cp) should not abort on missing objects." \
-'
-    git clone orig repocp &&
-    (
+"'silo fetch' (cp) should continue even if some objects are missing." '
+    git clone orig repocp && (
         cd repocp &&
         git silo init &&
         ( git silo fetch -- . || true ) &&
