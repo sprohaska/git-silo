@@ -20,7 +20,7 @@ git-silo fetch \
     [<remote>] [--] [<path>... | config remote.<remote>.silofetch]
 git-silo gc [--gitattributes] [-f|--force] [-n <number>] [--dry-run] [--no-tags]
 git-silo purge [-f|--force] [--dry-run] [--] <path>...
-git-silo pack [--keep|--remove]
+git-silo pack [--keep|--prune]
 git-silo unpack [--] [<path>...]
 git-silo fsck
 git-silo dedup <repo>...
@@ -104,13 +104,13 @@ git-silo dedup <repo>...
   fsck              verify silo storage.
 
   pack              pack loose silo objects into 7z archives.  Loose objects
-                    are kept unless '--remove' is specified.  Packed objects
-                    are not automatically unpacked by operations such as
+                    are kept unless '--prune' is specified.  Packed objects are
+                    not automatically unpacked by operations such as
                     'checkout.' Use 'unpack' to explicitly unpack objects.
 
-    --keep          Keep loose objects.
+    --keep          keep loose objects.
 
-    --remove        Remove loose objects that have been packed.
+    --prune         prune loose objects that have been packed.
 
   unpack            unpack loose objects that are used by HEAD.
 
@@ -330,7 +330,7 @@ argparse_pack() {
             opt_keep=t
             shift
             ;;
-        --remove)
+        --prune)
             opt_keep=
             shift
             ;;

@@ -61,9 +61,9 @@ test_expect_success "'pack --keep' should keep loose objects." '(
     assertNumObjects 5
 )'
 
-test_expect_success "'pack --remove' should remove loose objects." '(
+test_expect_success "'pack --prune' should remove loose objects." '(
     cd repo &&
-    git silo pack --remove &&
+    git silo pack --prune &&
     assertNumObjects 0
 )'
 
@@ -87,7 +87,7 @@ test_expect_success "setup shared repo." '
 
 test_expect_success "'unpack' should maintain shared permissions." '(
     cd sharedrepo &&
-    git silo pack --remove &&
+    git silo pack --prune &&
     git silo unpack &&
     isSharedDir .git/silo/objects/$(cut -b 1-2 ../a.sha1)
 )'
@@ -118,9 +118,9 @@ test_expect_success 'setup files (11..99)' '(
     git commit -m "add files"
 )'
 
-test_expect_success "'pack --remove' should keep 2 (large) loose objects." '(
+test_expect_success "'pack --prune' should keep 2 (large) loose objects." '(
     cd repo &&
-    git silo pack --remove &&
+    git silo pack --prune &&
     assertNumObjects 2 &&
     assertNumPacks 68
 )'
@@ -135,7 +135,7 @@ test_expect_success "'unpack' should create loose objects for HEAD." '(
     cd repo &&
     git rm 9? &&
     git commit -m "remove 9?" &&
-    git silo pack --remove &&
+    git silo pack --prune &&
     assertNumObjects 2 &&
     git silo unpack &&
     assertNumObjects 89
