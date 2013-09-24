@@ -21,7 +21,7 @@ git-silo fetch \
 git-silo gc [--gitattributes] [-f|--force] [-n <number>] [--dry-run] [--no-tags]
 git-silo purge [-f|--force] [--dry-run] [--] <path>...
 git-silo pack [--keep|--prune]
-git-silo unpack [--] [<path>...]
+git-silo unpack [--keep-packs|--prune-packs] [--all] [--] [<path>...]
 git-silo fsck
 git-silo dedup <repo>...
 
@@ -115,6 +115,13 @@ git-silo dedup <repo>...
   unpack            unpack loose objects that are used by HEAD.
 
     <path>...       limit unpacking to these files (default: all).
+
+    --keep-packs    keep packs.
+
+    --prune-packs   prune packs that have been completely unpacked.
+
+    --all           unpack all packed objects no matter whether they are used
+                    by HEAD or not.
 
   dedup             create hard links between repositories.  Repositories listed
                     later get linked to repositories listed earlier.
@@ -345,7 +352,41 @@ argparse_pack() {
 }
 
 argparse_unpack() {
-    argparse_pathspec "$@"
+    arg_pathspec=
+    opt_keep_packs=t
+    opt_all=
+    while [ $# -ge 1 ]; do
+        case "$1" in
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        --keep-packs)
+            opt_keep_packs=t
+            shift
+            ;;
+        --prune-packs)
+            opt_keep_packs=
+            shift
+            ;;
+        --all)
+            opt_all=t
+            shift
+            ;;
+        --)
+            shift
+            [ $# -gt 0 ] && arg_pathspec=( "$@" )
+            return 0
+            ;;
+        -*)
+            die "Unknown option $1"
+            ;;
+        *)
+            arg_pathspec=( "$@" )
+            return 0
+            ;;
+        esac
+    done
 }
 
 argparse_dedup() {
@@ -1331,15 +1372,21 @@ uniqSha1s() {
     sort -u
 }
 
-# Add slash after every second prefix hexdigit if followed by another hexdigit.
+# Add slashes every second prefix hexdigit if followed by more hexdigits.
 slashedPrefix() {
-    sed -E -e 's@([0-9a-f]{2})([0-9a-f])@\1/\2@g' <<<"$1"
-
+    local prev=
+    local cur="$1"
+    while [ "${prev}" != "${cur}" ]; do
+        prev="${cur}"
+        # Transform '^aaa -> ^aa/a' and '.../aaa' -> '.../aa/a'.
+        cur=$(sed -E -e 's@(^|/)([0-9a-f]{2})([0-9a-f])@\1\2/\3@g' <<<"${cur}")
+    done
+    printf '%s' "${cur}"
 }
 
-# Add slash after first two hexdigits if followed by another hexdigit.
+# Add slash after starting two hexdigits if followed by another hexdigit.
 slashedOnce() {
-    sed -E -e 's@([0-9a-f]{2})([0-9a-f])@\1/\2@'
+    sed -E -e 's@^([0-9a-f]{2})([0-9a-f])@\1/\2@'
 }
 
 sha1sAsObjectPaths() {
@@ -1722,38 +1769,55 @@ cmd_fsck() {
 }
 
 cmd_pack() {
-    validateHaveSilo
-    mkSiloPackDir
-
     # packtool=zip
     # packext=zip
     packtool=7z
     packext=7z
 
+    validateHaveSilo
+    mkSiloPackDir
+
     lsObjectsWithPackPrefix |
     sort -k 1 |
     forEachGroup updatePack
 
-    removePackedObjects
+    prunePackedObjects
 }
 
 cmd_unpack() {
-    validateHaveSilo
-
     packtool=7z
     packext=7z
 
-    lsSiloTracked "${arg_pathspec[@]}" |
+    validateHaveSilo
+
+    [ -d "$(getSiloPackDir)" ] || return 0
+
+    lsObjectsSelectedForUnpack |
     cut -b 1-2 |
     sort -u |
     mkSiloObjectSubdirs
 
-    lsSiloTracked "${arg_pathspec[@]}" |
-    cut -d ' ' -f 1 |
+    lsObjectsSelectedForUnpack |
     dropSha1sOfLooseObjects |
     lookupPacksForObjects |
     sort -k 1 |
     forEachGroup unpackObjects
+
+    test $opt_keep_packs || prunePacks
+}
+
+mkSiloPackDir() {
+    local packdir="$(getSiloPackDir)"
+    mkdirWithParentsPermissions "${packdir}"
+}
+
+lsObjectsSelectedForUnpack() {
+    if test $opt_all; then
+        lsPackedObjects
+    else
+        lsSiloTracked "${arg_pathspec[@]}" |
+        cut -d ' ' -f 1
+    fi
 }
 
 mkSiloObjectSubdirs() {
@@ -1797,7 +1861,7 @@ unpackObjects() {
     )
 }
 
-removePackedObjects() {
+prunePackedObjects() {
     local packedobjs=$(lsPackedObjects)
     local objectdir="$(getSiloObjectDir)"
     lsSiloObjectsInDir "${objectdir}" |
@@ -1820,9 +1884,28 @@ removePackedObjects() {
     removeEmptyObjectDirs
 }
 
-mkSiloPackDir() {
+prunePacks() {
+    lsPacksWithObjects |
+    sort -k 1 |
+    forEachGroup prunePack
+}
+
+prunePack() {
+    local pack="$1"
+    local objs="$2"
+
+    haveAllLooseObjects "${objs}" || return 0
+
     local packdir="$(getSiloPackDir)"
-    mkdirWithParentsPermissions "${packdir}"
+    rm -f "${packdir}/${pack}"
+}
+
+haveAllLooseObjects() {
+    local objectdir="$(getSiloObjectDir)"
+    while IFS= read -r sha1; do
+        [ -z "${sha1}" ] && continue
+        [ -e "${objectdir}/$(sha1AsObjectPath ${sha1})" ] || return 1
+    done <<<"${objs}"
 }
 
 # Determine pack prefix for loose objects.  Output: <prefix><SPACE><object>.
@@ -2011,24 +2094,25 @@ packtool_7z_ls() {
 }
 
 lsPackedObjects() {
-    packdir="$(getSiloPackDir)"
-    find "${packdir}" -type f -name "*_*.${packext}" |
-    while IFS= read -r pack; do
-        packtool_${packtool}_ls "${pack}" |
-        sed -e 's@/@@'
-    done
+    lsPacksWithObjects |
+    cut -d ' ' -f 2
 }
 
 lsPacksWithObjects() {
+    packdir="$(getSiloPackDir)"
+    lsSlashedPacks |
+    while IFS= read -r pack; do
+        [ -z "${pack}" ] && continue
+        packtool_${packtool}_ls "${packdir}/${pack}" |
+        sed -e 's@/@@' -e "s@^@${pack} @"
+    done
+}
+
+lsSlashedPacks() {
     (
         cd "$(getSiloPackDir)" &&
         find . -type f -name "*_*.${packext}" |
-        sed -e 's@^./@@' |
-        while IFS= read -r pack; do
-            [ -z "${pack}" ] && continue
-            packtool_${packtool}_ls "${pack}" |
-            sed -e 's@/@@' -e "s@^@$pack @"
-        done
+        cut -b 3-
     )
 }
 

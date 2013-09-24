@@ -34,6 +34,12 @@ test_expect_success 'setup' '
     ( cd repo && git config silo.packSizeLimit 8K )
 '
 
+test_expect_success 'unpack should handle empty silo' '(
+    cd repo &&
+    git silo unpack 2>err &&
+    [ -z "$(cat err)" ]
+)'
+
 test_expect_success 'pack should handle empty silo' '(
     cd repo &&
     git silo pack
@@ -73,10 +79,28 @@ test_expect_success "'unpack 1' should create one loose object." '(
     assertNumObjects 1
 )'
 
+test_expect_success "'unpack --prune-packs 1' should keep packs." '(
+    cd repo &&
+    git silo unpack --prune-packs 1 &&
+    assertNumPacks 3
+)'
+
 test_expect_success "'unpack' should create all 5 loose object." '(
     cd repo &&
     git silo unpack &&
     assertNumObjects 5
+)'
+
+test_expect_success "'unpack --keep-packs' should keep packs." '(
+    cd repo &&
+    git silo unpack --keep-packs &&
+    assertNumPacks 3
+)'
+
+test_expect_success "'unpack --prune-packs' should remove packs." '(
+    cd repo &&
+    git silo unpack --prune-packs &&
+    assertNumPacks 0
 )'
 
 test_expect_success "setup shared repo." '
@@ -105,7 +129,7 @@ test_expect_success 'setup files (6..10)' '(
 test_expect_success 'pack should succeed.' '(
     cd repo &&
     git silo pack &&
-    assertNumPacks 4
+    assertNumPacks 6
 )'
 
 test_expect_success 'setup files (11..99)' '(
@@ -122,7 +146,7 @@ test_expect_success "'pack --prune' should keep 2 (large) loose objects." '(
     cd repo &&
     git silo pack --prune &&
     assertNumObjects 2 &&
-    assertNumPacks 68
+    assertNumPacks 69
 )'
 
 test_expect_success "'unpack' should create all loose object." '(
@@ -139,6 +163,20 @@ test_expect_success "'unpack' should create loose objects for HEAD." '(
     assertNumObjects 2 &&
     git silo unpack &&
     assertNumObjects 89
+)'
+
+test_expect_success "'unpack --prune-packs' should keep a few packs." '(
+    cd repo &&
+    git silo unpack --prune-packs &&
+    assertNumPacks 10
+)'
+
+test_expect_success \
+"'unpack --all --prune-packs' should unpack and prune all." '(
+    cd repo &&
+    git silo unpack --all --prune-packs &&
+    assertNumObjects 99 &&
+    assertNumPacks 0
 )'
 
 test_done
