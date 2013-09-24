@@ -190,8 +190,8 @@ can be temporarily deactivated by using git's '-c' switch.  For example, the
 following command will always create an archive with full content: 'git -c
 silo.contentSizeLimit=0 archive HEAD >a.tar'
 
-silo.packSizeLimit (default '50G'): The maximum size of a pack.  The suffixes
-'K', 'M', 'G' can be used.
+silo.packSizeLimit (default '50G'): The maximum size of a pack.  0 means no
+limit.  The suffixes 'K', 'M', 'G' can be used.
 
 silo.ismasterstore (default 'true'): Unless set to 'false', some destructive
 operations, such as 'purge', are not permitted.
@@ -1941,7 +1941,7 @@ lsObjectsWithPackPrefix() {
             continue
         fi
 
-        if (( ${size} > ${threshold} )); then
+        if (( ${threshold} > 0 )) && (( ${size} > ${threshold} )); then
             echo nopack ${name}
             continue
         fi
@@ -1957,7 +1957,7 @@ lsObjectsWithPackPrefix() {
                 fi
             fi
             newsize=$(( ${cumsums[${level}]} + ${size} ))
-            if (( ${newsize} < ${threshold} )); then
+            if (( ${threshold} == 0)) || (( ${newsize} < ${threshold} )); then
                 echo ${curprefix} ${name}
                 cumsums[${level}]=${newsize}
                 continue 2

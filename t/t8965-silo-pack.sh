@@ -179,4 +179,12 @@ test_expect_success \
     assertNumPacks 0
 )'
 
+test_expect_success \
+"'pack' creates a single pack when packSizeLimit=0." '(
+    cd repo &&
+    git config silo.packSizeLimit 0 &&
+    git silo pack &&
+    assertNumPacks 1
+)'
+
 test_done
