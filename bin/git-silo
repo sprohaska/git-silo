@@ -1771,6 +1771,7 @@ cmd_fsck() {
 cmd_pack() {
     packtool=7z
     packext=7z
+    requireBin7z
 
     validateHaveSilo
     mkSiloPackDir
@@ -1785,6 +1786,7 @@ cmd_pack() {
 cmd_unpack() {
     packtool=7z
     packext=7z
+    requireBin7z
 
     validateHaveSilo
 
@@ -2034,6 +2036,17 @@ updatePack() {
     fi
 }
 
+requireBin7z() {
+    local try="7zr 7z"
+    for b in $try; do
+        if $b 2>&1 | grep -q "7-Zip"; then
+            bin_7z=$b
+            return
+        fi
+    done
+    die "Missing 7z binary (tried $try).  If using a package manager (Linux or Mac), install the package 'p7zip'; or install 7-Zip from http://www.7-zip.org and add it to PATH."
+}
+
 packtool_7z_add() {
     local src="$1"
     local dest="$2"
@@ -2041,19 +2054,19 @@ packtool_7z_add() {
         cp "${src}" "${dest}"
         chmod u+w "${dest}"
     fi
-    xargs 7zr a -t7z -m0=LZMA2 "${dest}"
+    xargs ${bin_7z} a -t7z -m0=LZMA2 "${dest}"
 }
 
 packtool_7z_extract() {
     local pack="$1"
-    xargs 7zr x "${pack}"
+    xargs ${bin_7z} x "${pack}"
 }
 
 packtool_7z_ls() {
     # Select rows that contain file listing (separated by lines that contain
     # '---').  Drop listing separators.  isolate file names by removing start
     # of line up to space (assuming file names w/o spaces).
-    7zr l "$1" |
+    ${bin_7z} l "$1" |
     sed -n -e '/---/,/---/p' |
     sed -e '1d' -e '$d' |
     sed -e 's/^.* //'

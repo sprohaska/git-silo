@@ -28,6 +28,15 @@ numFilesIn() {
     sed -e 's/ *//g'
 }
 
+cat >7zr <<\EOF
+#!/bin/bash
+
+echo "invalid"
+EOF
+
+chmod a+x 7zr
+cp 7zr 7z
+
 test_expect_success 'setup' '
     setup_user &&
     setup_repo repo &&
@@ -43,6 +52,15 @@ test_expect_success 'unpack should handle empty silo' '(
 test_expect_success 'pack should handle empty silo' '(
     cd repo &&
     git silo pack
+)'
+
+test_expect_success 'pack and unpack should report missing 7z.' '(
+    cd repo &&
+    export PATH=..:$PATH &&
+    ! git silo pack 2>err &&
+    grep -qi "missing.*7z" err &&
+    ! git silo unpack 2>err &&
+    grep -qi "missing.*7z" err
 )'
 
 test_expect_success 'setup files (1..5)' '(
