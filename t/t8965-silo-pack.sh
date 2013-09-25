@@ -6,6 +6,11 @@ Test packing (WIP)
 
 . ./lib-silo.sh
 
+if ! type 7zr >/dev/null 2>&1; then
+    skip_all='Skipping tests, because 7zr is not available.'
+    test_done
+fi
+
 assertNumObjects() {
     assertNumFilesIn '.git/silo/objects' $1
 }
