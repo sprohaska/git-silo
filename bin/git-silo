@@ -2054,7 +2054,9 @@ packtool_7z_add() {
         cp "${src}" "${dest}"
         chmod u+w "${dest}"
     fi
-    xargs ${bin_7z} a -t7z -m0=LZMA2 "${dest}"
+    # Use LZMA2 to support multi-threaded compression.
+    # Disable solid mode (-ms=off) to allow quickly accessing individual files.
+    xargs ${bin_7z} a -t7z -m0=LZMA2 -ms=off "${dest}"
 }
 
 packtool_7z_extract() {
