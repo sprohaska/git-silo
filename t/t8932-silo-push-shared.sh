@@ -10,96 +10,75 @@ ssh localhost true 2>/dev/null && test_set_prereq LOCALHOST
 
 test_expect_success "setup" '
     setup_user &&
-    setup_repo repo1 --shared &&
+    setup_repo repo1 --shared
+'
+
+test_expect_success "setup (cp)" '
     git clone repo1 cpclone && (
         cd cpclone &&
         git silo init
-    ) &&
-    setup_file a &&
-    setup_add_file cpclone a
+    )
 '
 
-test_expect_success LOCALHOST "setup (ssh)" '
-    setup_clone_ssh repo1 scpclone && (
-        cd scpclone &&
-        git silo init
-    ) &&
-    setup_file b &&
-    setup_add_file scpclone b
-'
+for transport in scp sshtar; do
+    repo="${transport}clone"
+    test_expect_success LOCALHOST "setup ${repo}" "
+        setup_clone_ssh repo1 ${repo} && (
+            cd ${repo} &&
+            git config silo.sshtransport ${transport} &&
+            git silo init
+        )
+    "
+done
 
-test_expect_success UNIX \
-"'git silo push' (cp) should create dir with shared permissions when pushing to shared repo." '
+run_tests() {
+local req=$1
+local transport=$2
+local prefix=$3
+local clone="${transport}clone"
+
+test_expect_success $req \
+"'git silo push' (${transport}) should create dir with shared permissions when pushing to shared repo." "
+    setup_file ${prefix}1 &&
+    setup_add_file ${clone} ${prefix}1 &&
     (
-        cd cpclone &&
+        cd ${clone} &&
         git silo push -- .
     ) && (
         cd repo1 &&
-        isSharedDir .git/silo/objects/$(cut -b 1-2 ../a.sha1)
+        isSharedDir .git/silo/objects/\$(cut -b 1-2 ../${prefix}1.sha1)
     )
-'
+"
 
-test_expect_success LOCALHOST \
-"'git silo push' (scp) should create dir with shared permissions when pushing to shared repo." '
-    (
-        cd scpclone &&
+test_expect_success $req \
+"'git silo push' (${transport}) should set group write bit in shared repo even when file in local repo is not group readable." "
+    setup_file ${prefix}2 &&
+    setup_add_file ${clone} ${prefix}2 && (
+        cd ${clone} &&
+        chmod g-r ${prefix}2 &&
         git silo push -- .
     ) && (
-        cd repo1 &&
-        isSharedDir .git/silo/objects/$(cut -b 1-2 ../b.sha1)
+        cd repo1 && (
+            ls -l .git/silo/objects/\$(cut -b 1-2 ../${prefix}2.sha1)/\$(cut -b 3-40 ../${prefix}2.sha1) |
+            grep -q '^-r--r--'
+        )
     )
-'
+"
 
-test_expect_success UNIX \
-"'git silo push' (cp) should set group write bit in shared repo even when file in local repo is not group readable." \
-'
-    setup_file c &&
-    setup_add_file cpclone c && (
-        cd cpclone &&
-        chmod g-r c &&
-        git silo push -- .
-    ) && (
-        cd repo1 &&
-        ( ls -l .git/silo/objects/$(cut -b 1-2 ../c.sha1)/$(cut -b 3-40 ../c.sha1) | grep -q "^-r--r--" )
-    )
-'
-
-test_expect_success LOCALHOST \
-"'git silo push' (scp) should set group write bit in shared repo even when file in local repo is not group readable." \
-'
-    setup_file d &&
-    setup_add_file scpclone d && (
-        cd scpclone &&
-        chmod g-r d &&
-        git silo push -- .
-    ) && (
-        cd repo1 &&
-        ( ls -l .git/silo/objects/$(cut -b 1-2 ../d.sha1)/$(cut -b 3-40 ../d.sha1) | grep -q "^-r--r--" )
-    )
-'
-
-test_expect_success UNIX \
-"'git silo push' (cp) should fail with 'missing silo dir' when pushing to unitialized repo." '
-    (
-        cd repo1 &&
-        rm -rf .git/silo
-    ) && (
-        cd cpclone &&
+test_expect_success $req \
+"'git silo push' (${transport}) should fail with 'missing silo dir' when pushing to unitialized repo." "
+    mv repo1/.git/silo repo1/.git/silo-tmp && (
+        cd ${clone} &&
         ! git silo push -- . 2>../stderr
     ) &&
-    grep -qi "missing silo dir" stderr
-'
+    grep -qi 'missing silo dir' stderr &&
+    mv repo1/.git/silo-tmp repo1/.git/silo
+"
 
-test_expect_success LOCALHOST \
-"'git silo push' (scp) should fail with 'missing silo dir' when pushing to unitialized repo." '
-    (
-        cd repo1 &&
-        rm -rf .git/silo
-    ) && (
-        cd scpclone &&
-        ! git silo push -- . 2>../stderr
-    ) &&
-    grep -qi "missing silo dir" stderr
-'
+}
+
+run_tests UNIX cp a
+run_tests LOCALHOST scp b
+run_tests LOCALHOST sshtar c
 
 test_done

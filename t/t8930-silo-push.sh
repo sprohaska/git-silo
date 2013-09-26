@@ -14,7 +14,7 @@ test_expect_success "setup" '
     setup_repo repo1
 '
 
-test_expect_success "'git silo push' should refuse to push without path." '
+test_expect_success "'silo push' should refuse to push without path." '
     git clone repo1 refuse && (
         cd refuse &&
         git silo init &&
@@ -22,7 +22,7 @@ test_expect_success "'git silo push' should refuse to push without path." '
     )
 '
 
-test_expect_success "'git silo push' (cp) should push." '
+test_expect_success "'silo push' (cp) should push." '
     git clone repo1 cpclone && (
         cd cpclone &&
         git silo init
@@ -30,18 +30,15 @@ test_expect_success "'git silo push' (cp) should push." '
     setup_add_file cpclone first && (
         cd cpclone &&
         git silo push -- .
-    ) && (
-        cd repo1/.git/silo/objects &&
-        find * -type f | sed -e "s@/@@"
-    ) >actual &&
-    test_cmp first.sha1 actual
+    ) &&
+    assertRepoHasSiloObject repo1 first
 '
 
 test_expect_success "cleanup" '
     rm -f repo1/.git/silo/objects/*/*
 '
 
-test_expect_success "'git silo push' should support named remote." '
+test_expect_success "'silo push' should support named remote." '
     git clone repo1 namedorigin && (
         cd namedorigin &&
         git remote rename origin org &&
@@ -50,30 +47,23 @@ test_expect_success "'git silo push' should support named remote." '
     setup_add_file namedorigin first && (
         cd namedorigin &&
         git silo push org -- .
-    ) && (
-        cd repo1/.git/silo/objects &&
-        find * -type f | sed -e "s@/@@"
-    ) >actual &&
-    test_cmp first.sha1 actual
+    ) &&
+    assertRepoHasSiloObject repo1 first
 '
 
 test_expect_success "cleanup" '
     rm -f repo1/.git/silo/objects/*/*
 '
 
-test_expect_success "'git silo push' should mention files that are pushed." '
+test_expect_success "'silo push' should mention files that are pushed." '
     ( cd cpclone && git silo push -- . ) >log &&
     grep -q first log
 '
 
 test_expect_success \
-"'git silo push' should not mention files that are already up-to-date." '
+"'silo push' should not mention files that are already up-to-date." '
     ( cd cpclone && git silo push -- . ) >log &&
     ! grep -q first log
-'
-
-test_expect_success "cleanup" '
-    rm -f repo1/.git/silo/objects/*/*
 '
 
 if ! test_have_prereq LOCALHOST; then
@@ -81,34 +71,45 @@ if ! test_have_prereq LOCALHOST; then
     test_done
 fi
 
-test_expect_success "'git silo push' (scp) should push." "
-    setup_clone_ssh repo1 scpclone && (
-        cd scpclone &&
+ssh_tests_with_transport() {
+local transport="$1"
+local clone="${transport}clone"
+
+test_expect_success "cleanup" '
+    rm -f repo1/.git/silo/objects/*/*
+'
+
+test_expect_success "'silo push' (${transport}) should push." "
+    setup_clone_ssh repo1 ${clone} && (
+        cd ${clone} &&
+        git config silo.sshtransport ${transport} &&
         git silo init
     ) &&
-    setup_add_file scpclone first && (
-        cd scpclone &&
+    setup_add_file ${clone} first && (
+        cd ${clone} &&
         git silo push -- .
-    ) && (
-        cd repo1/.git/silo/objects &&
-        find * -type f | sed -e 's@/@@'
-    ) >actual &&
-    test_cmp first.sha1 actual
+    ) &&
+    assertRepoHasSiloObject repo1 first
 "
 
 test_expect_success "cleanup" '
     rm -f repo1/.git/silo/objects/*/*
 '
 
-test_expect_success "'git silo push' should mention files that are pushed." '
-    ( cd scpclone && git silo push -- . ) >log &&
+test_expect_success "'silo push' (${transport}) should mention files that are pushed." "
+    ( cd ${clone} && git silo push -- . ) >log &&
     grep -q first log
-'
+"
 
 test_expect_success \
-"'git silo push' should not mention files that are already up-to-date." '
-    ( cd scpclone && git silo push -- . ) >log &&
+"'silo push' (${transport}) should not mention files that are already up-to-date." "
+    ( cd ${clone} && git silo push -- . ) >log &&
     ! grep -q first log
-'
+"
+
+}  # ssh_tests_with_transport
+
+ssh_tests_with_transport scp
+ssh_tests_with_transport sshtar
 
 test_done

@@ -18,33 +18,38 @@ test_expect_success "setup" '
     git clone repo1 cpclone
 '
 
-test_expect_success "'git silo push' (cp) should skip missing files." '
+for transport in scp sshtar; do
+    repo="${transport}clone"
+    test_expect_success LOCALHOST "setup ${repo}" "
+        setup_clone_ssh repo1 ${repo} && (
+            cd ${repo} &&
+            git config silo.sshtransport ${transport}
+        )
+    "
+done
+
+run_tests() {
+local req="$1"
+local transport="$2"
+local clone="${transport}clone"
+
+test_expect_success $req \
+"'git silo push' (${transport}) should skip missing files." "
     (
-        cd cpclone &&
+        cd ${clone} &&
         git silo init &&
         git silo fetch -- a
     ) &&
     rm -rf repo1/.git/silo/objects/* && (
-        cd cpclone &&
+        cd ${clone} &&
         git silo push -- .
     )
-'
+"
 
-if ! test_have_prereq LOCALHOST; then
-    skip_all='skipping tests that require ssh to localhost.'
-    test_done
-fi
+}  # run_tests
 
-test_expect_success "'git silo push' (scp) should skip missing files." '
-    setup_clone_ssh repo1 scpclone && (
-        cd scpclone &&
-        git silo init &&
-        git silo fetch -- a
-    ) &&
-    rm -rf repo1/.git/silo/objects/* && (
-        cd scpclone &&
-        git silo push -- .
-    )
-'
+run_tests '' cp
+run_tests LOCALHOST scp
+run_tests LOCALHOST sshtar
 
 test_done

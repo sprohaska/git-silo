@@ -215,6 +215,10 @@ pscp.exe.
 GIT_SSH (environment variable): If set, git-silo will use the specified program
 instead of ssh.
 
+silo.sshtransport (default 'scp'): Configures how to fetch and push files via
+ssh.  'scp' indicates that scp or PuTTY's pscp.exe is used.  'sshtar' indicates
+that a standard ssh connection is used together with tar.
+
 # KNOWN ISSUES
 
   - scp performance on Windows might be poor (only 1 MB/s on local network).
@@ -232,7 +236,11 @@ instead of ssh.
 
   - scp in msysgit has been observed to fail during file transfer from Linux for
     unknown reasons.  scp of the same file from a Unix machine worked.  PuTTY's
-    scp also worked.  If you experience such a problem, consider using PuTTY.
+    scp also worked.  If you experience such a problem, consider using PuTTY or
+    configuring silo to use tar to transport files (see CONFIGURATION VARIABLES
+    section):
+
+        git config --global silo.sshtransport sshtar
 
   - git might fail with mmap out-of-memory on Windows.  Git on Windows is a
     32-bit executable, which fails for large files in some situations.  There is
@@ -1218,6 +1226,166 @@ EOFPRG
     done
 }
 
+transport_sshtar_fetch() {
+    local url url_host url_dir objPathMap silodir
+    url=$1
+    read -r url_host url_dir <<< "$(parseUrl "$url")"
+    objPathMap=$(lsSiloTracked "${pathspec[@]}")
+    silodir=$(getSiloObjectDir)
+
+    tmpdir="$(mktempSiloDir)"
+    # Clean up on exit.  Handlers for SIG* need to be set for Linux.  On Mac,
+    # EXIT alone is sufficient.  Interestingly, setting 'true' as a handler for
+    # SIG* also works.  The EXIT handler seems to be executed only if the
+    # signal is handled somehow, how in detail does not matter.
+    trap "rm -rf '${tmpdir}'" EXIT
+    trap "rm -rf '${tmpdir}'; exit 1" SIGHUP SIGINT SIGTERM
+
+    while read -r p; do
+        [ "${p}" == "" ] && continue
+        [ -f "${silodir}/${p}" ] && continue
+        echo ${p}
+    done | { {
+            exec_ssh 2>&4 "${url_host}" \
+                bash -c "$(genprgRemoteTarSend | escapeSSHRemoteArg)" git-silo-send "'${url_dir}'" |
+            ( cd "${tmpdir}" && tar -xvf - 2>&1 ) |
+            while read -r obj; do
+                [ -z "${obj}" ] && continue
+                egrep -q '^(x )?[0-9a-f]{2}/[0-9a-f]{38}$' <<<"${obj}" || {
+                    # Forward unknown messages to stderr.
+                    printf >&2 '%s\n' "${obj}"
+                    continue
+                }
+                obj="${obj#x }"  # remove potential bsdtar 'x ' prefix.
+                mkdirWithParentsPermissions "${silodir}/$(dirname $obj)"
+                chmod a-wx "${tmpdir}/${obj}"
+                mv "${tmpdir}/${obj}" "${silodir}/${obj}"
+                printSyncInfo "Received" "${obj}" "${objPathMap}"
+            done
+        } 4>&1 >&3 | {
+            # Process stderr of remote ssh command.
+            # See the following links for file descriptor dup:
+            # http://wiki.bash-hackers.org/howto/redirection_tutorial
+            # https://groups.google.com/d/msg/comp.unix.shell/ZCBtFUiUpO8/WXCUd84tIagJ
+            areMissing=
+            while read -r msg obj; do
+                [ -z "${msg}" ] && continue
+                [ "${msg}" == "missing" ] &&
+                    egrep -q '^[0-9a-f]{2}/[0-9a-f]{38}$' <<<"${obj}" || {
+                    # Forward unknown messages to stderr.
+                    printf >&2 '%s %s\n' "${msg}" "${obj}"
+                    continue
+                }
+                printSyncInfo >&2 "Warning: missing" "${obj}" "${objPathMap}"
+                areMissing=t
+            done
+            test $areMissing &&
+                die "Some files are missing at remote (see above)."
+            true
+        }
+    } 3>&1 || exit $?
+
+    rm -rf "${tmpdir}"
+}
+
+genprgRemoteTarSend() {
+    genprgShbang
+    genprgTarExistingFiles
+}
+
+genprgTarExistingFiles() {
+    cat <<\EOF
+[ -d "$1" ] || {
+    printf >&2 "Warning: silo dir does not exist: %s\n" "$1"
+    tar -cf - -T /dev/null
+    exit 0
+}
+cd "$1"
+while read p; do
+    [ "${p}" = "" ] && continue
+    if ! [ -f "${p}" ]; then
+        printf >&2 'missing %s\n' "${p}"
+        continue
+    fi
+    echo ${p}
+done |
+tar -cf - -T -
+EOF
+}
+
+# Wrap entire arg in single quotes.  Escape internal single quotes by '"'"'.
+escapeSSHRemoteArg() {
+    echo "'"
+    sed -e "s/'/'\"'\"'/g"
+    echo "'"
+}
+
+transport_sshtar_push() {
+    local silodir url objPathMap url_host url_dir existing
+    url=$1
+    objPathMap=$(lsSiloTracked "${pathspec[@]}")
+    silodir=$(getSiloObjectDir)
+    read url_host url_dir <<< "$(parseUrl "$url")"
+    existing=$(lsRemoteDir "$url_host" "$url_dir")
+    while read p; do
+        [ -z "$p" ] && continue
+        findLineIn "${p}" "${existing}" && continue
+        if ! [ -f "${silodir}/${p}" ]; then
+            printSyncInfo "Warning: missing" "${p}" "${objPathMap}" >&2
+            continue
+        fi
+        echo "${p}"
+    done |
+    ( cd "${silodir}" && tar -cf - -T - ) |
+    exec_ssh "${url_host}" \
+        bash -c "$(genprgRemoteTarReceive | escapeSSHRemoteArg)" git-silo-receive "'${url_dir}'" |
+    while read -r obj; do
+        [ -z "${obj}" ] && continue
+        egrep -q '^(x )?[0-9a-f]{2}/[0-9a-f]{38}$' <<<"${obj}" ||
+            die "Unexpected msg: ${obj}"
+        obj="${obj#x }"  # remove potential bsdtar 'x ' prefix.
+        printSyncInfo "Pushed" "${obj}" "${objPathMap}"
+    done
+}
+
+genprgRemoteTarReceive() {
+    genprgShbang
+    genprgFunctions \
+        die \
+        mkdirWithParentsPermissions \
+        isSharedDir
+    genprgRemoteUntar
+}
+
+genprgRemoteUntar() {
+    cat <<\EOF
+[ -d "$1" ] || die "Missing silo dir '$1' (run 'git-silo init' at remote to create it)."
+cd "$1"
+
+tmpdir="tmp$$"
+trap "rm -rf '${tmpdir}'" EXIT
+trap "rm -rf '${tmpdir}'; exit 1" SIGHUP SIGINT SIGTERM
+mkdir "$tmpdir"
+
+( cd "${tmpdir}" && tar -xvf - 2>&1 ) |
+while read -r obj; do
+    [ -z "${obj}" ] && continue
+    egrep -q '^(x )?[0-9a-f]{2}/[0-9a-f]{38}$' <<<"${obj}" || {
+        printf >&2 '%s\n' "${obj}"
+        continue
+    }
+    obj="${obj#x }"  # remove potential bsdtar 'x ' prefix.
+    mkdirWithParentsPermissions "$(dirname ${obj})"
+    chmod a-wx "${tmpdir}/${obj}"
+    chmod g+r "${tmpdir}/${obj}"
+    mv "${tmpdir}/${obj}" "${obj}"
+    echo x ${obj}
+done
+
+rm -rf "${tmpdir}"
+EOF
+}
+
 config_ssh() {
     scp=$(git config silo.scp) || scp=scp
     if ! scpargstyle=$(git config silo.scpargstyle); then
@@ -1377,8 +1545,21 @@ getTransport() {
     if [ "${1/://}" = "$1" ] || isWindowsAbsPath "$1"; then
         echo localcp
     else
-        echo scp
+        cfg_sshtransport
     fi
+}
+
+cfg_sshtransport() {
+    local o
+    o=$(git config silo.sshtransport) || o=scp
+    case ${o} in
+    sshtar|scp)
+        echo ${o}
+        ;;
+    *)
+        printf "Warning: invalid option silo.sshtransport = '%s'; using 'scp'.\n" "${o}" >&2
+        echo scp
+    esac
 }
 
 isWindowsAbsPath() {
@@ -1480,7 +1661,7 @@ resolveGitDir() {
     localcp)
         url=$(cd "$url" && cd "$(git rev-parse --git-dir)" && pwd)
         ;;
-    scp)
+    scp|sshtar)
         read url_host url_dir <<< "$(parseUrl "$url")"
         url_dir=$(
             exec_ssh "$url_host" bash -s <<EOFPRG

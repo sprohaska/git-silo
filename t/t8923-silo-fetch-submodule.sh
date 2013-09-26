@@ -7,11 +7,13 @@ redirect to the real repository location.
 
 . ./lib-silo.sh
 
+ssh localhost true 2>/dev/null && test_set_prereq LOCALHOST
+
 test_expect_success "setup user" '
     setup_user
 '
 
-test_expect_success "Setup submodule" '
+test_expect_success "setup submodule" '
     mkdir super && (
         cd super &&
         git init &&
@@ -42,35 +44,38 @@ test_expect_success "Setup submodule" '
     )
 '
 
-test_expect_success \
-"local fetch should handle submodule that uses 'gitdir: ...' redirect." '
-    git clone super2/sub sublocal && (
-        cd sublocal &&
-        git silo init &&
-        git silo fetch -- . &&
-        git silo checkout a &&
-        echo a >expected &&
-        test_cmp expected a
-    )
+test_expect_success "setup subcp" '
+    git clone super2/sub subcp
 '
 
-ssh localhost true 2>/dev/null && test_set_prereq LOCALHOST
+for transport in scp sshtar; do
+    repo=sub${transport}
+    test_expect_success LOCALHOST "setup ${repo}" "
+        setup_clone_ssh super2/sub ${repo} && (
+            cd ${repo} &&
+            git config silo.sshtransport ${transport}
+        )
+    "
+done
 
-if ! test_have_prereq LOCALHOST; then
-    skip_all='skipping tests that require ssh to localhost.'
-    test_done
-fi
+run_tests() {
+local req="$1"
+local transport="$2"
 
-test_expect_success \
-"ssh fetch should handle submodule that uses 'gitdir: ...' redirect." '
-    setup_clone_ssh super2/sub subssh && (
-        cd subssh &&
-        git silo init &&
-        git silo fetch -- . &&
-        git silo checkout a &&
-        echo a >expected &&
-        test_cmp expected a
-    )
-'
+test_expect_success $req \
+"'silo fetch' (${transport}) should handle submodule that uses 'gitdir: ...' redirect." "(
+    cd sub${transport} &&
+    git silo init &&
+    git silo fetch -- . &&
+    git silo checkout a &&
+    echo a >expected &&
+    test_cmp expected a
+)"
+
+}
+
+run_tests '' cp
+run_tests LOCALHOST scp
+run_tests LOCALHOST sshtar
 
 test_done

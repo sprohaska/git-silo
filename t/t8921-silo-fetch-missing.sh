@@ -8,11 +8,6 @@ Test that "silo fetch" handles missing files.
 
 ssh localhost true 2>/dev/null && test_set_prereq LOCALHOST
 
-if ! test_have_prereq LOCALHOST; then
-    skip_all='skipping tests that require ssh to localhost.'
-    test_done
-fi
-
 test_expect_success "setup user" '
     setup_user
 '
@@ -28,26 +23,47 @@ test_expect_success "setup original repo" '
     )
 '
 
-test_expect_success \
-"'silo fetch' (scp) should continue even if some objects are missing." '
-    setup_clone_ssh orig reposcp && (
-        cd reposcp &&
-        git silo init &&
-        ( git silo fetch -- . || true ) &&
-        git silo checkout b &&
-        test -e b
+test_expect_success "setup cpclone" '
+    git clone orig cpclone && (
+        cd cpclone &&
+        git silo init
     )
 '
 
-test_expect_success \
-"'silo fetch' (cp) should continue even if some objects are missing." '
-    git clone orig repocp && (
-        cd repocp &&
+test_expect_success LOCALHOST "setup scpclone" '
+    setup_clone_ssh orig scpclone && (
+        cd scpclone &&
         git silo init &&
-        ( git silo fetch -- . || true ) &&
-        git silo checkout b &&
-        test -e b
+        git config silo.sshtransport scp
     )
 '
+
+test_expect_success LOCALHOST "setup sshtarclone" '
+    setup_clone_ssh orig sshtarclone && (
+        cd sshtarclone &&
+        git silo init &&
+        git config silo.sshtransport sshtar
+    )
+'
+
+run_tests() {
+local req="$1"
+local transport="$2"
+local clone="${transport}clone"
+
+test_expect_success $req \
+"'silo fetch' (${transport}) should continue if some objects are missing and finally report error." "(
+    cd ${clone} &&
+    ! git silo fetch -- . 2>stderr &&
+    grep -qi 'files are missing' stderr &&
+    git silo checkout b &&
+    test -e b
+)"
+
+}  # ssh_tests_with_transport
+
+run_tests '' cp
+run_tests LOCALHOST scp
+run_tests LOCALHOST sshtar
 
 test_done
