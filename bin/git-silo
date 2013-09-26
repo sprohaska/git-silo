@@ -2075,7 +2075,7 @@ updatePack() {
     printf '%s' "${objs}" | slashedOnce | (
         cd "${objectdir}" &&
         packtool_${packtool}_add "${oldpack}" "${tmppackfile}"
-    )
+    ) || die "Failed to add object files to archive."
 
     # Move in place and clean up.
     chmod a-w "${tmppackfile}"
@@ -2100,6 +2100,10 @@ requireBin7z() {
 packtool_7z_add() {
     local src="$1"
     local dest="$2"
+
+    # Clean up if interrupted.
+    trap "rm -f '${dest}'; exit 1" SIGHUP SIGINT SIGTERM
+
     if [ -n "${src}" ]; then
         cp "${src}" "${dest}"
         chmod u+w "${dest}"
@@ -2107,6 +2111,8 @@ packtool_7z_add() {
     # Use LZMA2 to support multi-threaded compression.
     # Disable solid mode (-ms=off) to allow quickly accessing individual files.
     xargs ${bin_7z} a -t7z -m0=LZMA2 -ms=off "${dest}"
+
+    trap - SIGHUP SIGINT SIGTERM
 }
 
 packtool_7z_extract() {
