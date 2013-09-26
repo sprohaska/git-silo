@@ -20,7 +20,7 @@ git-silo fetch \
     [<remote>] [--] [<path>... | config remote.<remote>.silofetch]
 git-silo gc [--gitattributes] [-f|--force] [-n <number>] [--dry-run] [--no-tags]
 git-silo purge [-f|--force] [--dry-run] [--] <path>...
-git-silo pack [--keep-tip|--keep|--prune]
+git-silo pack [--all] [--keep-tip|--keep|--prune]
 git-silo unpack [--keep-packs|--prune-packs] [--all] [--] [<path>...]
 git-silo fsck
 git-silo dedup <repo>...
@@ -109,12 +109,15 @@ git-silo dedup <repo>...
                     The size of the archives can be controlled with
                     'silo.packSizeLimit' (see CONFIGURATION VARIABLES section).
 
+    --all           pack all loose objects.  The default is to leave objects
+                    unpacked that are used by HEAD.
+
     --keep-tip      keep loose objects for HEAD; prune other loose objects that
                     have been packed.  This is the default.
 
     --keep          keep all loose objects.
 
-    --prune         prune loose objects that have been packed.
+    --prune         prune all loose objects that have been packed.
 
   unpack            unpack loose objects that are used by HEAD.
 
@@ -331,6 +334,7 @@ argparse_fsck() {
 
 argparse_pack() {
     opt_keep=tip
+    opt_all=
     while [ $# -ge 1 ]; do
         case "$1" in
         -h|--help)
@@ -347,6 +351,10 @@ argparse_pack() {
             ;;
         --prune)
             opt_keep=unpacked
+            shift
+            ;;
+        --all)
+            opt_all=t
             shift
             ;;
         -*)
@@ -1948,10 +1956,12 @@ haveAllLooseObjects() {
 #
 # 'nopack' indicates that object is too large to pack.
 # 'packed' indicates that object is contained in existing pack.
+# 'tip' indicates that object is used by HEAD.
 lsObjectsWithPackPrefix() {
+    local packedobjs tipobjs prefixes
     local threshold=$(cfg_packSizeLimit)
-    local packedobjs=$(lsPackedObjects)
-    local prefixes
+    packedobjs=$(lsPackedObjects)
+    tipobjs=$(lsSiloTracked | cut -d ' ' -f 1)
     for i in {0..39}; do
         prefixes[${i}]=''
     done
@@ -1969,6 +1979,12 @@ lsObjectsWithPackPrefix() {
 
         if grep -q -F "${name}" <<<"${packedobjs}"; then
             echo packed ${name}
+            continue
+        fi
+
+        if ! test $opt_all &&
+            grep -q -F "${name}" <<<"${tipobjs}"; then
+            echo tip ${name}
             continue
         fi
 
@@ -2029,6 +2045,9 @@ updatePack() {
 
     # Skip objects that are already packed.
     [ "${prefix}" == "packed" ] && return 0
+
+    # Skip objects that are used by tip.
+    [ "${prefix}" == "tip" ] && return 0
 
     oldpack=$(findPackWithPrefix "${prefix}")
     packid="$(

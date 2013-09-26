@@ -80,7 +80,29 @@ test_expect_success 'setup files (1..5)' '(
     git branch five
 )'
 
-test_expect_success 'pack should create expected number of packs.' '(
+test_expect_success "'pack' should not pack objects used by HEAD." '(
+    cd repo &&
+    git checkout five &&
+    git silo pack &&
+    assertNumPacks 0 &&
+    assertNumObjects 5
+)'
+
+test_expect_success "'pack --all' should pack objects used by HEAD." '(
+    cd repo &&
+    git checkout five &&
+    git silo pack --all &&
+    assertNumPacks 3 &&
+    assertNumObjects 5
+)'
+
+test_expect_success "rm packs." '(
+    cd repo &&
+    git silo unpack --prune-packs &&
+    assertNumPacks 0
+)'
+
+test_expect_success "'pack' should create expected number of packs." '(
     cd repo &&
     git checkout empty &&
     git silo pack --keep &&
