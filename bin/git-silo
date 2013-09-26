@@ -2081,7 +2081,14 @@ packtool_7z_add() {
 
 packtool_7z_extract() {
     local pack="$1"
-    xargs ${bin_7z} x "${pack}"
+    local parallel ncpu
+    ncpu="$(nCPU)"
+    if (( ${ncpu} > 1 )); then
+        echo "Using up to ${ncpu} processes for unpacking."
+        # Use separate process for each object (-n 1) for parallel execution.
+        parallel="-P ${ncpu} -n 1"
+    fi
+    xargs ${parallel} ${bin_7z} x "${pack}"
 }
 
 packtool_7z_ls() {
@@ -2092,6 +2099,23 @@ packtool_7z_ls() {
     sed -n -e '/---/,/---/p' |
     sed -e '1d' -e '$d' |
     sed -e 's/^.* //'
+}
+
+# Determine number of CPUs.
+nCPU() {
+    local n=
+    case $(uname) in
+    Linux*)
+        n="$(grep -c ^processor /proc/cpuinfo || true)"
+        ;;
+    Darwin*)
+        n="$(sysctl hw.ncpu | cut -d ' ' -f 2 || true)"
+        ;;
+    esac
+    if ! grep -q "^[1-9][0-9]*$" <<<"${n}"; then
+        n=1
+    fi
+    printf '%d' "${n}"
 }
 
 lsPackedObjects() {
