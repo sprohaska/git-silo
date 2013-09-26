@@ -685,6 +685,7 @@ genprgFilterClean() {
         cmd_filter_clean \
         validateHaveSilo \
         getSiloObjectDir \
+        getSiloDir \
         isSha1PlaceholderFile \
         fileSize \
         computeSha1AndStoreContentInSilo \
@@ -705,6 +706,7 @@ genprgFilterSmudge() {
         getCfgSizeVarWithDefault \
         validSha1 \
         getSiloObjectDir \
+        getSiloDir \
         fileSize
     genprgCallMain
 }
@@ -859,28 +861,32 @@ validateHaveSilo() {
     [ -d "$silodir" ] || die "Missing silo '$silodir'; run 'git-silo init'."
 }
 
-getSiloBinDir() {
+getSiloDir() {
     local silodir
     silodir="$(git rev-parse --git-dir)"
     silodir="$(cd "${silodir}" && pwd)"
-    silodir="${silodir}/silo/bin"
+    silodir="${silodir}/silo"
     printf '%s' "${silodir}"
 }
 
+getSiloBinDir() {
+    printf '%s/%s' "$(getSiloDir)" "bin"
+}
+
 getSiloObjectDir() {
-    local silodir
-    silodir=$(git rev-parse --git-dir)
-    silodir=$(cd "$silodir" && pwd)
-    silodir="$silodir/silo/objects"
-    printf '%s' "$silodir"
+    printf '%s/%s' "$(getSiloDir)" "objects"
 }
 
 getSiloPackDir() {
-    local dir
-    dir=$(git rev-parse --git-dir)
-    dir=$(cd "${dir}" && pwd)
-    dir="${dir}/silo/packs"
-    printf '%s' "${dir}"
+    printf '%s/%s' "$(getSiloDir)" "packs"
+}
+
+mktempSiloDir() {
+    local tmp
+    tmp="$(getSiloDir)/tmp$$"
+    mkdir "${tmp}" ||
+        die "Failed to create tmpdir '${tmp}'."
+    printf '%s' "${tmp}"
 }
 
 computeSha1() {
@@ -1793,11 +1799,6 @@ cmd_unpack() {
     [ -d "$(getSiloPackDir)" ] || return 0
 
     lsObjectsSelectedForUnpack |
-    cut -b 1-2 |
-    sort -u |
-    mkSiloObjectSubdirs
-
-    lsObjectsSelectedForUnpack |
     dropSha1sOfLooseObjects |
     lookupPacksForObjects |
     sort -k 1 |
@@ -1849,16 +1850,35 @@ lookupPacksForObjects() {
 
 unpackObjects() {
     local pack="$1"
-    local objs="$2"
+    local sha1s="$2"
     local objectdir="$(getSiloObjectDir)"
     local packdir="$(getSiloPackDir)"
+    local tmpdir
 
     [ "$pack" == "nopack" ] && return 0
 
-    printf '%s' "${objs}" | slashedOnce | (
-        cd "${objectdir}" &&
+    tmpdir="$(mktempSiloDir)"
+    # Clean up on exit.  Handlers for SIG* need to be set for Linux.  On Mac,
+    # EXIT alone is sufficient.  Interestingly, setting 'true' as a handler for
+    # SIG* also works.  The EXIT handler seems to be executed only if the
+    # signal is handled somehow, how in detail does not matter.
+    trap "rm -rf '${tmpdir}'" EXIT
+    trap "rm -rf '${tmpdir}'; exit 1" SIGHUP SIGINT SIGTERM
+
+    printf '%s' "${sha1s}" | slashedOnce | (
+        cd "${tmpdir}" &&
         packtool_${packtool}_extract "${packdir}/${pack}"
-    )
+    ) || die "Failed to extract object files from archive."
+
+    for sha1 in ${sha1s}; do
+        subdir="${sha1:0:2}"
+        objfile="${sha1:2}"
+        mkdirWithParentsPermissions "${objectdir}/${subdir}"
+        chmod a-w "${tmpdir}/${subdir}/${objfile}"
+        mv "${tmpdir}/${subdir}/${objfile}" "${objectdir}/${subdir}/${objfile}"
+    done
+
+    rm -rf "${tmpdir}"
 }
 
 prunePackedObjects() {
