@@ -80,7 +80,7 @@ test_expect_success 'setup files (1..5)' '(
 
 test_expect_success 'pack should create expected number of packs.' '(
     cd repo &&
-    git silo pack &&
+    git silo pack --keep &&
     assertNumPacks 3
 )'
 
@@ -88,6 +88,15 @@ test_expect_success "'pack --keep' should keep loose objects." '(
     cd repo &&
     git silo pack --keep &&
     assertNumObjects 5
+)'
+
+test_expect_success "'pack --keep-tip' should keep loose objects for HEAD." '(
+    cd repo &&
+    git rm 1 &&
+    git commit -m "rm 1" &&
+    git silo pack --keep-tip &&
+    assertNumObjects 4 &&
+    git reset --hard HEAD^
 )'
 
 test_expect_success "'pack --prune' should remove loose objects." '(
@@ -151,7 +160,7 @@ test_expect_success 'setup files (6..10)' '(
 
 test_expect_success 'pack should succeed.' '(
     cd repo &&
-    git silo pack &&
+    git silo pack --keep &&
     assertNumPacks 6
 )'
 
@@ -178,10 +187,20 @@ test_expect_success "'unpack' should create all loose object." '(
     assertNumObjects 99
 )'
 
-test_expect_success "'unpack' should create loose objects for HEAD." '(
+test_expect_success "remove a few files" '(
     cd repo &&
     git rm 9? &&
-    git commit -m "remove 9?" &&
+    git commit -m "remove 9?"
+)'
+
+test_expect_success "'prune --keep-tip' should keep loose objects for HEAD." '(
+    cd repo &&
+    git silo pack --keep-tip &&
+    assertNumObjects 89
+)'
+
+test_expect_success "'unpack' should create loose objects for HEAD." '(
+    cd repo &&
     git silo pack --prune &&
     assertNumObjects 2 &&
     git silo unpack &&
@@ -206,7 +225,7 @@ test_expect_success \
 "'pack' creates a single pack when packSizeLimit=0." '(
     cd repo &&
     git config silo.packSizeLimit 0 &&
-    git silo pack &&
+    git silo pack --keep &&
     assertNumPacks 1
 )'
 

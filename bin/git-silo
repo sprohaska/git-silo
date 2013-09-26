@@ -20,7 +20,7 @@ git-silo fetch \
     [<remote>] [--] [<path>... | config remote.<remote>.silofetch]
 git-silo gc [--gitattributes] [-f|--force] [-n <number>] [--dry-run] [--no-tags]
 git-silo purge [-f|--force] [--dry-run] [--] <path>...
-git-silo pack [--keep|--prune]
+git-silo pack [--keep-tip|--keep|--prune]
 git-silo unpack [--keep-packs|--prune-packs] [--all] [--] [<path>...]
 git-silo fsck
 git-silo dedup <repo>...
@@ -103,12 +103,16 @@ git-silo dedup <repo>...
 
   fsck              verify silo storage.
 
-  pack              pack loose silo objects into 7z archives.  Loose objects
-                    are kept unless '--prune' is specified.  Packed objects are
-                    not automatically unpacked by operations such as
-                    'checkout.' Use 'unpack' to explicitly unpack objects.
+  pack              pack loose silo objects into 7z archives.  Packed objects
+                    are not automatically unpacked by operations such as
+                    'checkout.'  Use 'unpack' to explicitly unpack objects.
+                    The size of the archives can be controlled with
+                    'silo.packSizeLimit' (see CONFIGURATION VARIABLES section).
 
-    --keep          keep loose objects.
+    --keep-tip      keep loose objects for HEAD; prune other loose objects that
+                    have been packed.  This is the default.
+
+    --keep          keep all loose objects.
 
     --prune         prune loose objects that have been packed.
 
@@ -116,7 +120,7 @@ git-silo dedup <repo>...
 
     <path>...       limit unpacking to these files (default: all).
 
-    --keep-packs    keep packs.
+    --keep-packs    keep packs.  This is the default.
 
     --prune-packs   prune packs that have been completely unpacked.
 
@@ -326,7 +330,7 @@ argparse_fsck() {
 }
 
 argparse_pack() {
-    opt_keep=t
+    opt_keep=tip
     while [ $# -ge 1 ]; do
         case "$1" in
         -h|--help)
@@ -334,11 +338,15 @@ argparse_pack() {
             exit 0
             ;;
         --keep)
-            opt_keep=t
+            opt_keep=all
+            shift
+            ;;
+        --keep-tip)
+            opt_keep=tip
             shift
             ;;
         --prune)
-            opt_keep=
+            opt_keep=unpacked
             shift
             ;;
         -*)
@@ -1882,24 +1890,27 @@ unpackObjects() {
 }
 
 prunePackedObjects() {
-    local packedobjs=$(lsPackedObjects)
+    [ "${opt_keep}" == "all" ] && return 0
+
     local objectdir="$(getSiloObjectDir)"
+    local tipobjs packedobjs sha1
+    tipobjs=$(lsSiloTracked | cut -d ' ' -f 1)
+    packedobjs=$(lsPackedObjects)
     lsSiloObjectsInDir "${objectdir}" |
     while IFS= read -r path; do
-        if grep -q -F "${path/\//}" <<<"${packedobjs}"; then
-            if test $opt_keep; then
-                echo "Would remove ${path}"
-            else
-                echo "Removing ${path}"
-                rm -f "${objectdir}/${path}"
-            fi
-        else
-            if test $opt_keep; then
-                echo "Would keep ${path}"
-            else
-                echo "Keeping ${path}"
-            fi
+        [ -z "${path}" ] && continue
+        sha1="${path/\//}"
+
+        # Always skip unpacked.
+        grep -q -F "${sha1}" <<<"${packedobjs}" || continue
+
+        # Skip tip objects if requested.
+        if [ "${opt_keep}" == "tip" ]; then
+            grep -q -F "${sha1}" <<<"${tipobjs}" && continue
         fi
+
+        echo "Removing ${path}"
+        rm -f "${objectdir}/${path}"
     done
     removeEmptyObjectDirs
 }
