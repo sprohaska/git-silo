@@ -7,6 +7,8 @@ is used.
 
 . ./lib-silo.sh
 
+# Create 1GB as multiple lines to avoid malloc failure in msysgit during
+# creation and during 'head | grep'.
 test_expect_success 'setup' '
     setup_user &&
     setup_repo repo &&
@@ -14,7 +16,9 @@ test_expect_success 'setup' '
     setup_add_file repo 1KB &&
     printf "%1048576d" 0 >1MB &&
     setup_add_file repo 1MB &&
-    printf "%1073741824d" 0 >1GB &&
+    for i in {1..1024}; do
+        printf "%1048575d\n" 0 >>1GB
+    done &&
     setup_add_file repo 1GB
 '
 
