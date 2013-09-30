@@ -1127,6 +1127,7 @@ cmd_fetch() {
         transport_${transport}_fetch "$url"
 }
 
+# transport_scp
 transport_scp_fetch() {
     config_ssh
     local silodir url dir objPathMap remotep
@@ -1226,6 +1227,57 @@ EOFPRG
     done
 }
 
+config_ssh() {
+    scp=$(git config silo.scp) || scp=scp
+    if ! scpargstyle=$(git config silo.scpargstyle); then
+        case "$scp" in
+        *pscp*)
+            scpargstyle=putty
+            ;;
+        *)
+            scpargstyle=openssh
+            ;;
+        esac
+    fi
+}
+
+exec_scp() {
+    local defaultargs=
+    case $scpargstyle in
+    putty)
+        defaultargs=-batch
+        ;;
+    esac
+    "$scp" $defaultargs "$@"
+}
+
+lsRemoteDir() {
+    exec_ssh "$1" bash -s <<EOFPRG |
+set -o errexit
+if test -e '$2'; then
+    cd '$2'
+    find . -type f
+fi
+EOFPRG
+    sed -e 's@^\./@@' ||
+        die "Failed to list silo objects at '$1' in '$2'."
+}
+
+makeScpUrl() {
+    local host=$1
+    local dir=$2
+    case $scpargstyle in
+    putty)
+        printf '%s:%s' "$host" "$dir"
+        ;;
+    openssh)
+        printf '%s:"%s"' "$host" "$dir"
+        ;;
+    esac
+}
+# transport_scp
+
+# transport_sshtar
 transport_sshtar_fetch() {
     local url url_host url_dir objPathMap silodir
     url=$1
@@ -1311,13 +1363,6 @@ while read p; do
 done |
 tar -cf - -T -
 EOF
-}
-
-# Wrap entire arg in single quotes.  Escape internal single quotes by '"'"'.
-escapeSSHRemoteArg() {
-    echo "'"
-    sed -e "s/'/'\"'\"'/g"
-    echo "'"
 }
 
 transport_sshtar_push() {
@@ -1407,30 +1452,7 @@ done
 rm -rf "${tmpdir}"
 EOF
 }
-
-config_ssh() {
-    scp=$(git config silo.scp) || scp=scp
-    if ! scpargstyle=$(git config silo.scpargstyle); then
-        case "$scp" in
-        *pscp*)
-            scpargstyle=putty
-            ;;
-        *)
-            scpargstyle=openssh
-            ;;
-        esac
-    fi
-}
-
-exec_scp() {
-    local defaultargs=
-    case $scpargstyle in
-    putty)
-        defaultargs=-batch
-        ;;
-    esac
-    "$scp" $defaultargs "$@"
-}
+# transport_sshtar
 
 exec_ssh() {
     local defaultargs=
@@ -1443,17 +1465,16 @@ exec_ssh() {
     "$ssh" $defaultargs "$@"
 }
 
-makeScpUrl() {
-    local host=$1
-    local dir=$2
-    case $scpargstyle in
-    putty)
-        printf '%s:%s' "$host" "$dir"
-        ;;
-    openssh)
-        printf '%s:"%s"' "$host" "$dir"
-        ;;
-    esac
+# Escape arg so that it can be passed to ssh as a remote arg:
+#
+#   ssh bash -c "$(genprg | escapeSSHRemoteArg)"
+#
+# The entire arg is wrapped in single quotes.  Internal single quotes are
+# escaped as '"'"'.
+escapeSSHRemoteArg() {
+    echo "'"
+    sed -e "s/'/'\"'\"'/g"
+    echo "'"
 }
 
 transport_localcp_fetch() {
@@ -1861,18 +1882,6 @@ lsDirWithSize() {
         cut -d ' ' -f 5,9 |
         sed -e 's@\./@@'
     )
-}
-
-lsRemoteDir() {
-    exec_ssh "$1" bash -s <<EOFPRG |
-set -o errexit
-if test -e '$2'; then
-    cd '$2'
-    find . -type f
-fi
-EOFPRG
-    sed -e 's@^\./@@' ||
-        die "Failed to list silo objects at '$1' in '$2'."
 }
 
 allCurrentSiloObjects() {
