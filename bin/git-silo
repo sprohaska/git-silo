@@ -1321,24 +1321,26 @@ escapeSSHRemoteArg() {
 }
 
 transport_sshtar_push() {
-    local silodir url objPathMap url_host url_dir existing
-    url=$1
+    local url_host url_dir silodir objPathMap
+    read url_host url_dir <<< "$(parseUrl "$1")"
     objPathMap=$(lsSiloTracked "${pathspec[@]}")
     silodir=$(getSiloObjectDir)
-    read url_host url_dir <<< "$(parseUrl "$url")"
-    existing=$(lsRemoteDir "$url_host" "$url_dir")
+    cat |
+    exec_ssh "${url_host}" \
+        bash -c "$(genprgRemoteEchoMissing | escapeSSHRemoteArg)" \
+        git-silo-receive-prep "'${url_dir}'" |
     while read p; do
         [ -z "$p" ] && continue
-        findLineIn "${p}" "${existing}" && continue
         if ! [ -f "${silodir}/${p}" ]; then
             printSyncInfo "Warning: missing" "${p}" "${objPathMap}" >&2
             continue
         fi
-        echo "${p}"
+        printf '%s\n' "${p}"
     done |
     ( cd "${silodir}" && tar -cf - -T - ) |
     exec_ssh "${url_host}" \
-        bash -c "$(genprgRemoteTarReceive | escapeSSHRemoteArg)" git-silo-receive "'${url_dir}'" |
+        bash -c "$(genprgRemoteTarReceive | escapeSSHRemoteArg)" \
+        git-silo-receive "'${url_dir}'" |
     while read -r obj; do
         [ -z "${obj}" ] && continue
         egrep -q '^(x )?[0-9a-f]{2}/[0-9a-f]{38}$' <<<"${obj}" ||
@@ -1346,6 +1348,26 @@ transport_sshtar_push() {
         obj="${obj#x }"  # remove potential bsdtar 'x ' prefix.
         printSyncInfo "Pushed" "${obj}" "${objPathMap}"
     done
+}
+
+genprgRemoteEchoMissing() {
+    genprgShbang
+    genprgFunctions \
+        die
+    genprgEchoObjsMissingInSilo
+}
+
+genprgEchoObjsMissingInSilo() {
+    cat <<\EOF
+[ -d "$1" ] || die "Missing silo dir '$1' (run 'git-silo init' at remote to create it)."
+cd "$1"
+
+while read -r p; do
+    [ -z "${p}" ] && continue
+    [ -f "${p}" ] && continue
+    printf '%s\n' "${p}"
+done
+EOF
 }
 
 genprgRemoteTarReceive() {
