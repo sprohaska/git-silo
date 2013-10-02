@@ -880,13 +880,15 @@ updateGitattributes() {
 hasGitSiloAttributes() {
     local p="${1}"
     [[ $(getAttrValue text "${p}") == "unset" ]] &&
-        [[ $(getAttrValue filter "${p}") == silo ]]
+        [[ $(getAttrValue filter "${p}") == "silo" ]]
 }
 
 getAttrValue() {
     local attr="${1}"
     local path="${2}"
-    git check-attr "${attr}" "${path}" | cut -d ' ' -f 3
+    # check-attr's output is '<path> COLON SP <attribute> COLON SP <info> LF'.
+    # Split on COLON and remove SP to handle <path> with spaces.
+    git check-attr "${attr}" "${path}" | cut -d : -f 3 | cut -b 2-
 }
 
 getWorkingCopyEndl() {

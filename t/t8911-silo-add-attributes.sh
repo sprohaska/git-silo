@@ -19,8 +19,8 @@ test_expect_success \
     cd wildcard &&
     echo "*.ext -text filter=silo" >.gitattributes &&
     mkdir subdir &&
-    touch subdir/a.ext &&
-    git silo add subdir/a.ext &&
+    touch "subdir/a a.ext" &&
+    git silo add "subdir/a a.ext" &&
     ! [ -e subdir/.gitattributes ]
 '
 
