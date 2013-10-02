@@ -1311,7 +1311,8 @@ transport_sshtar_fetch() {
                 obj="${obj#x }"  # remove potential bsdtar 'x ' prefix.
                 mkdirWithParentsPermissions "${silodir}/$(dirname $obj)"
                 chmod a-wx "${tmpdir}/${obj}"
-                mv "${tmpdir}/${obj}" "${silodir}/${obj}"
+                # ln, don't mv, so that unpacking tar can still see the file.
+                ln "${tmpdir}/${obj}" "${silodir}/${obj}"
                 printSyncInfo "Received" "${obj}" "${objPathMap}"
             done
         } 4>&1 >&3 | {
@@ -1445,7 +1446,8 @@ while read -r obj; do
     mkdirWithParentsPermissions "$(dirname ${obj})"
     chmod a-wx "${tmpdir}/${obj}"
     chmod g+r "${tmpdir}/${obj}"
-    mv "${tmpdir}/${obj}" "${obj}"
+    # ln, don't mv, so that unpacking tar can still see the file.
+    ln "${tmpdir}/${obj}" "${obj}"
     echo x ${obj}
 done
 
