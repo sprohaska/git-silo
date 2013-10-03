@@ -1350,7 +1350,7 @@ genprgTarExistingFiles() {
     cat <<\EOF
 [ -d "$1" ] || {
     printf >&2 "Warning: silo dir does not exist: %s\n" "$1"
-    tar -cf - -T /dev/null
+    COPYFILE_DISABLE=1 tar -cf - -T /dev/null
     exit 0
 }
 cd "$1"
@@ -1362,10 +1362,12 @@ while read p; do
     fi
     echo ${p}
 done |
-tar -cf - -T -
+COPYFILE_DISABLE=1 tar -cf - -T -
 EOF
 }
 
+# COPYFILE_DISABLE avoids resource forks with Mac OS X tar.  See
+# http://superuser.com/questions/259703/get-mac-tar-to-stop-putting-filenames-in-tar-archives
 transport_sshtar_push() {
     local url_host url_dir silodir objPathMap
     read url_host url_dir <<< "$(parseUrl "$1")"
@@ -1383,7 +1385,7 @@ transport_sshtar_push() {
         fi
         printf '%s\n' "${p}"
     done |
-    ( cd "${silodir}" && tar -cf - -T - ) |
+    ( cd "${silodir}" && COPYFILE_DISABLE=1 tar -cf - -T - ) |
     exec_ssh "${url_host}" \
         bash -c "$(genprgRemoteTarReceive | escapeSSHRemoteArg)" \
         git-silo-receive "'${url_dir}'" |
