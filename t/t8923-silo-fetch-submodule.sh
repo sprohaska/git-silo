@@ -48,7 +48,7 @@ test_expect_success "setup subcp" '
     git clone super2/sub subcp
 '
 
-for transport in scp sshtar; do
+for transport in scp sshtar sshcat; do
     repo=sub${transport}
     test_expect_success LOCALHOST "setup ${repo}" "
         setup_clone_ssh super2/sub ${repo} && (
@@ -77,5 +77,6 @@ test_expect_success $req \
 run_tests '' cp
 run_tests LOCALHOST scp
 run_tests LOCALHOST sshtar
+run_tests LOCALHOST sshcat
 
 test_done

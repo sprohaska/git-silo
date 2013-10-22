@@ -217,7 +217,8 @@ instead of ssh.
 
 silo.sshtransport (default 'scp'): Configures how to fetch and push files via
 ssh.  'scp' indicates that scp or PuTTY's pscp.exe is used.  'sshtar' indicates
-that a standard ssh connection is used together with tar.
+that a standard ssh connection is used together with tar.  With 'sshcat' one
+ssh connection together with cat is used per file.
 
 # KNOWN ISSUES
 
@@ -241,6 +242,10 @@ that a standard ssh connection is used together with tar.
     section):
 
         git config --global silo.sshtransport sshtar
+
+  - silo.sshtransport 'sshtar' might fail on msysgit for files of 2GB or
+    larger, because msysgit's tar does not work with large files.  Use
+    silo.transport 'sshcat' instead.
 
   - git might fail with mmap out-of-memory on Windows.  Git on Windows is a
     32-bit executable, which fails for large files in some situations.  There is
@@ -1251,18 +1256,6 @@ exec_scp() {
     "$scp" $defaultargs "$@"
 }
 
-lsRemoteDir() {
-    exec_ssh "$1" bash -s <<EOFPRG |
-set -o errexit
-if test -e '$2'; then
-    cd '$2'
-    find . -type f
-fi
-EOFPRG
-    sed -e 's@^\./@@' ||
-        die "Failed to list silo objects at '$1' in '$2'."
-}
-
 makeScpUrl() {
     local host=$1
     local dir=$2
@@ -1276,6 +1269,107 @@ makeScpUrl() {
     esac
 }
 # transport_scp
+
+# transport_sshcat
+transport_sshcat_fetch() {
+    local silodir url dir objPathMap
+    local url_host url_dir
+    url=$1
+    read url_host url_dir <<< "$(parseUrl "$url")"
+    objPathMap=$(lsSiloTracked "${pathspec[@]}")
+    silodir=$(getSiloObjectDir)
+    remoteObjs=$(lsRemoteDir "$url_host" "$url_dir")
+    local areMissing=
+    while read p; do
+        [ "$p" = "" ] && continue
+        [ -f "$silodir/$p" ] && continue
+        if ! findLineIn "$p" "$remoteObjs"; then
+            areMissing=t
+            printSyncInfo "Warning: missing" "$p" "$objPathMap" >&2
+            continue
+        fi
+        printSyncInfo "Fetching" "$p" "$objPathMap"
+        if test $opt_dry_run; then
+            continue
+        fi
+        dir="$(dirname "$p")"
+        mkdirWithParentsPermissions "$silodir/$dir"
+        exec_ssh -n "${url_host}" "cat '${url_dir}/${p}'" >"${silodir}/${p}-tmp" ||
+            die "Failed to copy '$p'."
+        chmod a-w "$silodir/$p-tmp"
+        mv "$silodir/$p-tmp" "$silodir/$p"
+    done
+    test $areMissing && die "Some files are missing at remote (see above)."
+    true
+}
+
+transport_sshcat_push() {
+    local silodir url objPathMap url_host url_dir existing remotep
+    url=$1
+    objPathMap=$(lsSiloTracked "${pathspec[@]}")
+    silodir=$(getSiloObjectDir)
+    read url_host url_dir <<< "$(parseUrl "$url")"
+    existing=$(lsRemoteDir "$url_host" "$url_dir")
+    while read p; do
+        [ "$p" = "" ] && continue
+        findLineIn "$p" "$existing" && continue
+        if ! [ -f "$silodir/$p" ]; then
+            printSyncInfo "Warning: missing" "$p" "$objPathMap" >&2
+            continue
+        fi
+        printSyncInfo "Pushing" "$p" "$objPathMap"
+        if test $opt_dry_run; then
+            continue
+        fi
+        cat "${silodir}/${p}" | exec_ssh "${url_host}" \
+            bash -c "$(genprgRemoteCatReceive | escapeSSHRemoteArg)" \
+            git-silo-receive "'${url_dir}'" "'${p}'" ||
+                die "Failed to copy '$p'."
+    done
+}
+
+genprgRemoteCatReceive() {
+    genprgShbang
+    genprgRemoteCatReceiveImpl
+}
+
+genprgRemoteCatReceiveImpl() {
+    cat <<\EOF
+silodir="$1"
+obj="$2"
+
+if ! test -d "${silodir}"; then
+    echo >&2 "Missing silo dir '${silodir}' (run 'git-silo init' at remote to create it)."
+    exit 1
+fi
+cd "${silodir}"
+subdir="$(dirname "${obj}")"
+if ! [ -e "${subdir}" ]; then
+    mkdir "${subdir}"
+    if test -g "."; then
+        chmod g+ws "${subdir}"
+    fi
+fi
+
+cat >"${obj}-tmp"
+chmod a-w "${obj}-tmp"
+chmod g+r "${obj}-tmp"
+mv "${obj}-tmp" "${obj}"
+EOF
+}
+
+lsRemoteDir() {
+    exec_ssh "$1" bash -s <<EOFPRG |
+set -o errexit
+if test -e '$2'; then
+    cd '$2'
+    find . -type f
+fi
+EOFPRG
+    sed -e 's@^\./@@' ||
+        die "Failed to list silo objects at '$1' in '$2'."
+}
+# transport_sshcat
 
 # transport_sshtar
 transport_sshtar_fetch() {
@@ -1600,7 +1694,7 @@ cfg_sshtransport() {
     local o
     o=$(git config silo.sshtransport) || o=scp
     case ${o} in
-    sshtar|scp)
+    sshtar|sshcat|scp)
         echo ${o}
         ;;
     *)
@@ -1708,7 +1802,7 @@ resolveGitDir() {
     localcp)
         url=$(cd "$url" && cd "$(git rev-parse --git-dir)" && pwd)
         ;;
-    scp|sshtar)
+    scp|sshtar|sshcat)
         read url_host url_dir <<< "$(parseUrl "$url")"
         url_dir=$(
             exec_ssh "$url_host" bash -s <<EOFPRG

@@ -77,6 +77,7 @@ local clone="${transport}clone"
 
 test_expect_success "cleanup" '
     rm -f repo1/.git/silo/objects/*/*
+    rmdir repo1/.git/silo/objects/*
 '
 
 test_expect_success "'silo push' (${transport}) should push." "
@@ -111,5 +112,6 @@ test_expect_success \
 
 ssh_tests_with_transport scp
 ssh_tests_with_transport sshtar
+ssh_tests_with_transport sshcat
 
 test_done

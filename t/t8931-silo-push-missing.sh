@@ -18,7 +18,7 @@ test_expect_success "setup" '
     git clone repo1 cpclone
 '
 
-for transport in scp sshtar; do
+for transport in scp sshtar sshcat; do
     repo="${transport}clone"
     test_expect_success LOCALHOST "setup ${repo}" "
         setup_clone_ssh repo1 ${repo} && (
@@ -51,5 +51,6 @@ test_expect_success $req \
 run_tests '' cp
 run_tests LOCALHOST scp
 run_tests LOCALHOST sshtar
+run_tests LOCALHOST sshcat
 
 test_done

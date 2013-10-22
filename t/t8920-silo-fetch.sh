@@ -11,6 +11,7 @@ ssh localhost true 2>/dev/null && test_set_prereq LOCALHOST
 test_expect_success "setup" '
     setup_user &&
     setup_file first &&
+    setup_file second &&
     setup_repo repo1
 '
 
@@ -24,6 +25,7 @@ test_expect_success "'silo fetch' (cp) should fetch" '
     git clone repo1 cpclone &&
     ( cd cpclone && git silo init ) &&
     setup_add_file repo1 first &&
+    setup_add_file repo1 second &&
     ( cd cpclone && git pull && git silo fetch -- . ) &&
     assertRepoHasSiloObject cpclone first
 '
@@ -90,7 +92,8 @@ test_expect_success \
         cd scpclone &&
         git silo fetch -- .
     ) &&
-    assertRepoHasSiloObject scpclone first
+    assertRepoHasSiloObject scpclone first &&
+    assertRepoHasSiloObject scpclone second
 '
 
 test_expect_success "cleanup" '
@@ -134,5 +137,6 @@ fi
 
 ssh_tests_with_transport scp
 ssh_tests_with_transport sshtar
+ssh_tests_with_transport sshcat
 
 test_done
