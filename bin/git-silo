@@ -1294,7 +1294,7 @@ transport_sshcat_fetch() {
         fi
         dir="$(dirname "$p")"
         mkdirWithParentsPermissions "$silodir/$dir"
-        exec_ssh -n "${url_host}" "cat '${url_dir}/${p}'" >"${silodir}/${p}-tmp" ||
+        exec_ssh </dev/null "${url_host}" "cat '${url_dir}/${p}'" >"${silodir}/${p}-tmp" ||
             die "Failed to copy '$p'."
         chmod a-w "$silodir/$p-tmp"
         mv "$silodir/$p-tmp" "$silodir/$p"
