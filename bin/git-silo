@@ -2169,7 +2169,7 @@ lookupPacksForObjects() {
     local packidx="$(lsPacksWithObjects)"
     while IFS= read -r sha1; do
         [ -z "${sha1}" ] && continue
-        grep "${sha1}$" <<<"${packidx}" ||
+        grep "${sha1}\$" <<<"${packidx}" ||
             printf 'nopack %s\n' "${sha1}"
     done
 }
@@ -2458,7 +2458,7 @@ nCPU() {
         n="$(sysctl hw.ncpu | cut -d ' ' -f 2 || true)"
         ;;
     esac
-    if ! grep -q "^[1-9][0-9]*$" <<<"${n}"; then
+    if ! grep -q "^[1-9][0-9]*\$" <<<"${n}"; then
         n=1
     fi
     printf '%d' "${n}"
