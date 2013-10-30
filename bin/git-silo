@@ -2023,11 +2023,11 @@ allSiloObjectsForTree() {
             sha1=$(getSha1ForGitObject $gitsha1); then
             printf '%s\n' "$sha1"
         fi
-    done <<< "$(lsFullTree $1)"
+    done <<< "$(lsFullTree ${tree})"
 }
 
 lsFullTree() {
-    git ls-tree -rl --full-tree $1
+    git ls-tree -rl --full-tree "$1"
 }
 
 convertToObjectSubdirPaths() {
@@ -2044,9 +2044,9 @@ setminus() {
 }
 
 gcAllGitattributes() {
-    while read p; do
+    while IFS= read -r p; do
         [ "$p" = "" ] && continue
-        gcGitattributes $p
+        gcGitattributes "${p}"
     done <<< "$(lsGitattributes)"
     test $opt_dry_run && return 0
     git commit -m "git-silo gc gitattributes" &&
@@ -2056,23 +2056,23 @@ gcAllGitattributes() {
 
 gcGitattributes() {
     local attr tmpfile dir reEntry
-    attr=$1
-    dir=$(dirname $attr)
-    tmpfile=$attr-tmp$$
+    attr="$1"
+    dir="$(dirname "${attr}")"
+    tmpfile="${attr}-tmp$$"
     reEntry='^/.*filter=silo -text$'
-    grep -v "$reEntry" $attr >$tmpfile || true
+    grep -v "${reEntry}" "${attr}" >"${tmpfile}" || true
     while read path rest; do
         if [ -f "$dir/$path" ]; then
-            printf '%s filter=silo -text\n' "$path" >>$tmpfile
+            printf '%s filter=silo -text\n' "$path" >>"${tmpfile}"
         fi
-    done <<< "$(grep "$reEntry" $attr)"
+    done <<< "$(grep "$reEntry" "${attr}")"
     if test $opt_dry_run; then
-        diff $attr $tmpfile >/dev/null || echo "Would clean up '$attr'."
-        rm $tmpfile
+        diff "${attr}" "${tmpfile}" >/dev/null || echo "Would clean up '$attr'."
+        rm "${tmpfile}"
         return 0
     fi
-    mv $tmpfile $attr
-    git add $attr
+    mv "${tmpfile}" "${attr}"
+    git add "${attr}"
 }
 
 lsGitattributes() {

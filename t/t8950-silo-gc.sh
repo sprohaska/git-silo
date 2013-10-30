@@ -139,4 +139,18 @@ test_expect_success \
     git silo gc --gitattributes --dry-run | grep "Would clean.*gitattributes"
 '
 
+test_expect_success 'gc should handle subdir with spaces' '
+    mkdir "s d" &&
+    echo a >"s d/a" &&
+    echo b >"s d/b" &&
+    git silo add "s d/a" &&
+    cp "s d/.gitattributes" expected &&
+    git silo add "s d/b" &&
+    git commit -m "add a b" &&
+    git rm "s d/b" &&
+    git commit -m "rm b" &&
+    git silo gc --gitattributes &&
+    test_cmp expected "s d/.gitattributes"
+'
+
 test_done
