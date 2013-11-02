@@ -668,15 +668,6 @@ isBareRepo() {
     [ $(git rev-parse --is-bare-repository) = "true" ]
 }
 
-getSiloProgram() {
-    local dir prgpath
-    prgpath=$(tr '\\' / <<<"$0")
-    dir="$(dirname "${prgpath}")"
-    dir="$(cd "${dir}"; pwd)"
-    base="$(basename "${prgpath}")"
-    printf '%s/%s' "${dir}" "${base}"
-}
-
 cmd_filter_clean() {
     validateHaveSilo
     if isSha1PlaceholderFile "$arg_file"; then
@@ -1855,22 +1846,6 @@ allLocalRefs() {
     git show-ref --heads $(test $opt_tags && echo --tags) -s
 }
 
-allSiloObjectsForTree() {
-    local tree perm ty gitsha1 size path sha1
-    tree=$1
-    while read perm ty gitsha1 size path; do
-        [ "$path" = "" ] && continue
-        if [ "$path" != "" ] && [ "$size" = 41 ] && \
-            sha1=$(getSha1ForGitObject $gitsha1); then
-            printf '%s\n' "$sha1"
-        fi
-    done <<< "$(lsFullTree ${tree})"
-}
-
-lsFullTree() {
-    git ls-tree -rl --full-tree "$1"
-}
-
 convertToObjectSubdirPaths() {
     sed -e 's@^\(.\{2\}\)@\1/@'
 }
@@ -1986,14 +1961,6 @@ lsObjectsSelectedForUnpack() {
         lsSiloTracked "${arg_pathspec[@]}" |
         cut -d ' ' -f 1
     fi
-}
-
-mkSiloObjectSubdirs() {
-    local objectdir="$(getSiloObjectDir)"
-    while IFS= read -r d; do
-        [ -z "${d}" ] && continue
-        mkdirWithParentsPermissions "${objectdir}/${d}"
-    done
 }
 
 dropSha1sOfLooseObjects() {
