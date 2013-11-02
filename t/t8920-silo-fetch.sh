@@ -77,10 +77,10 @@ test_expect_success \
 ssh_tests_with_transport() {
 local transport="$1"
 
-test_expect_success "setup scpclone (${transport})" "
-    rm -rf scpclone &&
-    setup_clone_ssh repo1 scpclone && (
-        cd scpclone &&
+test_expect_success "setup sshclone (${transport})" "
+    rm -rf sshclone &&
+    setup_clone_ssh repo1 sshclone && (
+        cd sshclone &&
         git silo init &&
         git config silo.sshtransport ${transport}
     )
@@ -89,32 +89,32 @@ test_expect_success "setup scpclone (${transport})" "
 test_expect_success \
 "'silo fetch' (${transport}) should fetch" '
     (
-        cd scpclone &&
+        cd sshclone &&
         git silo fetch -- .
     ) &&
-    assertRepoHasSiloObject scpclone first &&
-    assertRepoHasSiloObject scpclone second
+    assertRepoHasSiloObject sshclone first &&
+    assertRepoHasSiloObject sshclone second
 '
 
 test_expect_success "cleanup" '
-    rm -f scpclone/.git/silo/objects/*/*
+    rm -f sshclone/.git/silo/objects/*/*
 '
 
 test_expect_success \
 "'silo fetch' (${transport}) should mention files that are fetched." '
-    ( cd scpclone && git silo fetch -- . ) >log &&
+    ( cd sshclone && git silo fetch -- . ) >log &&
     grep -q first log
 '
 
 test_expect_success \
 "'silo fetch' (${transport}) should not mention files that are already up-to-date." '
-    ( cd scpclone && git silo fetch -- . ) >log &&
+    ( cd sshclone && git silo fetch -- . ) >log &&
     ! grep -q first log
 '
 
 test_expect_success \
 "'silo fetch' (${transport}) should report error with invalid remote path." '(
-    cd scpclone &&
+    cd sshclone &&
     git remote add invalid ssh://localhost/invalid/path &&
     ! git silo fetch invalid -- .
 )'
@@ -122,7 +122,7 @@ test_expect_success \
 test_expect_success \
 "'silo fetch' (${transport}) should ignore missing remote silo/objects." '
     mv repo1/.git/silo/objects repo1/.git/silo/objects-tmp && (
-        cd scpclone &&
+        cd sshclone &&
         git silo fetch -- .
     ) &&
     mv repo1/.git/silo/objects-tmp repo1/.git/silo/objects
@@ -135,7 +135,6 @@ if ! test_have_prereq LOCALHOST; then
     test_done
 fi
 
-ssh_tests_with_transport scp
 ssh_tests_with_transport sshtar
 ssh_tests_with_transport sshcat
 

@@ -110,7 +110,6 @@ test_expect_success \
 
 }  # ssh_tests_with_transport
 
-ssh_tests_with_transport scp
 ssh_tests_with_transport sshtar
 ssh_tests_with_transport sshcat
 
