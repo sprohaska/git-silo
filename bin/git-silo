@@ -2167,8 +2167,9 @@ updatePack() {
     # Skip objects that are used by tip.
     [ "${prefix}" == "tip" ] && return 0
 
+    # Compute preliminary id based on objects in pack.
     oldpack=$(findPackWithPrefix "${prefix}")
-    packid="$(
+    packobjsid="$(
         (
             if [ -n "${oldpack}" ]; then
                 packtool_${packtool}_ls "${oldpack}"
@@ -2180,13 +2181,10 @@ updatePack() {
         computeSha1
         )"
 
-    # Skip packing if old and new pack file have same id.
-    [ "${packid}" == "$(packIdOfFile "${oldpack}")" ] && return 0
-
     # Prepare tmp pack.
-    packfile="${packdir}/$(slashedPrefix "${prefix}")${packid}.${packext}"
-    mkdirWithParentsPermissions "$(dirname "${packfile}")"
-    tmppackfile="${packfile}-tmp"
+    pathprefix="${packdir}/$(slashedPrefix "${prefix}")"
+    tmppackfile="${pathprefix}${packobjsid}.${packext}-tmp"
+    mkdirWithParentsPermissions "$(dirname "${tmppackfile}")"
     rm -f "${tmppackfile}"
 
     # Add objects
@@ -2194,10 +2192,14 @@ updatePack() {
         cd "${objectdir}" &&
         packtool_${packtool}_add "${oldpack}" "${tmppackfile}"
     ) || die "Failed to add object files to archive."
-
-    # Move in place and clean up.
     chmod a-w "${tmppackfile}"
-    verifyPackfileId "${tmppackfile}"
+
+    # Double check that pack contains the expected objects.
+    verifyPackfileObjsId "${tmppackfile}"
+
+    # Compute final pack id based on its sha1, move in place, and clean up.
+    packcontentid=$(computeSha1 <"${tmppackfile}")
+    packfile="${pathprefix}${packcontentid}.${packext}"
     mv "${tmppackfile}" "${packfile}"
     if [ -n "${oldpack}" ]; then
         rm -f "${oldpack}"
@@ -2304,18 +2306,18 @@ findPackWithPrefix() {
     )
 }
 
-verifyPackfileId() {
+verifyPackfileObjsId() {
     local packfile="$1"
-    local contentId
-    contentId="$(
+    local packobjsid
+    packobjsid="$(
         packtool_${packtool}_ls "$packfile" |
         sed -e 's@/@@' |
         sort |
         computeSha1
         )"
     packid="$(packIdOfFile "${packfile}")"
-    if [ "${packid}" != "${contentId}" ]; then
-        die "content id '${contentId}' does not match packfile name '$(basename "${packfile}")'."
+    if [ "${packid}" != "${packobjsid}" ]; then
+        die "Id from object list ('${packobjsid}') does not match packfile name '$(basename "${packfile}")'."
     fi
 }
 
