@@ -1105,7 +1105,7 @@ cmd_fetch() {
 # transport_sshcat
 transport_sshcat_fetch() {
     local silodir url dir objPathMap
-    local url_host url_dir
+    local url_host url_dir psha1 tmp
     url=$1
     read url_host url_dir <<< "$(parseUrl "$url")"
     objPathMap=$(lsSiloTracked "${pathspec[@]}")
@@ -1126,10 +1126,16 @@ transport_sshcat_fetch() {
         fi
         dir="$(dirname "$p")"
         mkdirWithParentsPermissions "$silodir/$dir"
-        exec_ssh </dev/null "${url_host}" "cat '${url_dir}/${p}'" >"${silodir}/${p}-tmp" ||
+        tmp="${silodir}/${p}-tmp"
+        exec_ssh </dev/null "${url_host}" "cat '${url_dir}/${p}'" >"${tmp}" ||
             die "Failed to copy '$p'."
-        chmod a-w "$silodir/$p-tmp"
-        mv "$silodir/$p-tmp" "$silodir/$p"
+        chmod a-w "${tmp}"
+        psha1=${p//\//}
+        if [ $(computeSha1 <"${tmp}") != "${psha1}" ]; then
+            rm -f "${tmp}"
+            die "Checksum mismatch."
+        fi
+        mv "${tmp}" "$silodir/$p"
     done
     test $areMissing && die "Some files are missing at remote (see above)."
     true

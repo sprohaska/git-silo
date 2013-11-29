@@ -138,4 +138,20 @@ fi
 ssh_tests_with_transport sshtar
 ssh_tests_with_transport sshcat
 
+test_expect_success "'silo fetch' (sshcat) should detect corrupted object." '
+    setup_repo corrupted &&
+    setup_add_file corrupted first && (
+        cd corrupted &&
+        chmod u+w .git/silo/objects/*/* &&
+        echo corrupted-data >.git/silo/objects/*/*
+    ) &&
+    setup_clone_ssh corrupted corruptedclone && (
+        cd corruptedclone &&
+        git silo init &&
+        git config silo.sshtransport sshcat &&
+        ! git silo fetch -- . 2>err &&
+        grep -q -i "checksum" err
+    )
+'
+
 test_done
