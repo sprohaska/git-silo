@@ -1162,6 +1162,8 @@ transport_sshcat_push() {
 
 genprgRemoteCatReceive() {
     genprgShbang
+    genprgFunctions \
+        computeSha1
     genprgRemoteCatReceiveImpl
 }
 
@@ -1169,6 +1171,7 @@ genprgRemoteCatReceiveImpl() {
     cat <<\EOF
 silodir="$1"
 obj="$2"
+objsha1="${obj//\//}"
 
 if ! test -d "${silodir}"; then
     echo >&2 "Missing silo dir '${silodir}' (run 'git-silo init' at remote to create it)."
@@ -1185,6 +1188,11 @@ fi
 
 cat >"${obj}-tmp"
 chmod a-w "${obj}-tmp"
+if ! [ $(computeSha1 <"${obj}-tmp") == "${objsha1}" ]; then
+    echo >&2 "Error: Checksum mismatch."
+    rm -f "${obj}-tmp"
+    exit 1
+fi
 chmod g+r "${obj}-tmp"
 mv "${obj}-tmp" "${obj}"
 EOF

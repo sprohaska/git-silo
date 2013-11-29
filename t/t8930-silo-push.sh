@@ -113,4 +113,24 @@ test_expect_success \
 ssh_tests_with_transport sshtar
 ssh_tests_with_transport sshcat
 
+test_expect_success "cleanup" '
+    rm -f repo1/.git/silo/objects/*/*
+    rmdir repo1/.git/silo/objects/*
+'
+
+test_expect_success "'silo push' (sshcat) should detect corrupted files." '
+    setup_clone_ssh repo1 corrupted && (
+        cd corrupted &&
+        git config silo.sshtransport sshcat &&
+        git silo init
+    ) &&
+    setup_add_file corrupted first && (
+        cd corrupted &&
+        chmod u+w .git/silo/objects/*/* &&
+        echo corrupted-data >.git/silo/objects/*/* &&
+        ! git silo push -- . 2>err &&
+        grep -q -i "checksum" err
+    )
+'
+
 test_done
