@@ -1127,6 +1127,7 @@ transport_sshcat_fetch() {
         dir="$(dirname "$p")"
         mkdirWithParentsPermissions "$silodir/$dir"
         tmp="${silodir}/${p}-tmp"
+        rm -f "${tmp}"
         exec_ssh </dev/null "${url_host}" "cat '${url_dir}/${p}'" >"${tmp}" ||
             die "Failed to copy '$p'."
         chmod a-w "${tmp}"
@@ -1193,6 +1194,7 @@ if ! [ -e "${subdir}" ]; then
 fi
 
 tmp="${obj}-tmp"
+rm -f "${tmp}"
 cat >"${tmp}"
 chmod a-w "${tmp}"
 if [ $(computeSha1 <"${tmp}") != "${objsha1}" ]; then
