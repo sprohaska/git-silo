@@ -706,7 +706,8 @@ genprgFilterSmudge() {
         validSha1 \
         getSiloObjectDir \
         getSiloDir \
-        fileSize
+        fileSize \
+        die
     genprgCallMain
 }
 
