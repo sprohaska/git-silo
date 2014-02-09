@@ -30,14 +30,6 @@ test_expect_success "setup cpclone" '
     )
 '
 
-test_expect_success LOCALHOST "setup sshtarclone" '
-    setup_clone_ssh orig sshtarclone && (
-        cd sshtarclone &&
-        git silo init &&
-        git config silo.sshtransport sshtar
-    )
-'
-
 test_expect_success LOCALHOST "setup sshcatclone" '
     setup_clone_ssh orig sshcatclone && (
         cd sshcatclone &&
@@ -63,7 +55,6 @@ test_expect_success $req \
 }  # ssh_tests_with_transport
 
 run_tests '' cp
-run_tests LOCALHOST sshtar
 run_tests LOCALHOST sshcat
 
 test_done

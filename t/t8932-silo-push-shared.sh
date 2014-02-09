@@ -20,7 +20,7 @@ test_expect_success "setup (cp)" '
     )
 '
 
-for transport in sshtar sshcat; do
+for transport in sshcat; do
     repo="${transport}clone"
     test_expect_success LOCALHOST "setup ${repo}" "
         setup_clone_ssh repo1 ${repo} && (
@@ -78,7 +78,6 @@ test_expect_success $req \
 }
 
 run_tests UNIX cp a
-run_tests LOCALHOST sshtar c
 run_tests LOCALHOST sshcat d
 
 test_done

@@ -135,7 +135,6 @@ if ! test_have_prereq LOCALHOST; then
     test_done
 fi
 
-ssh_tests_with_transport sshtar
 ssh_tests_with_transport sshcat
 
 test_expect_success "'silo fetch' (sshcat) should detect corrupted object." '
