@@ -56,7 +56,7 @@ test_expect_success 'unpack should handle empty silo' '(
 
 test_expect_success 'pack should handle empty silo' '(
     cd repo &&
-    git silo pack
+    git silo pack --all
 )'
 
 test_expect_success 'pack and unpack should report missing 7z.' '(

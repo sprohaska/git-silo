@@ -1093,6 +1093,11 @@ cmd_fetch() {
     lsSiloTracked "${pathspec[@]}" |
         filterSiloAttr "${arg_filter[@]}" |
         uniqSha1s |
+        selectMissingSha1s |
+        transport_${transport}_prefetch "${url}"
+    lsSiloTracked "${pathspec[@]}" |
+        filterSiloAttr "${arg_filter[@]}" |
+        uniqSha1s |
         sha1sAsObjectPaths |
         transport_${transport}_fetch "$url"
 }
@@ -1212,6 +1217,50 @@ EOFPRG
     sed -e 's@^\./@@' ||
         die "Failed to list silo objects at '$1' in '$2'."
 }
+
+transport_sshcat_prefetch() {
+    local url="$1"
+    local url_host url_dir
+    read url_host url_dir <<< "$(parseUrl "$url")"
+
+    exec_ssh "${url_host}" \
+        bash -c "$(genprgRemoteAutoUnpackInDir | escapeSSHRemoteArg)" \
+        git-silo-prefetch "'${url_dir}'" ||
+            die "Failed to autounpack at remote."
+}
+
+genprgRemoteAutoUnpackInDir() {
+    genprgShbang
+    genprgFunctions \
+        die \
+        findBin7z \
+        forEachGroup \
+        getSiloDir \
+        getSiloObjectDir \
+        getSiloPackDir \
+        isSharedDir \
+        selectMissingSha1s \
+        lookupPacksForObjects \
+        lsPacksWithObjects \
+        lsSlashedPacks \
+        maybeAutoUnpackInDir \
+        mkdirWithParentsPermissions \
+        mktempSiloDir \
+        nCPU \
+        packtool_7z_extract \
+        packtool_7z_ls \
+        sha1AsObjectPath \
+        slashedOnce \
+        unpackObjects
+    genprgRemoteAutoUnpackInDirImpl
+}
+
+genprgRemoteAutoUnpackInDirImpl() {
+    cat <<\EOF
+maybeAutoUnpackInDir "$1"
+EOF
+}
+
 # transport_sshcat
 
 exec_ssh() {
@@ -1310,6 +1359,44 @@ transport_localcp_push() {
             chmod g+r "$url/$p-tmp"
             mv "$url/$p-tmp" "$url/$p"
         fi
+    done
+}
+
+transport_localcp_prefetch() {
+    maybeAutoUnpackInDir "${url}"
+}
+
+maybeAutoUnpackInDir() {
+    local dir="$1"
+    [ -d "${dir}" ] || return 0
+
+    packtool=7z
+    packext=7z
+
+    (
+        cd "${dir}"
+        if [ -d "$(getSiloPackDir)" ] && findBin7z; then
+            echo 'auto unpacking if necessary...'
+            selectMissingSha1s |
+            lookupPacksForObjects |
+            sort -k 1 |
+            forEachGroup unpackObjects
+        else
+            selectMissingSha1s |
+            while read s; do
+                [ -z "${s}" ] && continue
+                printf 'Warning: cannot unpack %s.\n' "${s}"
+            done
+        fi
+    )
+}
+
+selectMissingSha1s() {
+    local silodir="$(getSiloObjectDir)"
+    while read p; do
+        [ "${p}" = "" ] && continue
+        [ -f "${silodir}/$(sha1AsObjectPath ${p})" ] && continue
+        printf '%s\n' "${p}"
     done
 }
 
@@ -1969,7 +2056,7 @@ forEachGroup() {
         [ -z "${p}" ] && continue
         if [ "${p}" != "${prefix}" ]; then
             if [ -n "${prefix}" ]; then
-                "$@" "${prefix}" "${group}"
+                "$@" "${prefix}" "${group}" </dev/null
             fi
             prefix="${p}"
             group=
@@ -1978,7 +2065,7 @@ forEachGroup() {
 "
     done
     if [ -n "${prefix}" ]; then
-        "$@" "${prefix}" "${group}"
+        "$@" "${prefix}" "${group}" </dev/null
     fi
 }
 
@@ -2036,15 +2123,21 @@ updatePack() {
     fi
 }
 
-requireBin7z() {
+findBin7z() {
     local try="7zr 7z"
     for b in $try; do
         if $b 2>&1 | grep -q "7-Zip"; then
             bin_7z=$b
-            return
+            return 0
         fi
     done
-    die "Missing 7z binary (tried $try).  If using a package manager (Linux or Mac), install the package 'p7zip'; or install 7-Zip from http://www.7-zip.org and add it to PATH."
+    printf "Missing 7z binary (tried %s)." "${try}"
+    return 1
+}
+
+requireBin7z() {
+    findBin7z ||
+    die "Missing 7z.  If using a package manager (Linux or Mac), install the package 'p7zip'; or install 7-Zip from http://www.7-zip.org and add it to PATH."
 }
 
 packtool_7z_add() {
