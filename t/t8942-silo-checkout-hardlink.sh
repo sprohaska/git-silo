@@ -46,4 +46,13 @@ test_expect_success \
     ! test -w a
 '
 
+test_expect_success \
+"git checkout should not use hardlink if xbit mismatch." '
+    chmod u+x .git/silo/objects/*/* &&
+    rm a &&
+    git silo checkout a &&
+    ! test -x a &&
+    test $(linkCount a) -eq 1
+'
+
 test_done

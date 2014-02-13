@@ -930,6 +930,7 @@ cmd_checkout() {
             mkdir -p "$(dirname "$path")"
             (
                 ! test $opt_copy &&
+                xbitAllowsLink "${objfile}" "${path}" &&
                 rm -f "$path" &&
                 ln "$objfile" "$path" >/dev/null 2>&1 && (
                     ! test -w "$path" ||
@@ -942,7 +943,13 @@ cmd_checkout() {
                 printf "Linking %s %s\n" "${sha1}" "${path}"
             ) || (
                 rm -f "$path" &&
-                cp "$objfile" "$path" &&
+                cp "$objfile" "$path" && (
+                    if gitExpectsXbit "${path}"; then
+                        chmod a+x "${path}"
+                    else
+                        chmod a-x "${path}"
+                    fi
+                )
                 chmod u+w "$path" &&
                 printf "Copying %s %s\n" "${sha1}" "${path}"
             ) || {
@@ -955,6 +962,23 @@ cmd_checkout() {
     done <<< "$(lsSiloTracked "${arg_pathspec[@]}")"
     test $haveErr && die "There have been problems during silo checkout (see above)."
     true
+}
+
+xbitAllowsLink() {
+    local src=$1
+    local dest=$2
+    [ -f "${src}" ] || return 1
+    if gitExpectsXbit "${dest}"; then
+        [ -x "${src}" ] && return 0
+    else
+        ! [ -x "${src}" ] && return 0
+    fi
+    printf >&2 "Warning: can't use hardlink, because x-bits don't match; falling back to copy '%s'.\n" "${2}"
+    return 1
+}
+
+gitExpectsXbit() {
+    [ $(git ls-files --stage "${1}" | cut -b 4) == "7" ]
 }
 
 linkCount() {
