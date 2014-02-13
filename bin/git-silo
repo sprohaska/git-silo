@@ -1130,6 +1130,8 @@ transport_sshcat_fetch() {
         rm -f "${tmp}"
         exec_ssh </dev/null "${url_host}" "cat '${url_dir}/${p}'" >"${tmp}" ||
             die "Failed to copy '$p'."
+        exec_ssh </dev/null "${url_host}" "[ -x '${url_dir}/${p}' ]" &&
+            chmod a+x "${tmp}"
         chmod a-w "${tmp}"
         psha1=${p//\//}
         if [ $(computeSha1 <"${tmp}") != "${psha1}" ]; then
@@ -1160,9 +1162,11 @@ transport_sshcat_push() {
         if test $opt_dry_run; then
             continue
         fi
+        xbit=
+        [ -x "${silodir}/${p}" ] && xbit=yes
         cat "${silodir}/${p}" | exec_ssh "${url_host}" \
             bash -c "$(genprgRemoteCatReceive | escapeSSHRemoteArg)" \
-            git-silo-receive "'${url_dir}'" "'${p}'" ||
+            git-silo-receive "'${url_dir}'" "'${p}'" "'${xbit}'" ||
                 die "Failed to copy '$p'."
     done
 }
@@ -1179,6 +1183,7 @@ genprgRemoteCatReceiveImpl() {
     cat <<\EOF
 silodir="$1"
 obj="$2"
+opt_xbit="$3"
 objsha1="${obj//\//}"
 
 if ! test -d "${silodir}"; then
@@ -1196,6 +1201,7 @@ fi
 tmp="${obj}-tmp"
 rm -f "${tmp}"
 cat >"${tmp}"
+test ${opt_xbit} && chmod a+x "${tmp}"
 chmod a-w "${tmp}"
 if [ $(computeSha1 <"${tmp}") != "${objsha1}" ]; then
     rm -f "${tmp}"

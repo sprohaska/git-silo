@@ -96,6 +96,15 @@ assertRepoHasSiloObject() {
         error "Missing object ${obj} (${file}) in repo '${repo}'."
 }
 
+siloObjectPath() {
+    local repo=$1
+    local file=$2
+    local obj
+    obj="$(cat "${file}.sha1")"
+    obj="${obj:0:2}/${obj:2}"
+    echo "${repo}/.git/silo/objects/${obj}"
+}
+
 assertRepoHasNumSiloObjects() {
     local repo=$1
     local expected=$2
