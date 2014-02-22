@@ -962,7 +962,7 @@ cmd_checkout() {
 tryAutoUnpackForCheckout() {
     lsNeedsCheckout |
     cut -d ' ' -f 1 |
-    maybeAutoUnpackInDir '.'
+    tryAutoUnpackInDir '.'
 }
 
 lsNeedsCheckout() {
@@ -1290,7 +1290,7 @@ genprgRemoteAutoUnpackInDir() {
         lookupPacksForObjects \
         lsPacksWithObjects \
         lsSlashedPacks \
-        maybeAutoUnpackInDir \
+        tryAutoUnpackInDir \
         mkdirWithParentsPermissions \
         mktempSiloDir \
         nCPU \
@@ -1304,7 +1304,7 @@ genprgRemoteAutoUnpackInDir() {
 
 genprgRemoteAutoUnpackInDirImpl() {
     cat <<\EOF
-maybeAutoUnpackInDir "$1"
+tryAutoUnpackInDir "$1"
 EOF
 }
 
@@ -1410,10 +1410,10 @@ transport_localcp_push() {
 }
 
 transport_localcp_prefetch() {
-    maybeAutoUnpackInDir "${url}"
+    tryAutoUnpackInDir "${url}"
 }
 
-maybeAutoUnpackInDir() {
+tryAutoUnpackInDir() {
     local dir="$1"
     [ -d "${dir}" ] || return 0
 
