@@ -914,54 +914,64 @@ cmd_checkout() {
     local sha1 path silodir objfile
     silodir=$(getSiloObjectDir)
     local haveErr=
-    while read sha1 path; do
-        [ "$path" = "" ] && continue
-        if ! [ -e "$path" ] ||
-            isSha1PlaceholderFile "$path" ||
-            ( test $opt_copy && [ $(linkCount "$path") -gt 1 ] ) ||
-            ( test $opt_link && [ $(linkCount "$path") -eq 1 ] )
-        then
-            objfile=$silodir/${sha1:0:2}/${sha1:2}
-            if ! test -e "$objfile"; then
-                printf >&2 "missing silo content: %s\n" "$path"
-                haveErr=t
-                continue
-            fi
-            mkdir -p "$(dirname "$path")"
-            (
-                ! test $opt_copy &&
-                xbitAllowsLink "${objfile}" "${path}" &&
-                rm -f "$path" &&
-                ln "$objfile" "$path" >/dev/null 2>&1 && (
-                    ! test -w "$path" ||
-                    chmod a-w "$path" >/dev/null 2>&1 || (
-                        test $opt_link &&
-                        echo "Warning: failed to set read-only permissions, falling back to copy '$path'." >&2 &&
-                        false
-                    )
-                ) &&
-                printf "Linking %s %s\n" "${sha1}" "${path}"
-            ) || (
-                rm -f "$path" &&
-                cp "$objfile" "$path" && (
-                    if gitExpectsXbit "${path}"; then
-                        chmod a+x "${path}"
-                    else
-                        chmod a-x "${path}"
-                    fi
-                )
-                chmod u+w "$path" &&
-                printf "Copying %s %s\n" "${sha1}" "${path}"
-            ) || {
-                printf >&2 "Failed to copy '%s' to '%s'.\n" "$objfile" "$path"
-                haveErr=t
-                continue
-            }
-            git add -u -- "$path"  # Update index, so that 'git status' is clean.
+    while read -r sha1 path; do
+        [ -z "$path" ] && continue
+        objfile=$silodir/$(sha1AsObjectPath "${sha1}")
+        if ! test -e "$objfile"; then
+            printf >&2 "missing silo content: %s\n" "$path"
+            haveErr=t
+            continue
         fi
-    done <<< "$(lsSiloTracked "${arg_pathspec[@]}")"
+        mkdir -p "$(dirname "$path")"
+        (
+            ! test $opt_copy &&
+            xbitAllowsLink "${objfile}" "${path}" &&
+            rm -f "$path" &&
+            ln "$objfile" "$path" >/dev/null 2>&1 && (
+                ! test -w "$path" ||
+                chmod a-w "$path" >/dev/null 2>&1 || (
+                    test $opt_link &&
+                    echo "Warning: failed to set read-only permissions, falling back to copy '$path'." >&2 &&
+                    false
+                )
+            ) &&
+            printf "Linking %s %s\n" "${sha1}" "${path}"
+        ) || (
+            rm -f "$path" &&
+            cp "$objfile" "$path" && (
+                if gitExpectsXbit "${path}"; then
+                    chmod a+x "${path}"
+                else
+                    chmod a-x "${path}"
+                fi
+            )
+            chmod u+w "$path" &&
+            printf "Copying %s %s\n" "${sha1}" "${path}"
+        ) || {
+            printf >&2 "Failed to copy '%s' to '%s'.\n" "$objfile" "$path"
+            haveErr=t
+            continue
+        }
+        git add -u -- "$path"  # Update index, so that 'git status' is clean.
+    done <<< "$(lsNeedsCheckout)"
     test $haveErr && die "There have been problems during silo checkout (see above)."
     true
+}
+
+lsNeedsCheckout() {
+    while read -r sha1 path; do
+        [ -z "$path" ] && continue
+        pathNeedsCheckout "${path}" || continue
+        printf '%s %s\n' "${sha1}" "${path}"
+    done <<< "$(lsSiloTracked "${arg_pathspec[@]}")"
+}
+
+pathNeedsCheckout() {
+    local path="$1"
+    ! [ -e "$path" ] ||
+    isSha1PlaceholderFile "$path" ||
+    ( test $opt_copy && [ $(linkCount "$path") -gt 1 ] ) ||
+    ( test $opt_link && [ $(linkCount "$path") -eq 1 ] )
 }
 
 xbitAllowsLink() {
