@@ -1106,6 +1106,12 @@ cmd_push() {
     url=$(getRemoteSiloUrl)
     transport=$(getTransport "$url")
     echo "Pushing silo to $url"
+    transport_${transport}_push_init "${url}"
+    lsSiloTracked "${pathspec[@]}" |
+        filterSiloAttr "${arg_filter[@]}" |
+        uniqSha1s |
+        transport_${transport}_push_selectSha1s "$url" |
+        tryAutoUnpackInDir '.'
     lsSiloTracked "${pathspec[@]}" |
         filterSiloAttr "${arg_filter[@]}" |
         uniqSha1s |
@@ -1185,16 +1191,34 @@ transport_sshcat_fetch() {
     true
 }
 
+transport_sshcat_push_init() {
+    local url="$1"
+    local url_host url_dir
+    read url_host url_dir <<< "$(parseUrl "$url")"
+    existingAtRemote="$(lsRemoteDir "$url_host" "$url_dir")"
+}
+
+transport_sshcat_push_selectSha1s() {
+    local sha1 silodir
+    silodir="$(getSiloObjectDir)"
+    while read -r sha1; do
+        [ "${sha1}" = "" ] && continue
+        p=$(sha1AsObjectPath "${sha1}")
+        [ -f "${silodir}/${p}" ] && continue
+        findLineIn "${p}" "${existingAtRemote}" && continue
+        printf '%s\n' "$sha1"
+    done
+}
+
 transport_sshcat_push() {
-    local silodir url objPathMap url_host url_dir existing remotep
+    local silodir url objPathMap url_host url_dir remotep
     url=$1
     objPathMap=$(lsSiloTracked "${pathspec[@]}")
     silodir=$(getSiloObjectDir)
     read url_host url_dir <<< "$(parseUrl "$url")"
-    existing=$(lsRemoteDir "$url_host" "$url_dir")
     while read p; do
         [ "$p" = "" ] && continue
-        findLineIn "$p" "$existing" && continue
+        findLineIn "$p" "${existingAtRemote}" && continue
         if ! [ -f "$silodir/$p" ]; then
             printSyncInfo "Warning: missing" "$p" "$objPathMap" >&2
             continue
@@ -1378,8 +1402,25 @@ transport_localcp_fetch() {
     true
 }
 
+transport_localcp_push_init() {
+    true
+}
+
+transport_localcp_push_selectSha1s() {
+    local url="$1"
+    local sha1 silodir
+    silodir="$(getSiloObjectDir)"
+    while read -r sha1; do
+        [ "${sha1}" = "" ] && continue
+        p=$(sha1AsObjectPath "${sha1}")
+        [ -f "$url/${p}" ] && continue
+        [ -f "$silodir/${p}" ] && continue
+        printf '%s\n' "${sha1}"
+    done
+}
+
 transport_localcp_push() {
-    local silodir url objPathMap url_host url_dir existing
+    local silodir url objPathMap
     url=$1
     if ! [ -d "$url" ]; then
         die "Missing silo dir '$url' (run 'git-silo init' at remote to create it)."
