@@ -910,8 +910,9 @@ cmd_add() {
 }
 
 cmd_checkout() {
-    validateHaveSilo
     local sha1 path silodir objfile
+    validateHaveSilo
+    tryAutoUnpackForCheckout
     silodir=$(getSiloObjectDir)
     local haveErr=
     while read -r sha1 path; do
@@ -956,6 +957,12 @@ cmd_checkout() {
     done <<< "$(lsNeedsCheckout)"
     test $haveErr && die "There have been problems during silo checkout (see above)."
     true
+}
+
+tryAutoUnpackForCheckout() {
+    lsNeedsCheckout |
+    cut -d ' ' -f 1 |
+    maybeAutoUnpackInDir '.'
 }
 
 lsNeedsCheckout() {
