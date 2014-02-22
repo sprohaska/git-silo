@@ -92,8 +92,9 @@ assertRepoHasSiloObject() {
     local obj
     obj="$(cat "${file}.sha1")"
     obj="${obj:0:2}/${obj:2}"
-    [ -f "${repo}/.git/silo/objects/${obj}" ] ||
-        error "Missing object ${obj} (${file}) in repo '${repo}'."
+    [ -f "${repo}/.git/silo/objects/${obj}" ] && return 0
+    say_color error "Assert failed: missing object ${obj} (${file}) in repo '${repo}'."
+    return 1
 }
 
 siloObjectPath() {
@@ -110,6 +111,7 @@ assertRepoHasNumSiloObjects() {
     local expected=$2
     local actual
     actual=$(find "${repo}/.git/silo/objects" -type f | wc -l | sed -e 's/ *//g')
-    (( $expected == $actual )) ||
-        error "Wrong number of silo objects in repo '${repo}', expected ${expected}, actual ${actual}."
+    (( $expected == $actual )) && return 0
+    say_color error "Assert failed: wrong number of silo objects in repo '${repo}', expected ${expected}, actual ${actual}."
+    return 1
 }
