@@ -191,7 +191,7 @@ silo.contentSizeLimit (default '10M'): If the content for a file that is stored
 in silo is smaller than the limit or the limit is 0, the content will be used
 during normal git operations, such as 'git checkout', 'git reset', or 'git
 archive'.  Otherwise, placeholders will be used.  The suffixes 'K', 'M', 'G' can
-be used.  'git silo checkout' always uses the content and can will replace
+be used.  'git silo checkout' always uses the content and will replace
 placeholders in the working copy with the file content.  Note that placeholders
 can be temporarily deactivated by using git's '-c' switch.  For example, the
 following command will always create an archive with full content: 'git -c
