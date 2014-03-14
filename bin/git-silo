@@ -915,8 +915,8 @@ cmd_add() {
 cmd_checkout() {
     local sha1 path silodir objfile
     validateHaveSilo
-    tryAutoUnpackForCheckout
     silodir=$(getSiloObjectDir)
+    tryAutoUnpackForCheckout
     local haveErr=
     while read -r sha1 path; do
         [ -z "$path" ] && continue
