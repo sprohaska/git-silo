@@ -37,6 +37,15 @@ test_expect_success "git checkout --link should replace copy with hard links." '
     ! test -w a
 '
 
+test_expect_success "git checkout --link should link to object store." '
+    git silo checkout --copy a &&
+    ln a a2nd &&
+    test $(linkCount a2nd) -eq 2 &&
+    git silo checkout --link a &&
+    test $(linkCount a2nd) -eq 1 &&
+    ! test -w a
+'
+
 test_expect_success \
 "git checkout --link should fix wrong write permissions in silo store." '
     chmod u+w .git/silo/objects/*/* &&
