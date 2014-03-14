@@ -28,7 +28,8 @@ test_expect_success "setup" '
 
 test_expect_success "setup (pack)" '(
     cd orig &&
-    git silo pack
+    git silo pack &&
+    git config silo.autounpack true
 )'
 
 test_expect_success "'silo fetch' (cp) should ignore invalid 7z" '

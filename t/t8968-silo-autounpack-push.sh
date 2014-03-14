@@ -22,6 +22,7 @@ test_expect_success "push (cp) should autounpack." '
     setup_add_file cpclone first && (
         cd cpclone &&
         git silo pack --all --prune &&
+        git config silo.autounpack true &&
         git silo push -- .
     ) &&
     assertRepoHasSiloObject repo1 first
@@ -40,6 +41,7 @@ test_expect_success "push (sshcat) should autounpack." '
     setup_add_file sshclone first && (
         cd sshclone &&
         git silo pack --all --prune &&
+        git config silo.autounpack true &&
         git silo push -- .
     ) &&
     assertRepoHasSiloObject repo1 first

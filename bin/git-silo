@@ -200,6 +200,9 @@ silo.contentSizeLimit=0 archive HEAD >a.tar'
 silo.packSizeLimit (default '50G'): The maximum size of a pack.  0 means no
 limit.  The suffixes 'K', 'M', 'G' can be used.
 
+silo.autounpack (default 'false'): If 'true', silo will try to unpack objects
+if needed.
+
 silo.ismasterstore (default 'true'): Unless set to 'false', some destructive
 operations, such as 'purge', are not permitted.
 
@@ -1469,7 +1472,15 @@ transport_localcp_prefetch() {
 
 tryAutoUnpackInDir() {
     local dir="$1"
-    [ -d "${dir}" ] || return 0
+    # Always consume input (cat >/dev/null) to avoid broken pipe.
+    [ -d "${dir}" ] || {
+        cat >/dev/null
+        return 0
+    }
+    [ "$(cd "${dir}" && git config silo.autounpack)" = "true" ] || {
+        cat >/dev/null
+        return 0
+    }
 
     packtool=7z
     packext=7z

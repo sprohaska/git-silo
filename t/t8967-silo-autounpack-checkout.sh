@@ -15,7 +15,8 @@ test_expect_success "setup" '
 
 test_expect_success "setup (prune)" '(
     cd repo &&
-    git silo pack --prune --all
+    git silo pack --prune --all &&
+    git config silo.autounpack true
 )'
 
 test_expect_success "checkout should autounpack" '(
