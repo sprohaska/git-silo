@@ -923,7 +923,7 @@ cmd_checkout() {
         objfile=$silodir/$(sha1AsObjectPath "${sha1}")
         if ! test -e "$objfile"; then
             if hasSiloAttrLabel 'local' "${path}"; then
-                printf >&2 "Warning: missing silo content with label 'local': %s\n" "$path"
+                printf >&2 "Notice: missing silo content with label 'local': %s\n" "$path"
             else
                 printf >&2 "missing silo content: %s\n" "$path"
                 haveErr=t
