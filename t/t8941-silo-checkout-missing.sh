@@ -11,7 +11,7 @@ test_expect_success "setup user" '
 '
 
 test_expect_success \
-"git silo checkout should handle missing objects gracefully" '
+"setup" '
     git init &&
     touch .gitignore &&
     git add .gitignore &&
@@ -23,10 +23,21 @@ test_expect_success \
     ( openssl sha1 b | cut -d " " -f 2 >b.sha1 ) &&
     git silo add a b &&
     git commit -m "Add a b"
+'
+
+test_expect_success \
+"checkout should handle missing objects gracefully" '
     rm -rf .git/silo/objects/$(cut -b 1-2 a.sha1) &&
     rm a b &&
     ( git silo checkout . || true ) &&
     test -e b
+'
+
+test_expect_success \
+"checkout should exit success if only silo=local object missing." '
+    ! git silo checkout a &&
+    echo "/a silo=local" >>.gitattributes &&
+    git silo checkout a
 '
 
 test_done

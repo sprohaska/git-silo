@@ -922,8 +922,12 @@ cmd_checkout() {
         [ -z "$path" ] && continue
         objfile=$silodir/$(sha1AsObjectPath "${sha1}")
         if ! test -e "$objfile"; then
-            printf >&2 "missing silo content: %s\n" "$path"
-            haveErr=t
+            if hasSiloAttrLabel 'local' "${path}"; then
+                printf >&2 "Warning: missing silo content with label 'local': %s\n" "$path"
+            else
+                printf >&2 "missing silo content: %s\n" "$path"
+                haveErr=t
+            fi
             continue
         fi
         mkdir -p "$(dirname "$path")"
@@ -1601,6 +1605,22 @@ sha1sAsObjectPaths() {
 sha1AsObjectPath() {
     local sha1="$1"
     echo ${sha1:0:2}/${sha1:2}
+}
+
+# hasSiloAttrLabel <label> <path>
+#
+# return true if silo attribute of <path> contains <label>.
+hasSiloAttrLabel() {
+    local label=$1
+    local path=$2
+    local attr
+    attr=$(getAttrValue "silo" "${path}")
+    case ",${attr}," in
+        *,${label},*)
+            return 0
+            ;;
+    esac
+    false
 }
 
 filterSiloAttr() {

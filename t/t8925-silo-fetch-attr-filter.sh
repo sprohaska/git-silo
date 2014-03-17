@@ -39,14 +39,14 @@ fetchWithAttr() {
 assertNotFetched() {
     (
         cd repo2 &&
-        ! git silo checkout b
+        git silo checkout b 2>&1 | grep missing.*b
     )
 }
 
 assertFetched() {
     (
         cd repo2 &&
-        git silo checkout b
+        ! git silo checkout b | grep missing.*b
     )
 }
 
