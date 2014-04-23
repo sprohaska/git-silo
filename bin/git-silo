@@ -615,8 +615,9 @@ validateGitVersion() {
     version=$(cut -d ' ' -f 3 <<<"$version")
     major=$(cut -d . -f 1 <<<"$version")
     minor=$(cut -d . -f 2 <<<"$version")
-    [ $major -ge 1 ] && [ $minor -ge 8 ] ||
+    if [ $major -lt 2 ] && [ $minor -lt 8 ]; then
         die "git version too low (require at least version 1.8)."
+    fi
 }
 
 validateCmd() {
