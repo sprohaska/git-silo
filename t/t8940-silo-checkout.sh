@@ -23,16 +23,23 @@ test_expect_success "git checkout should replace placeholder file." '
     )
 '
 
+# Trick git into creating a placeholder that ends with CRLF by duplicating the
+# placeholder file and checking out the duplicate 'b' with autocrlf=true.
+# autocrlf has no impact on the original placeholder 'a', because it has the
+# gitattribute '-text', which is required by 'git silo'.
 test_expect_success \
 "git checkout should replace placeholder file even when it contains ends with crlf." '
     git clone repo1 repocrlf && (
         cd repocrlf &&
-        git rm .gitattributes &&
-        git commit -m "Remove -text attribute to get CRLF checkout."
         git config core.autocrlf true &&
-        rm a &&
-        git checkout a &&
+        cp a b &&
+        git add b &&
+        git commit -m "Add duplicate to get CRLF checkout" &&
+        rm b &&
+        git checkout b &&
         git silo init &&
+        cp b a &&
+        git add a &&
         git silo fetch -- . &&
         git silo checkout a &&
         test_cmp ../a a

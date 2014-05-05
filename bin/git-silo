@@ -931,6 +931,10 @@ cmd_checkout() {
             fi
             continue
         fi
+        if ! hasGitSiloAttributes "${path}"; then
+            printf >&2 "Warning: missing silo gitattributes 'filter=silo -text', keeping placeholder: %s\n" "${path}"
+            continue
+        fi
         mkdir -p "$(dirname "$path")"
         (
             ! test $opt_copy &&
