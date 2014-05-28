@@ -1221,7 +1221,7 @@ transport_sshcat_push_init() {
     local url="$1"
     local url_host url_dir
     read url_host url_dir <<< "$(parseUrl "$url")"
-    existingAtRemote="$(lsRemoteObjects "$url_host" "$url_dir")"
+    existingAtRemote="$(lsRemoteObjectsWithPacked "$url_host" "$url_dir")"
 }
 
 transport_sshcat_push_selectSha1sToUnpack() {
@@ -1315,6 +1315,35 @@ fi
 EOFPRG
     sed -e 's@^\./@@' ||
         die "Failed to list silo objects at '$1' in '$2'."
+}
+
+lsRemoteObjectsWithPacked() {
+    local host="$1"
+    local objdir="$2/objects"
+    local packdir="$2/packs"
+    exec_ssh "${host}" bash -s <<EOFPRG ||
+set -o errexit
+
+if test -e '${objdir}'; then
+    cd '${objdir}'
+    find . -type f | cut -b 3-
+fi
+
+if test -e '${packdir}'; then
+    cd '${packdir}'
+    find . -type f -name '*.lst' -exec cat '{}' ';'
+fi
+EOFPRG
+    die "Failed to list silo objects at '$1' in '$2'."
+}
+
+catPackLsts() {
+    local packdir="$1/packs"
+    test -e "${packdir}" || return 0
+    (
+        cd "${packdir}"
+        find . -type f -name '*.lst' -exec cat '{}' ';'
+    )
 }
 
 transport_sshcat_prefetch() {
@@ -1431,7 +1460,8 @@ transport_localcp_fetch() {
 }
 
 transport_localcp_push_init() {
-    true
+    local url="$1"
+    existingAtRemote="$(catPackLsts "$url")"
 }
 
 transport_localcp_push_selectSha1sToUnpack() {
@@ -1442,6 +1472,7 @@ transport_localcp_push_selectSha1sToUnpack() {
         [ "${sha1}" = "" ] && continue
         p=$(sha1AsObjectPath "${sha1}")
         [ -f "${url}/objects/${p}" ] && continue
+        findLineIn "${p}" "${existingAtRemote}" && continue
         [ -f "$objdir/${p}" ] && continue
         printf '%s\n' "${sha1}"
     done
@@ -1458,6 +1489,7 @@ transport_localcp_push() {
     while read p; do
         [ "$p" = "" ] && continue
         [ -f "${remoteObjdir}/$p" ] && continue
+        findLineIn "${p}" "${existingAtRemote}" && continue
         if ! [ -f "$objdir/$p" ]; then
             printSyncInfo "Warning: missing" "$p" "$objPathMap" >&2
             continue
@@ -2111,6 +2143,7 @@ prunePack() {
     haveAllLooseObjects "${objs}" || return 0
 
     local packdir="$(getSiloPackDir)"
+    rm -f "${packdir}/${pack}.lst"
     rm -f "${packdir}/${pack}"
 }
 
@@ -2254,12 +2287,18 @@ updatePack() {
     # Double check that pack contains the expected objects.
     verifyPackfileObjsId "${tmppackfile}"
 
-    # Compute final pack id based on its sha1, move in place, and clean up.
+    # Compute final pack id based on its sha1, create listing, move in place,
+    # and clean up.
     packcontentid=$(computeSha1 <"${tmppackfile}")
     packfile="${pathprefix}${packcontentid}.${packext}"
+    lstfile="${packfile}.lst"
+    tmplstfile="${lstfile}-tmp"
+    packtool_${packtool}_ls "${tmppackfile}" >"${tmplstfile}"
     mv "${tmppackfile}" "${packfile}"
+    mv "${tmplstfile}" "${lstfile}"
     if [ -n "${oldpack}" ]; then
         rm -f "${oldpack}"
+        rm -f "${oldpack}.lst"
     fi
 }
 

@@ -15,8 +15,9 @@ assertNumObjects() {
     assertNumFilesIn '.git/silo/objects' $1
 }
 
+# Multiply number by two, because each pack comes with a lst file.
 assertNumPacks() {
-    assertNumFilesIn '.git/silo/packs' $1
+    assertNumFilesIn '.git/silo/packs' $((2 * $1))
 }
 
 assertNumFilesIn() {
