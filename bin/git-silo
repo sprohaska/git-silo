@@ -1448,32 +1448,32 @@ transport_localcp_push_selectSha1sToUnpack() {
 }
 
 transport_localcp_push() {
-    local objdir destobjdir objPathMap
-    destobjdir="$1/objects"
-    if ! [ -d "${destobjdir}" ]; then
-        die "Missing silo dir '${destobjdir}' (run 'git-silo init' at remote to create it)."
+    local objdir remoteObjdir objPathMap
+    remoteObjdir="$1/objects"
+    if ! [ -d "${remoteObjdir}" ]; then
+        die "Missing silo dir '${remoteObjdir}' (run 'git-silo init' at remote to create it)."
     fi
     objPathMap=$(lsSiloTracked "${pathspec[@]}")
     objdir=$(getSiloObjectDir)
     while read p; do
         [ "$p" = "" ] && continue
-        [ -f "${destobjdir}/$p" ] && continue
+        [ -f "${remoteObjdir}/$p" ] && continue
         if ! [ -f "$objdir/$p" ]; then
             printSyncInfo "Warning: missing" "$p" "$objPathMap" >&2
             continue
         fi
         printSyncInfo "Pushing" "$p" "$objPathMap"
         if test $opt_dry_run; then
-            echo_debug "Would have run: cp" "$objdir/$p" "${destobjdir}/$p"
+            echo_debug "Would have run: cp" "$objdir/$p" "${remoteObjdir}/$p"
         else
             dir=$(dirname $p)
-            mkdirWithParentsPermissions "${destobjdir}/$dir"
+            mkdirWithParentsPermissions "${remoteObjdir}/$dir"
             echo_debug "cp ..."
-            rm -f "${destobjdir}/$p-tmp"
-            cp "$objdir/$p" "${destobjdir}/$p-tmp"
-            chmod a-w "${destobjdir}/$p-tmp"
-            chmod g+r "${destobjdir}/$p-tmp"
-            mv "${destobjdir}/$p-tmp" "${destobjdir}/$p"
+            rm -f "${remoteObjdir}/$p-tmp"
+            cp "$objdir/$p" "${remoteObjdir}/$p-tmp"
+            chmod a-w "${remoteObjdir}/$p-tmp"
+            chmod g+r "${remoteObjdir}/$p-tmp"
+            mv "${remoteObjdir}/$p-tmp" "${remoteObjdir}/$p"
         fi
     done
 }
