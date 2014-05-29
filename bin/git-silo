@@ -1135,7 +1135,7 @@ cmd_push() {
     lsSiloTracked "${pathspec[@]}" |
         filterSiloAttr "${arg_filter[@]}" |
         uniqSha1s |
-        transport_${transport}_push_selectSha1s "$url" |
+        transport_${transport}_push_selectSha1sToUnpack "$url" |
         tryAutoUnpackInDir '.'
     lsSiloTracked "${pathspec[@]}" |
         filterSiloAttr "${arg_filter[@]}" |
@@ -1177,12 +1177,13 @@ cmd_fetch() {
 # transport_sshcat
 transport_sshcat_fetch() {
     local silodir url dir objPathMap
-    local url_host url_dir psha1 tmp
+    local url_host url_dir psha1 tmp remoteObjdir
     url=$1
     read url_host url_dir <<< "$(parseUrl "$url")"
     objPathMap=$(lsSiloTracked "${pathspec[@]}")
     silodir=$(getSiloObjectDir)
-    remoteObjs=$(lsRemoteDir "$url_host" "$url_dir")
+    remoteObjs=$(lsRemoteObjects "$url_host" "${url_dir}")
+    remoteObjdir="${url_dir}/objects"
     local areMissing=
     while read p; do
         [ "$p" = "" ] && continue
@@ -1200,9 +1201,9 @@ transport_sshcat_fetch() {
         mkdirWithParentsPermissions "$silodir/$dir"
         tmp="${silodir}/${p}-tmp"
         rm -f "${tmp}"
-        exec_ssh </dev/null "${url_host}" "cat '${url_dir}/${p}'" >"${tmp}" ||
+        exec_ssh </dev/null "${url_host}" "cat '${remoteObjdir}/${p}'" >"${tmp}" ||
             die "Failed to copy '$p'."
-        exec_ssh </dev/null "${url_host}" "[ -x '${url_dir}/${p}' ]" &&
+        exec_ssh </dev/null "${url_host}" "[ -x '${remoteObjdir}/${p}' ]" &&
             chmod a+x "${tmp}"
         chmod a-w "${tmp}"
         psha1=${p//\//}
@@ -1220,10 +1221,10 @@ transport_sshcat_push_init() {
     local url="$1"
     local url_host url_dir
     read url_host url_dir <<< "$(parseUrl "$url")"
-    existingAtRemote="$(lsRemoteDir "$url_host" "$url_dir")"
+    existingAtRemote="$(lsRemoteObjects "$url_host" "$url_dir")"
 }
 
-transport_sshcat_push_selectSha1s() {
+transport_sshcat_push_selectSha1sToUnpack() {
     local sha1 silodir
     silodir="$(getSiloObjectDir)"
     while read -r sha1; do
@@ -1271,7 +1272,7 @@ genprgRemoteCatReceive() {
 
 genprgRemoteCatReceiveImpl() {
     cat <<\EOF
-silodir="$1"
+silodir="$1/objects"
 obj="$2"
 opt_xbit="$3"
 objsha1="${obj//\//}"
@@ -1302,11 +1303,13 @@ mv "${tmp}" "${obj}"
 EOF
 }
 
-lsRemoteDir() {
-    exec_ssh "$1" bash -s <<EOFPRG |
+lsRemoteObjects() {
+    local host="$1"
+    local objdir="$2/objects"
+    exec_ssh "${host}" bash -s <<EOFPRG |
 set -o errexit
-if test -e '$2'; then
-    cd '$2'
+if test -e '${objdir}'; then
+    cd '${objdir}'
     find . -type f
 fi
 EOFPRG
@@ -1383,14 +1386,14 @@ escapeSSHRemoteArg() {
 }
 
 transport_localcp_fetch() {
-    local silodir url dir objPathMap src dest tmp
-    url=$1
+    local silodir remoteObjdir dir objPathMap src dest tmp
+    remoteObjdir="$1/objects"
     objPathMap=$(lsSiloTracked "${pathspec[@]}")
     silodir=$(getSiloObjectDir)
     local areMissing=
     while read p; do
         [ "$p" = "" ] && continue
-        src="${url}/${p}"
+        src="${remoteObjdir}/${p}"
         dest="${silodir}/${p}"
         [ -f "${dest}" ] && continue
         if ! [ -e "${src}" ]; then
@@ -1431,46 +1434,46 @@ transport_localcp_push_init() {
     true
 }
 
-transport_localcp_push_selectSha1s() {
+transport_localcp_push_selectSha1sToUnpack() {
     local url="$1"
     local sha1 silodir
     silodir="$(getSiloObjectDir)"
     while read -r sha1; do
         [ "${sha1}" = "" ] && continue
         p=$(sha1AsObjectPath "${sha1}")
-        [ -f "$url/${p}" ] && continue
+        [ -f "${url}/objects/${p}" ] && continue
         [ -f "$silodir/${p}" ] && continue
         printf '%s\n' "${sha1}"
     done
 }
 
 transport_localcp_push() {
-    local silodir url objPathMap
-    url=$1
-    if ! [ -d "$url" ]; then
-        die "Missing silo dir '$url' (run 'git-silo init' at remote to create it)."
+    local silodir destobjdir objPathMap
+    destobjdir="$1/objects"
+    if ! [ -d "${destobjdir}" ]; then
+        die "Missing silo dir '${destobjdir}' (run 'git-silo init' at remote to create it)."
     fi
     objPathMap=$(lsSiloTracked "${pathspec[@]}")
     silodir=$(getSiloObjectDir)
     while read p; do
         [ "$p" = "" ] && continue
-        [ -f "$url/$p" ] && continue
+        [ -f "${destobjdir}/$p" ] && continue
         if ! [ -f "$silodir/$p" ]; then
             printSyncInfo "Warning: missing" "$p" "$objPathMap" >&2
             continue
         fi
         printSyncInfo "Pushing" "$p" "$objPathMap"
         if test $opt_dry_run; then
-            echo_debug "Would have run: cp" "$silodir/$p" "$url/$p"
+            echo_debug "Would have run: cp" "$silodir/$p" "${destobjdir}/$p"
         else
             dir=$(dirname $p)
-            mkdirWithParentsPermissions "$url/$dir"
+            mkdirWithParentsPermissions "${destobjdir}/$dir"
             echo_debug "cp ..."
-            rm -f "$url/$p-tmp"
-            cp "$silodir/$p" "$url/$p-tmp"
-            chmod a-w "$url/$p-tmp"
-            chmod g+r "$url/$p-tmp"
-            mv "$url/$p-tmp" "$url/$p"
+            rm -f "${destobjdir}/$p-tmp"
+            cp "$silodir/$p" "${destobjdir}/$p-tmp"
+            chmod a-w "${destobjdir}/$p-tmp"
+            chmod g+r "${destobjdir}/$p-tmp"
+            mv "${destobjdir}/$p-tmp" "${destobjdir}/$p"
         fi
     done
 }
@@ -1678,7 +1681,7 @@ getRemoteSiloUrl() {
     fi
     reurl=$(resolveGitDir "$url") ||
         die "Failed to resolve git-dir for '$url'."
-    printf '%s/silo/objects\n' "$reurl"
+    printf '%s/silo\n' "$reurl"
 }
 
 resolveGitDir() {
