@@ -757,10 +757,10 @@ genprgFunctions() {
 }
 
 computeSha1AndStoreContentInSilo() {
-    local silodir sha1 subdir objfile
-    silodir=$(getSiloObjectDir)
+    local objdir sha1 subdir objfile
+    objdir=$(getSiloObjectDir)
     sha1=$(computeSha1) || die "Failed to compute sha1."
-    subdir=$silodir/${sha1:0:2}
+    subdir=$objdir/${sha1:0:2}
     objfile=$subdir/${sha1:2}
     if [ ! -e "$objfile" ]; then
         mkdirWithParentsPermissions "$subdir"
@@ -798,12 +798,12 @@ cfg_ismasterstore() {
 }
 
 cmd_filter_smudge() {
-    local silodir sha1
+    local objdir sha1
     IFS= read -r -n 41 sha1
     validSha1 "$sha1" || die "Invalid input; expected sha1: $arg_file"
     IFS= read -r -n 1 dummy && die "Input too large."
-    silodir="$(getSiloObjectDir)"
-    objfile="${silodir}/${sha1:0:2}/${sha1:2}"
+    objdir="$(getSiloObjectDir)"
+    objfile="${objdir}/${sha1:0:2}/${sha1:2}"
     if [ -e "${objfile}" ]; then
         local contentSizeLimit=$(cfg_contentSizeLimit)
         if [ $contentSizeLimit -eq 0 ] ||
@@ -854,9 +854,9 @@ fileSize() {
 }
 
 validateHaveSilo() {
-    local silodir
-    silodir=$(getSiloObjectDir)
-    [ -d "$silodir" ] || die "Missing silo '$silodir'; run 'git-silo init'."
+    local objdir
+    objdir=$(getSiloObjectDir)
+    [ -d "$objdir" ] || die "Missing silo '$objdir'; run 'git-silo init'."
 }
 
 getSiloDir() {
@@ -914,14 +914,14 @@ cmd_add() {
 }
 
 cmd_checkout() {
-    local sha1 path silodir objfile
+    local sha1 path objdir objfile
     validateHaveSilo
-    silodir=$(getSiloObjectDir)
+    objdir=$(getSiloObjectDir)
     tryAutoUnpackForCheckout
     local haveErr=
     while read -r sha1 path; do
         [ -z "$path" ] && continue
-        objfile=$silodir/$(sha1AsObjectPath "${sha1}")
+        objfile=$objdir/$(sha1AsObjectPath "${sha1}")
         if ! test -e "$objfile"; then
             if hasSiloAttrLabel 'local' "${path}"; then
                 printf >&2 "Notice: missing silo content with label 'local': %s\n" "$path"
@@ -998,8 +998,8 @@ pathNeedsCheckout() {
     ( test $opt_copy && [ $(linkCount "$path") -gt 1 ] ) && return 0
     if test $opt_link; then
         [ $(linkCount "$path") -eq 1 ] && return 0
-        if [ -f "${silodir}/$(sha1AsObjectPath ${sha1})" ]; then
-            [ "$(inodeNumber "${silodir}/$(sha1AsObjectPath ${sha1})")" = \
+        if [ -f "${objdir}/$(sha1AsObjectPath ${sha1})" ]; then
+            [ "$(inodeNumber "${objdir}/$(sha1AsObjectPath ${sha1})")" = \
                 "$(inodeNumber "${path}")" ] || return 0
         fi
     fi
@@ -1176,18 +1176,18 @@ cmd_fetch() {
 
 # transport_sshcat
 transport_sshcat_fetch() {
-    local silodir url dir objPathMap
+    local objdir url dir objPathMap
     local url_host url_dir psha1 tmp remoteObjdir
     url=$1
     read url_host url_dir <<< "$(parseUrl "$url")"
     objPathMap=$(lsSiloTracked "${pathspec[@]}")
-    silodir=$(getSiloObjectDir)
+    objdir=$(getSiloObjectDir)
     remoteObjs=$(lsRemoteObjects "$url_host" "${url_dir}")
     remoteObjdir="${url_dir}/objects"
     local areMissing=
     while read p; do
         [ "$p" = "" ] && continue
-        [ -f "$silodir/$p" ] && continue
+        [ -f "$objdir/$p" ] && continue
         if ! findLineIn "$p" "$remoteObjs"; then
             areMissing=t
             printSyncInfo "Warning: missing" "$p" "$objPathMap" >&2
@@ -1198,8 +1198,8 @@ transport_sshcat_fetch() {
             continue
         fi
         dir="$(dirname "$p")"
-        mkdirWithParentsPermissions "$silodir/$dir"
-        tmp="${silodir}/${p}-tmp"
+        mkdirWithParentsPermissions "$objdir/$dir"
+        tmp="${objdir}/${p}-tmp"
         rm -f "${tmp}"
         exec_ssh </dev/null "${url_host}" "cat '${remoteObjdir}/${p}'" >"${tmp}" ||
             die "Failed to copy '$p'."
@@ -1211,7 +1211,7 @@ transport_sshcat_fetch() {
             rm -f "${tmp}"
             die "Checksum mismatch."
         fi
-        mv "${tmp}" "$silodir/$p"
+        mv "${tmp}" "$objdir/$p"
     done
     test $areMissing && die "Some files are missing at remote (see above)."
     true
@@ -1225,27 +1225,27 @@ transport_sshcat_push_init() {
 }
 
 transport_sshcat_push_selectSha1sToUnpack() {
-    local sha1 silodir
-    silodir="$(getSiloObjectDir)"
+    local sha1 objdir
+    objdir="$(getSiloObjectDir)"
     while read -r sha1; do
         [ "${sha1}" = "" ] && continue
         p=$(sha1AsObjectPath "${sha1}")
-        [ -f "${silodir}/${p}" ] && continue
+        [ -f "${objdir}/${p}" ] && continue
         findLineIn "${p}" "${existingAtRemote}" && continue
         printf '%s\n' "$sha1"
     done
 }
 
 transport_sshcat_push() {
-    local silodir url objPathMap url_host url_dir remotep
+    local objdir url objPathMap url_host url_dir remotep
     url=$1
     objPathMap=$(lsSiloTracked "${pathspec[@]}")
-    silodir=$(getSiloObjectDir)
+    objdir=$(getSiloObjectDir)
     read url_host url_dir <<< "$(parseUrl "$url")"
     while read p; do
         [ "$p" = "" ] && continue
         findLineIn "$p" "${existingAtRemote}" && continue
-        if ! [ -f "$silodir/$p" ]; then
+        if ! [ -f "$objdir/$p" ]; then
             printSyncInfo "Warning: missing" "$p" "$objPathMap" >&2
             continue
         fi
@@ -1254,8 +1254,8 @@ transport_sshcat_push() {
             continue
         fi
         xbit=
-        [ -x "${silodir}/${p}" ] && xbit=yes
-        cat "${silodir}/${p}" | exec_ssh "${url_host}" \
+        [ -x "${objdir}/${p}" ] && xbit=yes
+        cat "${objdir}/${p}" | exec_ssh "${url_host}" \
             bash -c "$(genprgRemoteCatReceive | escapeSSHRemoteArg)" \
             git-silo-receive "'${url_dir}'" "'${p}'" "'${xbit}'" ||
                 die "Failed to copy '$p'."
@@ -1272,15 +1272,15 @@ genprgRemoteCatReceive() {
 
 genprgRemoteCatReceiveImpl() {
     cat <<\EOF
-silodir="$1/objects"
+objdir="$1/objects"
 obj="$2"
 opt_xbit="$3"
 objsha1="${obj//\//}"
 
-if ! test -d "${silodir}"; then
-    die "Missing silo dir '${silodir}' (run 'git-silo init' at remote to create it)."
+if ! test -d "${objdir}"; then
+    die "Missing silo dir '${objdir}' (run 'git-silo init' at remote to create it)."
 fi
-cd "${silodir}"
+cd "${objdir}"
 subdir="$(dirname "${obj}")"
 if ! [ -e "${subdir}" ]; then
     mkdir "${subdir}"
@@ -1386,15 +1386,15 @@ escapeSSHRemoteArg() {
 }
 
 transport_localcp_fetch() {
-    local silodir remoteObjdir dir objPathMap src dest tmp
+    local objdir remoteObjdir dir objPathMap src dest tmp
     remoteObjdir="$1/objects"
     objPathMap=$(lsSiloTracked "${pathspec[@]}")
-    silodir=$(getSiloObjectDir)
+    objdir=$(getSiloObjectDir)
     local areMissing=
     while read p; do
         [ "$p" = "" ] && continue
         src="${remoteObjdir}/${p}"
-        dest="${silodir}/${p}"
+        dest="${objdir}/${p}"
         [ -f "${dest}" ] && continue
         if ! [ -e "${src}" ]; then
             areMissing=t
@@ -1408,7 +1408,7 @@ transport_localcp_fetch() {
         fi
 
         dir="$(dirname "$p")"
-        mkdirWithParentsPermissions "$silodir/$dir"
+        mkdirWithParentsPermissions "$objdir/$dir"
 
         # Try to link, but only if source has correct permissions.
         if ! test -w "${src}"; then
@@ -1436,41 +1436,41 @@ transport_localcp_push_init() {
 
 transport_localcp_push_selectSha1sToUnpack() {
     local url="$1"
-    local sha1 silodir
-    silodir="$(getSiloObjectDir)"
+    local sha1 objdir
+    objdir="$(getSiloObjectDir)"
     while read -r sha1; do
         [ "${sha1}" = "" ] && continue
         p=$(sha1AsObjectPath "${sha1}")
         [ -f "${url}/objects/${p}" ] && continue
-        [ -f "$silodir/${p}" ] && continue
+        [ -f "$objdir/${p}" ] && continue
         printf '%s\n' "${sha1}"
     done
 }
 
 transport_localcp_push() {
-    local silodir destobjdir objPathMap
+    local objdir destobjdir objPathMap
     destobjdir="$1/objects"
     if ! [ -d "${destobjdir}" ]; then
         die "Missing silo dir '${destobjdir}' (run 'git-silo init' at remote to create it)."
     fi
     objPathMap=$(lsSiloTracked "${pathspec[@]}")
-    silodir=$(getSiloObjectDir)
+    objdir=$(getSiloObjectDir)
     while read p; do
         [ "$p" = "" ] && continue
         [ -f "${destobjdir}/$p" ] && continue
-        if ! [ -f "$silodir/$p" ]; then
+        if ! [ -f "$objdir/$p" ]; then
             printSyncInfo "Warning: missing" "$p" "$objPathMap" >&2
             continue
         fi
         printSyncInfo "Pushing" "$p" "$objPathMap"
         if test $opt_dry_run; then
-            echo_debug "Would have run: cp" "$silodir/$p" "${destobjdir}/$p"
+            echo_debug "Would have run: cp" "$objdir/$p" "${destobjdir}/$p"
         else
             dir=$(dirname $p)
             mkdirWithParentsPermissions "${destobjdir}/$dir"
             echo_debug "cp ..."
             rm -f "${destobjdir}/$p-tmp"
-            cp "$silodir/$p" "${destobjdir}/$p-tmp"
+            cp "$objdir/$p" "${destobjdir}/$p-tmp"
             chmod a-w "${destobjdir}/$p-tmp"
             chmod g+r "${destobjdir}/$p-tmp"
             mv "${destobjdir}/$p-tmp" "${destobjdir}/$p"
@@ -1516,10 +1516,10 @@ tryAutoUnpackInDir() {
 }
 
 selectMissingSha1s() {
-    local silodir="$(getSiloObjectDir)"
+    local objdir="$(getSiloObjectDir)"
     while read p; do
         [ "${p}" = "" ] && continue
-        [ -f "${silodir}/$(sha1AsObjectPath ${p})" ] && continue
+        [ -f "${objdir}/$(sha1AsObjectPath ${p})" ] && continue
         printf '%s\n' "${p}"
     done
 }
@@ -1719,19 +1719,19 @@ cmd_gc() {
 }
 
 gcSiloObjects() {
-    local silodir current stored remove
+    local objdir current stored remove
     current=$(allCurrentSiloObjects)
     current=$(convertToObjectSubdirPaths <<< "$current")
 
-    silodir=$(getSiloObjectDir)
-    stored=$(lsDir "$silodir")
+    objdir=$(getSiloObjectDir)
+    stored=$(lsDir "$objdir")
 
     remove=$(setminus "$stored" "$current")
     if test $opt_dry_run; then
         sed -e 's/^/Would remove /' <<<"${remove}"
         return 0
     fi
-    ( cd "$silodir" && xargs rm -vf ) <<<"${remove}" |
+    ( cd "$objdir" && xargs rm -vf ) <<<"${remove}" |
         sed -e 's/^/Removing /'
     removeEmptyObjectDirs
 }
@@ -1744,7 +1744,7 @@ removeEmptyObjectDirs() {
 cmd_purge() {
     validateHaveSilo
 
-    local orphanSha1s silodir shouldRemoveObject sha1 path objpath
+    local orphanSha1s objdir shouldRemoveObject sha1 path objpath
     local msg_remove msg_placeholder
 
     [[ $(cfg_ismasterstore) == "false" ]] ||
@@ -1768,13 +1768,13 @@ cmd_purge() {
     fi
 
     orphanSha1s="$(orphanSha1sWithoutPaths "${arg_pathspec[@]}")"
-    silodir=$(getSiloObjectDir)
+    objdir=$(getSiloObjectDir)
 
     lsSiloTracked "${arg_pathspec[@]}" |
     while read -r sha1 path; do
         [ "${sha1}" = "" ] && continue
 
-        objpath="${silodir}/$(sha1AsObjectPath "${sha1}")"
+        objpath="${objdir}/$(sha1AsObjectPath "${sha1}")"
         if [ -f "${objpath}" ] && grep -q -F "${sha1}" <<<"${orphanSha1s}"; then
             shouldRemoveObject=t
             printf "%s %s %s\n" "${msg_remove}" "${sha1}" "${path}"
@@ -1954,21 +1954,21 @@ lsGitattributes() {
 }
 
 cmd_fsck() {
-    local silodir expected_sha1 actual_sha1
+    local objdir expected_sha1 actual_sha1
     validateHaveSilo
-    silodir="$(getSiloObjectDir)"
+    objdir="$(getSiloObjectDir)"
     local haveErr=
     while read -r p; do
         [ "$p" = "" ] && continue
         expected_sha1=${p/\//}
-        actual_sha1=$(computeSha1 <"$silodir/$p") ||
+        actual_sha1=$(computeSha1 <"$objdir/$p") ||
             die "Failed to compute sha1 for '$p'."
         if [ $expected_sha1 != $actual_sha1 ]; then
             printf 'Error: %s corrupted, has wrong sha1 %s\n' \
                 "$p" "$actual_sha1"
             haveErr=t
         fi
-    done <<<"$(lsSiloObjectsInDir "$silodir")"
+    done <<<"$(lsSiloObjectsInDir "$objdir")"
     test $haveErr && die "There have been errors (see above)."
     echo ok
 }
