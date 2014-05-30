@@ -1165,12 +1165,12 @@ cmd_fetch() {
     lsSiloTracked "${pathspec[@]}" |
         filterSiloAttr "${arg_filter[@]}" |
         uniqSha1s |
-        selectMissingSha1s |
+        selectMissingSha1sWithPacked |
         transport_${transport}_prefetch "${url}"
     lsSiloTracked "${pathspec[@]}" |
         filterSiloAttr "${arg_filter[@]}" |
         uniqSha1s |
-        selectMissingSha1s |
+        selectMissingSha1sWithPacked |
         sha1sAsObjectPaths |
         transport_${transport}_fetch "$url"
 }
@@ -1551,6 +1551,17 @@ selectMissingSha1s() {
     while read p; do
         [ "${p}" = "" ] && continue
         [ -f "${objdir}/$(sha1AsObjectPath ${p})" ] && continue
+        printf '%s\n' "${p}"
+    done
+}
+
+selectMissingSha1sWithPacked() {
+    local objdir="$(getSiloObjectDir)"
+    local packed="$(catPackLsts "$(getSiloDir)" | sed -e 's@/@@')"
+    while read p; do
+        [ "${p}" = "" ] && continue
+        [ -f "${objdir}/$(sha1AsObjectPath ${p})" ] && continue
+        findLineIn "${p}" "${packed}" && continue
         printf '%s\n' "${p}"
     done
 }
