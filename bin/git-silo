@@ -1170,6 +1170,7 @@ cmd_fetch() {
     lsSiloTracked "${pathspec[@]}" |
         filterSiloAttr "${arg_filter[@]}" |
         uniqSha1s |
+        selectMissingSha1s |
         sha1sAsObjectPaths |
         transport_${transport}_fetch "$url"
 }
@@ -1187,7 +1188,6 @@ transport_sshcat_fetch() {
     local areMissing=
     while read p; do
         [ "$p" = "" ] && continue
-        [ -f "$objdir/$p" ] && continue
         if ! findLineIn "$p" "$remoteObjs"; then
             areMissing=t
             printSyncInfo "Warning: missing" "$p" "$objPathMap" >&2
@@ -1424,7 +1424,6 @@ transport_localcp_fetch() {
         [ "$p" = "" ] && continue
         src="${remoteObjdir}/${p}"
         dest="${objdir}/${p}"
-        [ -f "${dest}" ] && continue
         if ! [ -e "${src}" ]; then
             areMissing=t
             printSyncInfo "Warning: missing" "$p" "$objPathMap" >&2
