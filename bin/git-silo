@@ -103,10 +103,10 @@ git-silo dedup <repo>...
 
   fsck              verify silo storage.
 
-  pack              pack loose silo objects into 7z archives.  Packed objects
-                    are not automatically unpacked by operations such as
-                    'checkout.'  Use 'unpack' to explicitly unpack objects.
-                    The size of the archives can be controlled with
+  pack              pack loose silo objects into 7z archives.  Use 'unpack' to
+                    explicitly unpack objects, or set 'silo.autounpack=true' to
+                    configure automatical unpacking of objects as needed.  The
+                    size of the archives can be controlled with
                     'silo.packSizeLimit' (see CONFIGURATION VARIABLES section).
 
     --all           pack all loose objects.  The default is to leave objects
