@@ -2361,10 +2361,26 @@ packtool_7z_extract() {
 
 packtool_7z_ls() {
     # Select rows that contain file listing (separated by lines that contain
-    # '---').  Drop listing separators.  isolate file names by removing start
-    # of line up to space (assuming file names w/o spaces).
+    # '------').  Drop listing separators.  isolate file names by removing
+    # start of line up to space (assuming file names w/o spaces).
+    #
+    # More than 4 dashes must be used for compatibiliy with 7zr 9.04, since it
+    # used 4 dashes to separate the header from the file info part.  The output
+    # of '7zr l' is structured as follows:
+    #
+    #     <header>
+    #     ---- (in version 9.04)
+    #     --   (in version 9.20)
+    #     <file-info>
+    #
+    #        Date      Time    Attr         Size   Compressed  Name
+    #     ------------------- ----- ------------ ------------  ------------------------
+    #     <listing>
+    #     ------------------- ----- ------------ ------------  ------------------------
+    #                        <totals>
+    #
     ${bin_7z} l "$1" |
-    sed -n -e '/---/,/---/p' |
+    sed -n -e '/------/,/------/p' |
     sed -e '1d' -e '$d' |
     sed -e 's/^.* //'
 }
