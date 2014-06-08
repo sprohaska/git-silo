@@ -42,4 +42,11 @@ test_expect_success "git repo should continue functioning when it is moved" '
     ( cd repomv2 && git show HEAD:b ) | egrep -q "^[0-9a-f]{40}"
 '
 
+test_expect_success "git should report error if filter is missing" '(
+    cd repomv2 &&
+    echo "exit 1" >>.git/silo/bin/clean &&
+    touch c &&
+    ! git add c
+)'
+
 test_done

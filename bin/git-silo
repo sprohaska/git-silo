@@ -660,6 +660,7 @@ configFilters() {
     # The leading space is necessary to avoid msys path mangling.
     git config filter.silo.clean ' "$(git rev-parse --git-dir)/silo/bin/clean" %f'
     git config filter.silo.smudge ' "$(git rev-parse --git-dir)/silo/bin/smudge" %f'
+    git config filter.silo.required true
 }
 
 isBareRepo() {
