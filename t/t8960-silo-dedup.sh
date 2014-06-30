@@ -10,7 +10,7 @@ assertLinkCount() {
     local path=$1
     local expected=$2
     if ! test $(linkCount "$path") -eq $expected; then
-        echo "Wrong link count $path (expected $expected)."
+        echo "Wrong link count $path (expected: $expected; actual: $(linkCount "$path"))."
         return 1
     fi
 }
@@ -50,6 +50,38 @@ test_expect_success LOCALHOST \
         git silo checkout .
     ) &&
     assertLinkCount repo2/a 4
+'
+
+test_expect_success "'dedup' should not link if x-bit differs" '
+    setup_repo repo3 && (
+        cd repo3 &&
+        echo b >b &&
+        chmod u+x b &&
+        echo c >c &&
+        git silo add -- b c &&
+        git commit -m "add b c"
+    ) &&
+    setup_repo repo4 && (
+        cd repo4 &&
+        echo b >b &&
+        echo c >c &&
+        chmod u+x c &&
+        git silo add -- b c &&
+        git commit -m "add b c"
+    ) &&
+    assertLinkCount repo3/b 2 &&
+    assertLinkCount repo4/b 2 &&
+    assertLinkCount repo3/c 2 &&
+    assertLinkCount repo4/c 2 &&
+    git silo dedup repo4 repo3 2>err && (
+        cd repo3 &&
+        git silo checkout --link -- b c
+    ) &&
+    assertLinkCount repo3/b 2 &&
+    assertLinkCount repo4/b 2 &&
+    assertLinkCount repo3/c 2 &&
+    assertLinkCount repo4/c 2 &&
+    grep -i warning err
 '
 
 test_done

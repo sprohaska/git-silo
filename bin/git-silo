@@ -2483,6 +2483,12 @@ cmd_dedup() {
         if [ "$(inodeNumber "${src}")" = "$(inodeNumber "${dest}")" ]; then
             continue
         fi
+        if ( [ -x "${src}" ] && ! [ -x "${dest}" ] ) ||
+            ( ! [ -x "${src}" ] && [ -x "${dest}" ] ) ; then
+            printf >&2 "Warning: skipping link '%s' from '%s' to '%s', because x-bits differ.\n" \
+                "$key" "$prev_dir" "$dir" >&2
+            continue
+        fi
         tmp=$dest-$$
         ln "$src" "$tmp" &&
         mv -f "$tmp" "$dest" || {
