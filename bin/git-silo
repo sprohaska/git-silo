@@ -1257,8 +1257,8 @@ transport_sshcat_push() {
         xbit=
         [ -x "${objdir}/${p}" ] && xbit=yes
         cat "${objdir}/${p}" | exec_ssh "${url_host}" \
-            bash -c "$(genprgRemoteCatReceive | escapeSSHRemoteArg)" \
-            git-silo-receive "'${url_dir}'" "'${p}'" "'${xbit}'" ||
+            bash -c "$(genprgRemoteCatReceive "${url_dir}" "${p}" "${xbit}" | escapeSSHRemoteArg)" \
+            git-silo-receive ||
                 die "Failed to copy '$p'."
     done
 }
@@ -1268,14 +1268,16 @@ genprgRemoteCatReceive() {
     genprgFunctions \
         computeSha1 \
         die
-    genprgRemoteCatReceiveImpl
+    genprgRemoteCatReceiveImpl "$@"
 }
 
 genprgRemoteCatReceiveImpl() {
-    cat <<\EOF
+    cat <<EOF
 objdir="$1/objects"
 obj="$2"
 opt_xbit="$3"
+EOF
+    cat <<\EOF
 objsha1="${obj//\//}"
 
 if ! test -d "${objdir}"; then
@@ -1353,8 +1355,8 @@ transport_sshcat_prefetch() {
     read url_host url_dir <<< "$(parseUrl "$url")"
 
     exec_ssh "${url_host}" \
-        bash -c "$(genprgRemoteAutoUnpackInDir | escapeSSHRemoteArg)" \
-        git-silo-prefetch "'${url_dir}'" ||
+        bash -c "$(genprgRemoteAutoUnpackInDir "${url_dir}" | escapeSSHRemoteArg)" \
+        git-silo-prefetch ||
             die "Failed to autounpack at remote."
 }
 
@@ -1381,11 +1383,11 @@ genprgRemoteAutoUnpackInDir() {
         sha1AsObjectPath \
         slashedOnce \
         unpackObjects
-    genprgRemoteAutoUnpackInDirImpl
+    genprgRemoteAutoUnpackInDirImpl "$@"
 }
 
 genprgRemoteAutoUnpackInDirImpl() {
-    cat <<\EOF
+    cat <<EOF
 tryAutoUnpackInDir "$1"
 EOF
 }
