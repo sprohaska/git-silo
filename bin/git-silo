@@ -1021,7 +1021,7 @@ xbitAllowsLink() {
 }
 
 gitExpectsXbit() {
-    [ $(git ls-files --stage "${1}" | cut -b 4) == "7" ]
+    [ "$(git ls-files --stage -- "${1}" | cut -b 4)" == "7" ]
 }
 
 linkCount() {
