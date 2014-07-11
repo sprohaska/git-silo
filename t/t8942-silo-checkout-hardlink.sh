@@ -1,8 +1,8 @@
 #!/bin/bash
 
-test_description='
-Test that "silo checkout" uses hard links as expected.
-'
+test_description="
+Test that silo uses hard links as expected.
+"
 
 . ./lib-silo.sh
 
@@ -25,19 +25,19 @@ test_expect_success "git checkout should use hard links." '
     ! test -w a
 '
 
-test_expect_success "git checkout --copy should not use hard links." '
+test_expect_success "silo checkout --copy should not use hard links." '
     git silo checkout --copy a &&
     test $(linkCount a) -eq 1 &&
     test -w a
 '
 
-test_expect_success "git checkout --link should replace copy with hard links." '
+test_expect_success "silo checkout --link should replace copy with hard links." '
     git silo checkout --link a &&
     test $(linkCount a) -eq 2 &&
     ! test -w a
 '
 
-test_expect_success "git checkout --link should link to object store." '
+test_expect_success "silo checkout --link should link to object store." '
     git silo checkout --copy a &&
     ln a a2nd &&
     test $(linkCount a2nd) -eq 2 &&
@@ -47,7 +47,7 @@ test_expect_success "git checkout --link should link to object store." '
 '
 
 test_expect_success \
-"git checkout --link should fix wrong write permissions in silo store." '
+"silo checkout --link should fix wrong write permissions in silo store." '
     chmod u+w .git/silo/objects/*/* &&
     test -w a &&
     rm a &&
@@ -56,7 +56,7 @@ test_expect_success \
 '
 
 test_expect_success \
-"git checkout should not use hardlink if xbit mismatch." '
+"silo checkout should not use hardlink if xbit mismatch." '
     chmod u+x .git/silo/objects/*/* &&
     rm a &&
     git silo checkout a &&
