@@ -56,6 +56,14 @@ test_expect_success \
 '
 
 test_expect_success \
+"git checkout should fix wrong write permissions in silo store." '
+    chmod u+w .git/silo/objects/*/* &&
+    rm a &&
+    git checkout -- a &&
+    ! test -w .git/silo/objects/*/*
+'
+
+test_expect_success \
 "silo checkout should not use hardlink if xbit mismatch." '
     chmod u+x .git/silo/objects/*/* &&
     rm a &&

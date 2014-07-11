@@ -806,6 +806,10 @@ cmd_filter_smudge() {
     objdir="$(getSiloObjectDir)"
     objfile="${objdir}/${sha1:0:2}/${sha1:2}"
     if [ -e "${objfile}" ]; then
+        # Try to set to read-only to contain Windows madness that requires to
+        # change files to writable when deleting a hardlink.
+        [ -w "${objfile}" ] &&
+            chmod a-w "${objfile}" || true
         local contentSizeLimit=$(cfg_contentSizeLimit)
         if [ $contentSizeLimit -eq 0 ] ||
             [ $(fileSize "${objfile}") -lt $contentSizeLimit ]; then
