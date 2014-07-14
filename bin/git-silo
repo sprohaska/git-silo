@@ -922,6 +922,7 @@ cmd_checkout() {
     local sha1 path objdir objfile
     validateHaveSilo
     objdir=$(getSiloObjectDir)
+    fixPermissions
     tryAutoUnpackForCheckout
     local haveErr=
     while read -r sha1 path; do
@@ -974,6 +975,18 @@ cmd_checkout() {
     done <<< "$(lsNeedsCheckout)"
     test $haveErr && die "There have been problems during silo checkout (see above)."
     true
+}
+
+# Try to set stored objects that are writable to read-only to contain Windows
+# hard link madness.
+fixPermissions() {
+    while read -r sha1 path; do
+        [ -z "$path" ] && continue
+        local objfile="${objdir}/$(sha1AsObjectPath ${sha1})"
+        if [ -w "${objfile}" ]; then
+            chmod a-w "${objfile}" || true
+        fi
+    done <<< "$(lsSiloTracked "${arg_pathspec[@]}")"
 }
 
 tryAutoUnpackForCheckout() {

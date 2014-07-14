@@ -56,6 +56,22 @@ test_expect_success \
 '
 
 test_expect_success \
+"silo checkout --link should fix wrong write permissions even if file exists." '
+    chmod u+w .git/silo/objects/*/* &&
+    test -w a &&
+    git silo checkout --link a &&
+    ! test -w a
+'
+
+test_expect_success \
+"silo checkout should fix wrong write permissions even if file exists." '
+    chmod u+w .git/silo/objects/*/* &&
+    test -w a &&
+    git silo checkout a &&
+    ! test -w a
+'
+
+test_expect_success \
 "git checkout should fix wrong write permissions in silo store." '
     chmod u+w .git/silo/objects/*/* &&
     rm a &&
