@@ -20,6 +20,25 @@ case $(uname) in
         ;;
 esac
 
+case $(uname) in
+SunOS)
+    sort() {
+        gsort "$@"
+    }
+    sed() {
+        gsed "$@"
+    }
+    find() {
+        gfind "$@"
+    }
+    grep() {
+        /usr/xpg4/bin/grep "$@"
+    }
+    egrep() {
+        /usr/xpg4/bin/egrep "$@"
+    }
+esac
+
 setup_user() {
     git config --global user.name "A U Thor" &&
     git config --global user.email "author@example.com"

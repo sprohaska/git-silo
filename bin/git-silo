@@ -237,6 +237,7 @@ EOF
 
 main() {
     argparse "$@"
+    setup_arch
     validateGitVersion
 
     cmd_$arg_cmd
@@ -691,6 +692,7 @@ genprgFilterClean() {
         mkdirWithParentsPermissions \
         isSharedDir \
         cfg_silo_add \
+        setup_arch \
         die
     genprgCallMain
 }
@@ -706,6 +708,7 @@ genprgFilterSmudge() {
         getSiloObjectDir \
         getSiloDir \
         fileSize \
+        setup_arch \
         die
     genprgCallMain
 }
@@ -727,6 +730,7 @@ genprgMainClean() {
 main() {
     (( $# == 1 )) || die "Require one argument with path to file."
     arg_file="${1}"
+    setup_arch
     cmd_filter_clean
 }
 
@@ -738,6 +742,7 @@ genprgMainSmudge() {
 main() {
     (( $# == 1 )) || die "Require one argument with path to file."
     arg_file="${1}"
+    setup_arch
     cmd_filter_smudge
 }
 
@@ -1088,9 +1093,9 @@ getWorkingCopyEndl() {
     local cfg_autocrlf
     if cfg_autocrlf=$(git config core.autocrlf) &&
             [ $cfg_autocrlf = 'true' ]; then
-        echo '\r\n'
+        printf '\\r\\n'
     else
-        echo '\n'
+        printf '\\n'
     fi
 }
 
@@ -1222,7 +1227,7 @@ transport_sshcat_fetch() {
         rm -f "${tmp}"
         exec_ssh </dev/null "${url_host}" "cat '${remoteObjdir}/${p}'" >"${tmp}" ||
             die "Failed to copy '$p'."
-        exec_ssh </dev/null "${url_host}" "[ -x '${remoteObjdir}/${p}' ]" &&
+        exec_ssh </dev/null "${url_host}" "test -x '${remoteObjdir}/${p}'" &&
             chmod a+x "${tmp}"
         chmod a-w "${tmp}"
         psha1=${p//\//}
@@ -1274,28 +1279,41 @@ transport_sshcat_push() {
         fi
         xbit=
         [ -x "${objdir}/${p}" ] && xbit=yes
-        cat "${objdir}/${p}" | exec_ssh "${url_host}" \
-            bash -c "$(genprgRemoteCatReceive "${url_dir}" "${p}" "${xbit}" | escapeSSHRemoteArg)" \
-            git-silo-receive ||
+
+        local prgpath
+        prgpath=$(genprgRemoteCatReceive |
+            exec_ssh "${url_host}" bash -c \
+                "'p=\$(mktemp /tmp/git-silo-receive.XXXXXX); cat >\$p; echo \$p'")
+        cat "${objdir}/${p}" |
+            exec_ssh "${url_host}" bash ${prgpath} "'${url_dir}'" "'${p}'" "'${xbit}'" ||
                 die "Failed to copy '$p'."
     done
 }
 
 genprgRemoteCatReceive() {
     genprgShbang
+    genprgSelfDestroy
     genprgFunctions \
         computeSha1 \
+        setup_arch \
         die
-    genprgRemoteCatReceiveImpl "$@"
+    genprgRemoteCatReceiveImpl
+}
+
+genprgSelfDestroy() {
+    cat <<\EOF
+trap "rm -f '$0'" EXIT
+EOF
 }
 
 genprgRemoteCatReceiveImpl() {
-    cat <<EOF
+    cat <<\EOF
 objdir="$1/objects"
 obj="$2"
 opt_xbit="$3"
-EOF
-    cat <<\EOF
+
+setup_arch
+
 objsha1="${obj//\//}"
 
 if ! test -d "${objdir}"; then
@@ -1371,17 +1389,20 @@ transport_sshcat_prefetch() {
     local url="$1"
     local url_host url_dir
     read url_host url_dir <<< "$(parseUrl "$url")"
-
-    exec_ssh "${url_host}" \
-        bash -c "$(genprgRemoteAutoUnpackInDir "${url_dir}" | escapeSSHRemoteArg)" \
-        git-silo-prefetch ||
-            die "Failed to autounpack at remote."
+    local prgpath
+    prgpath=$(genprgRemoteAutoUnpackInDir |
+        exec_ssh "${url_host}" bash -c \
+            "'p=\$(mktemp /tmp/git-silo-prefetch.XXXXXX); cat >\$p; echo \$p'")
+    exec_ssh "${url_host}" bash ${prgpath} "'${url_dir}'" ||
+        die "Failed to autounpack at remote."
 }
 
 genprgRemoteAutoUnpackInDir() {
     genprgShbang
+    genprgSelfDestroy
     genprgFunctions \
         die \
+        setup_arch \
         findBin7z \
         forEachGroup \
         getSiloDir \
@@ -1401,11 +1422,12 @@ genprgRemoteAutoUnpackInDir() {
         sha1AsObjectPath \
         slashedOnce \
         unpackObjects
-    genprgRemoteAutoUnpackInDirImpl "$@"
+    genprgRemoteAutoUnpackInDirImpl
 }
 
 genprgRemoteAutoUnpackInDirImpl() {
-    cat <<EOF
+    cat <<\EOF
+setup_arch
 tryAutoUnpackInDir "$1"
 EOF
 }
@@ -1421,18 +1443,6 @@ exec_ssh() {
         ;;
     esac
     "$ssh" $defaultargs "$@"
-}
-
-# Escape arg so that it can be passed to ssh as a remote arg:
-#
-#   ssh bash -c "$(genprg | escapeSSHRemoteArg)"
-#
-# The entire arg is wrapped in single quotes.  Internal single quotes are
-# escaped as '"'"'.
-escapeSSHRemoteArg() {
-    echo "'"
-    sed -e "s/'/'\"'\"'/g"
-    echo "'"
 }
 
 transport_localcp_fetch() {
@@ -1794,8 +1804,11 @@ gcSiloObjects() {
         sed -e 's/^/Would remove /' <<<"${remove}"
         return 0
     fi
-    ( cd "$objdir" && xargs rm -vf ) <<<"${remove}" |
-        sed -e 's/^/Removing /'
+    while IFS= read -r p; do
+        [ -n "${p}" ] || continue
+        printf 'Removing %s' "${p}"
+        rm -f "${objdir}/${p}"
+    done <<<"${remove}"
     removeEmptyObjectDirs
 }
 
@@ -2519,7 +2532,7 @@ cmd_dedup() {
 }
 
 inodeNumber() {
-    ls -i "$1" | cut -d ' ' -f 1
+    ls -i "$1" | sed -e 's/^ *//' | cut -d ' ' -f 1
 }
 
 validateHaveSiloAt() {
@@ -2581,6 +2594,28 @@ echo_debug() {
     if test $opt_debug; then
         echo >&2 "$@"
     fi
+}
+
+setup_arch() {
+    case $(uname) in
+    SunOS)
+        sort() {
+            gsort "$@"
+        }
+        sed() {
+            gsed "$@"
+        }
+        find() {
+            gfind "$@"
+        }
+        grep() {
+            /usr/xpg4/bin/grep "$@"
+        }
+        egrep() {
+            /usr/xpg4/bin/egrep "$@"
+        }
+        ;;
+    esac
 }
 
 main "$@"
