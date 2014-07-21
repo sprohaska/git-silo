@@ -2609,10 +2609,10 @@ setup_arch() {
             gfind "$@"
         }
         grep() {
-            /usr/xpg4/bin/grep "$@"
+            ggrep "$@"
         }
         egrep() {
-            /usr/xpg4/bin/egrep "$@"
+            gegrep "$@"
         }
         ;;
     esac
