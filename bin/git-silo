@@ -232,6 +232,9 @@ via ssh.  With 'sshcat', one ssh connection is used per file.
     ('fetch' from local filesystem).  Since Linux 3.6, the restrictions can be
     controlled with '/proc/sys/fs/protected_hardlinks' (see proc(5)).
 
+  - On SunOS, the following GNU tools are expected: ggrep, gegrep, gsed, gfind,
+    gsort, gxargs.
+
 EOF
 }
 
@@ -2603,26 +2606,42 @@ echo_debug() {
 setup_arch() {
     case $(uname) in
     SunOS)
-        sort() {
-            gsort "$@"
-        }
-        sed() {
-            gsed "$@"
-        }
-        find() {
-            gfind "$@"
-        }
-        grep() {
-            ggrep "$@"
-        }
-        egrep() {
-            gegrep "$@"
-        }
-        xargs() {
-            gxargs "$@"
-        }
+        setup_arch_SunOS
         ;;
     esac
+}
+
+setup_arch_SunOS() {
+    local required="gsort gsed gfind ggrep gegrep gxargs"
+    local err=
+    for c in ${required}; do
+        if ! type >/dev/null 2>&1 $c; then
+            printf >&2 "Missing '%s'.\n" "${c}"
+            err=t
+        fi
+    done
+    if test $err; then
+        die "Missing GNU tools (see above)."
+    fi
+
+    sort() {
+        gsort "$@"
+    }
+    sed() {
+        gsed "$@"
+    }
+    find() {
+        gfind "$@"
+    }
+    grep() {
+        ggrep "$@"
+    }
+    egrep() {
+        gegrep "$@"
+    }
+    xargs() {
+        gxargs "$@"
+    }
 }
 
 main "$@"
