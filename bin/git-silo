@@ -2383,7 +2383,8 @@ packtool_7z_add() {
 
 packtool_7z_extract() {
     local pack="$1"
-    local parallel ncpu
+    local parallel=
+    local ncpu
     ncpu="$(nCPU)"
     if (( ${ncpu} > 1 )); then
         echo "Using up to ${ncpu} processes for unpacking."
@@ -2428,6 +2429,9 @@ nCPU() {
         ;;
     Darwin*)
         n="$(sysctl hw.ncpu | cut -d ' ' -f 2 || true)"
+        ;;
+    SunOS*)
+        n="$(kstat -m cpu_info | grep -w core_id | uniq | wc -l | sed -e 's/^ *//' || true)"
         ;;
     esac
     if ! grep -q "^[1-9][0-9]*\$" <<<"${n}"; then
@@ -2613,6 +2617,9 @@ setup_arch() {
         }
         egrep() {
             gegrep "$@"
+        }
+        xargs() {
+            gxargs "$@"
         }
         ;;
     esac
