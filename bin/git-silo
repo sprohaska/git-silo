@@ -232,6 +232,17 @@ via ssh.  With 'sshcat', one ssh connection is used per file.
     ('fetch' from local filesystem).  Since Linux 3.6, the restrictions can be
     controlled with '/proc/sys/fs/protected_hardlinks' (see proc(5)).
 
+  - Readonly permissions on Windows do not work as expected for hard links.  A
+    file unexpectedly becomes writable when a hard link to it is deleted,
+    because deleting hard links to read-only files is impossible.  See
+
+        http://msdn.microsoft.com/en-us/library/windows/desktop/aa365006(v=vs.85).aspx
+
+    As a workaround, git-silo verifies permissions whenever it needs a stored
+    object and fixes them the read-only if needed.  It is yet unclear whether
+    this is good enough in practice or whether there are conditions when a hard
+    link is writable and git modifies a stored object that should be immutable.
+
   - On SunOS, the following GNU tools are expected: ggrep, gegrep, gsed, gfind,
     gsort, gxargs.
 
