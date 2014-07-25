@@ -1298,8 +1298,10 @@ transport_sshcat_push() {
         prgpath=$(genprgRemoteCatReceive |
             exec_ssh "${url_host}" bash -c \
                 "'p=\$(mktemp /tmp/git-silo-receive.XXXXXX); cat >\$p; echo \$p'")
+        # Use source to protect prgpath from msysgit path mangling.
         cat "${objdir}/${p}" |
-            exec_ssh "${url_host}" bash ${prgpath} "'${url_dir}'" "'${p}'" "'${xbit}'" ||
+            exec_ssh "${url_host}" bash -c "\"source '${prgpath}'\"" \
+                git-silo-receive "'${url_dir}'" "'${p}'" "'${xbit}'" ||
                 die "Failed to copy '$p'."
     done
 }
@@ -1407,7 +1409,9 @@ transport_sshcat_prefetch() {
     prgpath=$(genprgRemoteAutoUnpackInDir |
         exec_ssh "${url_host}" bash -c \
             "'p=\$(mktemp /tmp/git-silo-prefetch.XXXXXX); cat >\$p; echo \$p'")
-    exec_ssh "${url_host}" bash ${prgpath} "'${url_dir}'" ||
+    # Use source to protect prgpath from msysgit path mangling.
+    exec_ssh "${url_host}" bash -c "\"source '${prgpath}'\"" \
+        git-silo-prefetch "'${url_dir}'" ||
         die "Failed to autounpack at remote."
 }
 
