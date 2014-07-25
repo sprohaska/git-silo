@@ -707,6 +707,7 @@ genprgFilterClean() {
         isSharedDir \
         cfg_silo_add \
         setup_arch \
+        setup_arch_SunOS \
         die
     genprgCallMain
 }
@@ -723,6 +724,7 @@ genprgFilterSmudge() {
         getSiloDir \
         fileSize \
         setup_arch \
+        setup_arch_SunOS \
         die
     genprgCallMain
 }
@@ -1312,6 +1314,7 @@ genprgRemoteCatReceive() {
     genprgFunctions \
         computeSha1 \
         setup_arch \
+        setup_arch_SunOS \
         die
     genprgRemoteCatReceiveImpl
 }
@@ -1421,6 +1424,7 @@ genprgRemoteAutoUnpackInDir() {
     genprgFunctions \
         die \
         setup_arch \
+        setup_arch_SunOS \
         findBin7z \
         forEachGroup \
         getSiloDir \
