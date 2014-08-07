@@ -1296,15 +1296,15 @@ transport_sshcat_push() {
         xbit=
         [ -x "${objdir}/${p}" ] && xbit=yes
 
-        # Write all paths to program and use source to protect all paths from
-        # msysgit path mangling.
+        # Write paths to program to protect them from msysgit path mangling.
+        # Pass prgpath together with bash in a single string to protect prgpath
+        # from mangling.
         local prgpath
         prgpath=$(genprgRemoteCatReceive "${url_dir}" "${p}" "${xbit}" |
             exec_ssh "${url_host}" bash -c \
                 "'p=\$(mktemp /tmp/git-silo-receive.XXXXXX); cat >\$p; echo \$p'")
         cat "${objdir}/${p}" |
-            exec_ssh "${url_host}" bash -c "\"source '${prgpath}'\"" \
-                git-silo-receive ||
+            exec_ssh "${url_host}" "bash '${prgpath}'" ||
                 die "Failed to copy '$p'."
     done
 }
@@ -1413,13 +1413,13 @@ transport_sshcat_prefetch() {
     local url_host url_dir
     read url_host url_dir <<< "$(parseUrl "$url")"
     local prgpath
-    # Write paths to program and use source to protect them from msysgit path
+    # Write url to program to protect it from msysgit path mangling.  Pass
+    # prgpath together with bash in a single string to protect prgpath from
     # mangling.
     prgpath=$(genprgRemoteAutoUnpackInDir "${url_dir}" |
         exec_ssh "${url_host}" bash -c \
             "'p=\$(mktemp /tmp/git-silo-prefetch.XXXXXX); cat >\$p; echo \$p'")
-    exec_ssh "${url_host}" bash -c "\"source '${prgpath}'\"" \
-        git-silo-prefetch ||
+    exec_ssh "${url_host}" "bash '${prgpath}'" ||
         die "Failed to autounpack at remote."
 }
 
