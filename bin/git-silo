@@ -1296,14 +1296,15 @@ transport_sshcat_push() {
         xbit=
         [ -x "${objdir}/${p}" ] && xbit=yes
 
+        # Write all paths to program and use source to protect all paths from
+        # msysgit path mangling.
         local prgpath
-        prgpath=$(genprgRemoteCatReceive |
+        prgpath=$(genprgRemoteCatReceive "${url_dir}" "${p}" "${xbit}" |
             exec_ssh "${url_host}" bash -c \
                 "'p=\$(mktemp /tmp/git-silo-receive.XXXXXX); cat >\$p; echo \$p'")
-        # Use source to protect prgpath from msysgit path mangling.
         cat "${objdir}/${p}" |
             exec_ssh "${url_host}" bash -c "\"source '${prgpath}'\"" \
-                git-silo-receive "'${url_dir}'" "'${p}'" "'${xbit}'" ||
+                git-silo-receive ||
                 die "Failed to copy '$p'."
     done
 }
@@ -1316,7 +1317,7 @@ genprgRemoteCatReceive() {
         setup_arch \
         setup_arch_SunOS \
         die
-    genprgRemoteCatReceiveImpl
+    genprgRemoteCatReceiveImpl "$@"
 }
 
 genprgSelfDestroy() {
@@ -1326,11 +1327,14 @@ EOF
 }
 
 genprgRemoteCatReceiveImpl() {
-    cat <<\EOF
-objdir="$1/objects"
-obj="$2"
-opt_xbit="$3"
+    cat <<EOF
+objdir='$1/objects'
+obj='$2'
+opt_xbit='$3'
 
+EOF
+
+    cat <<\EOF
 setup_arch
 
 objsha1="${obj//\//}"
@@ -1409,12 +1413,13 @@ transport_sshcat_prefetch() {
     local url_host url_dir
     read url_host url_dir <<< "$(parseUrl "$url")"
     local prgpath
-    prgpath=$(genprgRemoteAutoUnpackInDir |
+    # Write paths to program and use source to protect them from msysgit path
+    # mangling.
+    prgpath=$(genprgRemoteAutoUnpackInDir "${url_dir}" |
         exec_ssh "${url_host}" bash -c \
             "'p=\$(mktemp /tmp/git-silo-prefetch.XXXXXX); cat >\$p; echo \$p'")
-    # Use source to protect prgpath from msysgit path mangling.
     exec_ssh "${url_host}" bash -c "\"source '${prgpath}'\"" \
-        git-silo-prefetch "'${url_dir}'" ||
+        git-silo-prefetch ||
         die "Failed to autounpack at remote."
 }
 
@@ -1444,13 +1449,13 @@ genprgRemoteAutoUnpackInDir() {
         sha1AsObjectPath \
         slashedOnce \
         unpackObjects
-    genprgRemoteAutoUnpackInDirImpl
+    genprgRemoteAutoUnpackInDirImpl "$@"
 }
 
 genprgRemoteAutoUnpackInDirImpl() {
-    cat <<\EOF
+    cat <<EOF
 setup_arch
-tryAutoUnpackInDir "$1"
+tryAutoUnpackInDir '$1'
 EOF
 }
 
