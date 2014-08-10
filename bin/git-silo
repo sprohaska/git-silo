@@ -1219,8 +1219,11 @@ cmd_fetch() {
     url=$(getRemoteSiloUrl)
     transport=$(getTransport "$url")
     echo "Fetching silo from $url"
+    # selectMissingSha1Paths before filterSiloAttr to optimize for case that
+    # nothing is missing.
     todo="$(
         lsSiloTracked "${pathspec[@]}" |
+        selectMissingSha1Paths |
         filterSiloAttr "${arg_filter[@]}" |
         uniqSha1s |
         selectMissingSha1sWithPacked
@@ -1617,6 +1620,15 @@ tryAutoUnpackInDir() {
             done
         fi
     )
+}
+
+selectMissingSha1Paths() {
+    local objdir="$(getSiloObjectDir)"
+    while read -r sha1 path; do
+        [ "${sha1}" = "" ] && continue
+        [ -f "${objdir}/$(sha1AsObjectPath ${sha1})" ] && continue
+        printf '%s %s\n' "${sha1}" "${path}"
+    done
 }
 
 selectMissingSha1s() {
