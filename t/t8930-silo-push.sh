@@ -51,6 +51,22 @@ test_expect_success "'silo push' should support named remote." '
     assertRepoHasSiloObject repo1 first
 '
 
+test_expect_success "'silo push' should push to relative path." '
+    rm -f repo1/.git/silo/objects/*/* && (
+        cd namedorigin &&
+        git silo push ../repo1 -- .
+    ) &&
+    assertRepoHasSiloObject repo1 first
+'
+
+test_expect_success "'silo push' should push to absolute path." '
+    rm -f repo1/.git/silo/objects/*/* && (
+        cd namedorigin &&
+        git silo push "$(cd ../repo1 && pwd)" -- .
+    ) &&
+    assertRepoHasSiloObject repo1 first
+'
+
 test_expect_success "cleanup" '
     rm -f repo1/.git/silo/objects/*/*
 '
@@ -89,6 +105,14 @@ test_expect_success "'silo push' (${transport}) should push." "
     setup_add_file ${clone} first && (
         cd ${clone} &&
         git silo push -- .
+    ) &&
+    assertRepoHasSiloObject repo1 first
+"
+
+test_expect_success "'silo push' (${transport}) should push." "
+    rm -f repo1/.git/silo/objects/*/* && (
+        cd ${clone} &&
+        git silo push 'ssh://localhost$(cd repo1 && pwd)' -- .
     ) &&
     assertRepoHasSiloObject repo1 first
 "

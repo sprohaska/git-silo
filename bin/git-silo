@@ -13,11 +13,11 @@ git-silo status [<path>...]
 git-silo push \
     [--dry-run] [-v|--verbose] \
     [--include=<label>] [--exclude=<pattern>] [--all] \
-    [<remote>] [--] [<path>... | config remote.<remote>.silopush]
+    [<url>|<remote>] [--] [<path>... | config remote.<remote>.silopush]
 git-silo fetch \
     [--dry-run] [-v|--verbose] \
     [--include=<label>] [--exclude=<pattern>] [--all] \
-    [<remote>] [--] [<path>... | config remote.<remote>.silofetch]
+    [<url>|<remote>] [--] [<path>... | config remote.<remote>.silofetch]
 git-silo gc [--gitattributes] [-f|--force] [-n <number>] [--dry-run] [--no-tags]
 git-silo purge [-f|--force] [--dry-run] [--] <path>...
 git-silo pack [--all] [--keep-tip|--keep|--prune]
@@ -42,7 +42,7 @@ git-silo dedup <repo>...
 
   push              push silo files for current HEAD.
 
-    <remote>        git remote to push to (default: origin).
+    <url>|<remote>  url or git remote to push to (default: origin).
 
     <path>...       push will be limited to the given paths.  Default paths can
                     be configured with 'remote.<remote>.silopush'.  See PATHS
@@ -50,7 +50,7 @@ git-silo dedup <repo>...
 
   fetch             fetch silo files for current HEAD.
 
-    <remote>        git remote to fetch from (default: origin).
+    <url>|<remote>  url or git remote to fetch from (default: origin).
 
     <path>...       fetch will be limited to the given paths.  Default paths
                     can be configured with 'remote.<remote>.silofetch'.  See
@@ -1159,11 +1159,13 @@ cmd_push() {
     test "$arg_remote" && remote="$arg_remote"
     if test "$arg_pathspec"; then
         pathspec=( "${arg_pathspec[@]}" )
-    else
+    elif isRemoteName "${remote}"; then
         IFS=$'\n'
         pathspec=( $(git config --get-all remote."${remote}".silopush) ) ||
             pathspec=()
         unset IFS
+    else
+        pathspec=()
     fi
     (( ${#pathspec[@]} )) || dieMissingPath "push"
     validateHaveSilo
@@ -1190,11 +1192,13 @@ cmd_fetch() {
     test "$arg_remote" && remote="$arg_remote"
     if test "$arg_pathspec"; then
         pathspec=( "${arg_pathspec[@]}" )
-    else
+    elif isRemoteName "${remote}"; then
         IFS=$'\n'
         pathspec=( $(git config --get-all remote."${remote}".silofetch) ) ||
             pathspec=()
         unset IFS
+    else
+        pathspec=()
     fi
     (( ${#pathspec[@]} )) || dieMissingPath "fetch"
     validateHaveSilo
@@ -1771,8 +1775,12 @@ getRemoteSiloUrl() {
     local url reurl
     local remote=origin
     test "$arg_remote" && remote="$arg_remote"
-    url=$(git config remote."${remote}".url) ||
-        die "Failed to get URL of remote '${remote}'.  If you meant '${remote}' to be a path, separate it by a double dash: '-- ${remote} ...'."
+    if isRemoteName "${remote}"; then
+        url=$(git config remote."${remote}".url) ||
+            die "Failed to get URL of remote '${remote}'.  If you meant '${remote}' to be a path, separate it by a double dash: '-- ${remote} ...'."
+    else
+        url="${remote}"
+    fi
     if grep -q '^ssh://' <<< "$url"; then
         url=$(sed -e 's@ssh://@@' -e 's@/@:/@' -e 's@//@/@' \
             -e 's@:/~@:~@' <<< "$url")
@@ -1782,6 +1790,10 @@ getRemoteSiloUrl() {
     reurl=$(resolveGitDir "$url") ||
         die "Failed to resolve git-dir for '$url'."
     printf '%s/silo\n' "$reurl"
+}
+
+isRemoteName() {
+    grep -q '^[a-zA-Z0-9-]*$' <<<"$1"
 }
 
 resolveGitDir() {

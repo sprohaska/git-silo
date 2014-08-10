@@ -74,6 +74,22 @@ test_expect_success \
     assertRepoHasSiloObject namedorigin first
 '
 
+test_expect_success "'silo fetch' should fetch from relative path." '
+    rm -f namedorigin/.git/silo/objects/*/* && (
+        cd namedorigin &&
+        git silo fetch ../repo1 -- .
+    ) &&
+    assertRepoHasSiloObject namedorigin first
+'
+
+test_expect_success "'silo fetch' should fetch from absolute path." '
+    rm -f namedorigin/.git/silo/objects/*/* && (
+        cd namedorigin &&
+        git silo fetch "$(cd ../repo1 && pwd)" -- .
+    ) &&
+    assertRepoHasSiloObject namedorigin first
+'
+
 ssh_tests_with_transport() {
 local transport="$1"
 
@@ -94,6 +110,15 @@ test_expect_success \
     ) &&
     assertRepoHasSiloObject sshclone first &&
     assertRepoHasSiloObject sshclone second
+'
+
+test_expect_success \
+"'silo fetch' (${transport}) should fetch from url." '
+    rm -f sshclone/.git/silo/objects/*/* && (
+        cd sshclone &&
+        git silo fetch "ssh://localhost$(cd ../repo1 && pwd)" -- .
+    ) &&
+    assertRepoHasSiloObject sshclone first
 '
 
 test_expect_success "cleanup" '
