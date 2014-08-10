@@ -1143,15 +1143,21 @@ cmd_status() {
     done <<< "$(lsSiloTracked "${arg_pathspec[@]}")"
 }
 
+# Use git cat-file in batch mode to avoid spawning many git processes.
 lsSiloTracked() {
-    local perm ty gitsha1 size path sha1
+    local perm ty gitsha1 size path sha1 emptyline
+    lsTree "$@" |
     while read perm ty gitsha1 size path; do
-        [ "$path" = "" ] && continue
-        if [ "$path" != "" ] && [ "$size" = 41 ] && \
-            sha1=$(getSha1ForGitObject $gitsha1); then
-            printf '%s %s\n' "$sha1" "$path"
-        fi
-    done <<< "$(lsTree "$@")"
+        [ -z "$path" ] && continue
+        [ "$size" = 41 ] || continue
+        printf '%s %s\n' "${gitsha1}" "${path}"
+    done |
+    git cat-file --batch='%(rest)' |
+    while IFS= read -r path && IFS= read -r sha1 && read -r emptyline; do
+        [ -z "${path}" ] && continue
+        [ -z "${sha1}" ] && continue
+        printf '%s %s\n' "${sha1}" "${path}"
+    done
 }
 
 lsTree() {
