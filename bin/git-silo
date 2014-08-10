@@ -13,11 +13,11 @@ git-silo status [<path>...]
 git-silo push \
     [--dry-run] [-v|--verbose] \
     [--include=<label>] [--exclude=<pattern>] [--all] \
-    [<url>|<remote>] [--] [<path>... | config remote.<remote>.silopush]
+    [<url>|<remote> [<commit>]] [--] [<path>... | config remote.<remote>.silopush]
 git-silo fetch \
     [--dry-run] [-v|--verbose] \
     [--include=<label>] [--exclude=<pattern>] [--all] \
-    [<url>|<remote>] [--] [<path>... | config remote.<remote>.silofetch]
+    [<url>|<remote> [<commit>]] [--] [<path>... | config remote.<remote>.silofetch]
 git-silo gc [--gitattributes] [-f|--force] [-n <number>] [--dry-run] [--no-tags]
 git-silo purge [-f|--force] [--dry-run] [--] <path>...
 git-silo pack [--all] [--keep-tip|--keep|--prune]
@@ -40,17 +40,21 @@ git-silo dedup <repo>...
 
   status            print status of files stored in silo.
 
-  push              push silo files for current HEAD.
+  push              push silo files.
 
     <url>|<remote>  url or git remote to push to (default: origin).
+
+    <commit>        specific commit for which to push silo files (default: HEAD).
 
     <path>...       push will be limited to the given paths.  Default paths can
                     be configured with 'remote.<remote>.silopush'.  See PATHS
                     section.
 
-  fetch             fetch silo files for current HEAD.
+  fetch             fetch silo files.
 
     <url>|<remote>  url or git remote to fetch from (default: origin).
+
+    <commit>        specific commit for which to fetch silo files (default: HEAD).
 
     <path>...       fetch will be limited to the given paths.  Default paths
                     can be configured with 'remote.<remote>.silofetch'.  See
@@ -573,6 +577,7 @@ argparse_sync() {
     opt_verbose=
     arg_pathspec=
     arg_remote=
+    arg_commit=
     arg_filter=()
     while [ $# -ge 1 ]; do
         case "$1" in
@@ -613,6 +618,10 @@ argparse_sync() {
         *)
             if ! test "$arg_remote"; then
                 arg_remote="$1"
+                shift
+            elif ! test "${arg_commit}"; then
+                arg_commit=$(git rev-parse --verify "$1^{commit}") ||
+                    die "Invalid commit '$1'."
                 shift
             else
                 arg_pathspec=( "$@" )
@@ -1146,7 +1155,8 @@ lsSiloTracked() {
 }
 
 lsTree() {
-    git ls-tree -rl HEAD -- "$@"
+    local commit=${arg_commit:-HEAD}
+    git ls-tree -rl "${commit}" -- "$@"
 }
 
 getSha1ForGitObject() {

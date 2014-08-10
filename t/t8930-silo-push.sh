@@ -82,6 +82,16 @@ test_expect_success \
     ! grep -q first log
 '
 
+test_expect_success "'silo push' should push specific revision." '
+    rm -f repo1/.git/silo/objects/*/* && (
+        cd namedorigin &&
+        git checkout HEAD~1 &&
+        git silo push org master -- . &&
+        git checkout master
+    ) &&
+    assertRepoHasSiloObject repo1 first
+'
+
 if ! test_have_prereq LOCALHOST; then
     skip_all='skipping tests that require ssh to localhost.'
     test_done

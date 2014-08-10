@@ -90,6 +90,16 @@ test_expect_success "'silo fetch' should fetch from absolute path." '
     assertRepoHasSiloObject namedorigin first
 '
 
+test_expect_success "'silo fetch' should fetch specific revision." '
+    rm -f namedorigin/.git/silo/objects/*/* && (
+        cd namedorigin &&
+        git checkout HEAD~2 &&
+        git silo fetch org master -- . &&
+        git checkout master
+    ) &&
+    assertRepoHasSiloObject namedorigin first
+'
+
 ssh_tests_with_transport() {
 local transport="$1"
 
