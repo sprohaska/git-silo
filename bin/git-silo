@@ -1166,6 +1166,7 @@ lsTree() {
 }
 
 cmd_push() {
+    local todo
     local pathspec
     local remote=origin
     test "$arg_remote" && remote="$arg_remote"
@@ -1186,19 +1187,19 @@ cmd_push() {
     transport=$(getTransport "$url")
     echo "Pushing silo to $url"
     transport_${transport}_push_init "${url}"
-    lsSiloTracked "${pathspec[@]}" |
+    todo="$(
+        lsSiloTracked "${pathspec[@]}" |
         filterSiloAttr "${arg_filter[@]}" |
-        uniqSha1s |
-        transport_${transport}_push_selectSha1sToUnpack "$url" |
+        uniqSha1s
+    )"
+    transport_${transport}_push_selectSha1sToUnpack "$url" <<<"${todo}" |
         tryAutoUnpackInDir '.'
-    lsSiloTracked "${pathspec[@]}" |
-        filterSiloAttr "${arg_filter[@]}" |
-        uniqSha1s |
-        sha1sAsObjectPaths |
+    sha1sAsObjectPaths <<<"${todo}" |
         transport_${transport}_push "$url"
 }
 
 cmd_fetch() {
+    local todo
     local pathspec
     local remote=origin
     test "$arg_remote" && remote="$arg_remote"
@@ -1218,16 +1219,14 @@ cmd_fetch() {
     url=$(getRemoteSiloUrl)
     transport=$(getTransport "$url")
     echo "Fetching silo from $url"
-    lsSiloTracked "${pathspec[@]}" |
+    todo="$(
+        lsSiloTracked "${pathspec[@]}" |
         filterSiloAttr "${arg_filter[@]}" |
         uniqSha1s |
-        selectMissingSha1sWithPacked |
-        transport_${transport}_prefetch "${url}"
-    lsSiloTracked "${pathspec[@]}" |
-        filterSiloAttr "${arg_filter[@]}" |
-        uniqSha1s |
-        selectMissingSha1sWithPacked |
-        sha1sAsObjectPaths |
+        selectMissingSha1sWithPacked
+    )"
+    transport_${transport}_prefetch "${url}" <<<"${todo}"
+    sha1sAsObjectPaths <<<"${todo}" |
         transport_${transport}_fetch "$url"
 }
 
