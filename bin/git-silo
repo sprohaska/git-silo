@@ -1165,10 +1165,6 @@ lsTree() {
     git ls-tree -rl "${commit}" -- "$@"
 }
 
-getSha1ForGitObject() {
-    git show $1 | egrep '^[0-9a-f]{40}$'
-}
-
 cmd_push() {
     local pathspec
     local remote=origin
@@ -2021,11 +2017,11 @@ siloObjectsWithRevListArgs() {
     ( grep 'blob 41$' || true ) |  # Avoid pipefail without match.
     cut -d ' ' -f 1 |
     sort -u |
-    while read blob; do
-        [ -z "$blob" ] && continue
-        if sha1=$(getSha1ForGitObject $blob); then
-            printf '%s\n' "$sha1"
-        fi
+    git cat-file --batch |
+    while IFS= read -r meta && IFS= read -r sha1 && read -r emptyline; do
+        [ -z "${meta}" ] && continue
+        [ -z "${sha1}" ] && continue
+        printf '%s\n' "${sha1}"
     done
 }
 
