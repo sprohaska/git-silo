@@ -10,7 +10,7 @@ version.
 cat >git <<EOFTXT
 #!/bin/bash
 
-echo git version 1.7.0
+echo git version 1.8.0
 EOFTXT
 chmod a+x git
 
