@@ -2704,3 +2704,5 @@ setup_arch_SunOS() {
 }
 
 main "$@"
+
+# vim: sw=4
