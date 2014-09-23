@@ -12,6 +12,7 @@ test_expect_success "setup user" '
 
 test_expect_success "setup repo" "
     git init &&
+    git config core.autocrlf false &&
     touch .gitignore &&
     git add .gitignore &&
     git commit -m 'initial commit' &&
