@@ -16,8 +16,10 @@ test_expect_success "setup" '
 # 'git mv' moves the sha1 but does not update the attributes.
 test_expect_success "move file without silo" '(
     cd repo &&
+    git config core.autocrlf false &&
     git mv first second &&
     git commit -m "move file" &&
+    rm second &&
     git reset --hard
 )'
 
