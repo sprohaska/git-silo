@@ -103,7 +103,7 @@ test_expect_success "'silo fetch' should fetch specific revision." '
 ssh_tests_with_transport() {
 local transport="$1"
 
-test_expect_success "setup sshclone (${transport})" "
+test_expect_success LOCALHOST "setup sshclone (${transport})" "
     rm -rf sshclone &&
     setup_clone_ssh repo1 sshclone && (
         cd sshclone &&
@@ -112,7 +112,7 @@ test_expect_success "setup sshclone (${transport})" "
     )
 "
 
-test_expect_success \
+test_expect_success LOCALHOST \
 "'silo fetch' (${transport}) should fetch" '
     (
         cd sshclone &&
@@ -122,7 +122,7 @@ test_expect_success \
     assertRepoHasSiloObject sshclone second
 '
 
-test_expect_success \
+test_expect_success LOCALHOST \
 "'silo fetch' (${transport}) should fetch from url." '
     rm -f sshclone/.git/silo/objects/*/* && (
         cd sshclone &&
@@ -131,30 +131,30 @@ test_expect_success \
     assertRepoHasSiloObject sshclone first
 '
 
-test_expect_success "cleanup" '
+test_expect_success LOCALHOST "cleanup" '
     rm -f sshclone/.git/silo/objects/*/*
 '
 
-test_expect_success \
+test_expect_success LOCALHOST \
 "'silo fetch' (${transport}) should mention files that are fetched." '
     ( cd sshclone && git silo fetch -- . ) >log &&
     grep -q first log
 '
 
-test_expect_success \
+test_expect_success LOCALHOST \
 "'silo fetch' (${transport}) should not mention files that are already up-to-date." '
     ( cd sshclone && git silo fetch -- . ) >log &&
     ! grep -q first log
 '
 
-test_expect_success \
+test_expect_success LOCALHOST \
 "'silo fetch' (${transport}) should report error with invalid remote path." '(
     cd sshclone &&
     git remote add invalid ssh://localhost/invalid/path &&
     ! git silo fetch invalid -- .
 )'
 
-test_expect_success \
+test_expect_success LOCALHOST \
 "'silo fetch' (${transport}) should ignore missing remote silo/objects." '
     mv repo1/.git/silo/objects repo1/.git/silo/objects-tmp && (
         cd sshclone &&
@@ -165,14 +165,9 @@ test_expect_success \
 
 }  # ssh_tests_with_transport
 
-if ! test_have_prereq LOCALHOST; then
-    skip_all='skipping tests that require ssh to localhost.'
-    test_done
-fi
-
 ssh_tests_with_transport sshcat
 
-test_expect_success "'silo fetch' (sshcat) should detect corrupted object." '
+test_expect_success LOCALHOST "'silo fetch' (sshcat) should detect corrupted object." '
     setup_repo corrupted &&
     setup_add_file corrupted first && (
         cd corrupted &&

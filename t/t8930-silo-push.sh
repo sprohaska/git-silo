@@ -92,21 +92,16 @@ test_expect_success "'silo push' should push specific revision." '
     assertRepoHasSiloObject repo1 first
 '
 
-if ! test_have_prereq LOCALHOST; then
-    skip_all='skipping tests that require ssh to localhost.'
-    test_done
-fi
-
 ssh_tests_with_transport() {
 local transport="$1"
 local clone="${transport}clone"
 
-test_expect_success "cleanup" '
+test_expect_success LOCALHOST "cleanup" '
     rm -f repo1/.git/silo/objects/*/*
     rmdir repo1/.git/silo/objects/*
 '
 
-test_expect_success "'silo push' (${transport}) should push." "
+test_expect_success LOCALHOST "'silo push' (${transport}) should push." "
     setup_clone_ssh repo1 ${clone} && (
         cd ${clone} &&
         git config silo.sshtransport ${transport} &&
@@ -119,7 +114,7 @@ test_expect_success "'silo push' (${transport}) should push." "
     assertRepoHasSiloObject repo1 first
 "
 
-test_expect_success "'silo push' (${transport}) should push." "
+test_expect_success LOCALHOST "'silo push' (${transport}) should push." "
     rm -f repo1/.git/silo/objects/*/* && (
         cd ${clone} &&
         git silo push 'ssh://localhost$(cd repo1 && pwd)' -- .
@@ -127,16 +122,16 @@ test_expect_success "'silo push' (${transport}) should push." "
     assertRepoHasSiloObject repo1 first
 "
 
-test_expect_success "cleanup" '
+test_expect_success LOCALHOST "cleanup" '
     rm -f repo1/.git/silo/objects/*/*
 '
 
-test_expect_success "'silo push' (${transport}) should mention files that are pushed." "
+test_expect_success LOCALHOST "'silo push' (${transport}) should mention files that are pushed." "
     ( cd ${clone} && git silo push -- . ) >log &&
     grep -q first log
 "
 
-test_expect_success \
+test_expect_success LOCALHOST \
 "'silo push' (${transport}) should not mention files that are already up-to-date." "
     ( cd ${clone} && git silo push -- . ) >log &&
     ! grep -q first log
@@ -146,12 +141,12 @@ test_expect_success \
 
 ssh_tests_with_transport sshcat
 
-test_expect_success "cleanup" '
+test_expect_success LOCALHOST "cleanup" '
     rm -f repo1/.git/silo/objects/*/*
     rmdir repo1/.git/silo/objects/*
 '
 
-test_expect_success "'silo push' (sshcat) should detect corrupted files." '
+test_expect_success LOCALHOST "'silo push' (sshcat) should detect corrupted files." '
     setup_clone_ssh repo1 corrupted && (
         cd corrupted &&
         git config silo.sshtransport sshcat &&
