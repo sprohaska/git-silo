@@ -52,7 +52,7 @@ test_expect_success LOCALHOST \
     assertLinkCount repo2/a 4
 '
 
-test_expect_success "'dedup' should not link if x-bit differs" '
+test_expect_success UNIX "'dedup' should not link if x-bit differs" '
     setup_repo repo3 && (
         cd repo3 &&
         echo b >b &&

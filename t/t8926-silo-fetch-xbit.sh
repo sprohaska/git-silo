@@ -6,6 +6,11 @@ Test that "silo fetch" keeps x-bit.
 
 . ./lib-silo.sh
 
+if ! test_have_prereq UNIX; then
+    skip_all='skipping xbit tests on msysgit; xbit not supported.'
+    test_done
+fi
+
 ssh localhost true 2>/dev/null && test_set_prereq LOCALHOST
 
 test_expect_success "setup user" '

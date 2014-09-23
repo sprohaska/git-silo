@@ -79,7 +79,7 @@ test_expect_success \
     ! test -w .git/silo/objects/*/*
 '
 
-test_expect_success \
+test_expect_success UNIX \
 "silo checkout should not use hardlink if xbit mismatch." '
     chmod u+x .git/silo/objects/*/* &&
     rm a &&
