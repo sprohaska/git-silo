@@ -6,6 +6,11 @@ Test automatic unpack
 
 . ./lib-silo.sh
 
+if ! type 7zr >/dev/null 2>&1; then
+    skip_all='Skipping tests, because 7zr is not available.'
+    test_done
+fi
+
 ssh localhost true 2>/dev/null && test_set_prereq LOCALHOST
 
 cat >7zr <<\EOF

@@ -7,6 +7,11 @@ available in packs at remote.
 
 . ./lib-silo.sh
 
+if ! type 7zr >/dev/null 2>&1; then
+    skip_all='Skipping tests, because 7zr is not available.'
+    test_done
+fi
+
 ssh localhost true 2>/dev/null && test_set_prereq LOCALHOST
 
 test_expect_success "setup orig" '
