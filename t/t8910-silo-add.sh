@@ -35,4 +35,12 @@ test_expect_success "'git silo checkout' should handle paths with spaces." '
     test -e "a a"
 '
 
+test_expect_success \
+"'add' updates committed files." '
+    git silo checkout --copy "a a" &&
+    echo a >>"a a" &&
+    git silo add -- "a a" &&
+    ( git status --porcelain -- "a a" | grep ^M )
+'
+
 test_done

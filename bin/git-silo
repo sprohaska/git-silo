@@ -995,7 +995,16 @@ cmd_add() {
         else
             printf >&2 "Warning: missing silo gitattributes 'filter=silo -text', ignoring %s\n" "${path}"
         fi
-    done <<< "$(lsUntrackedFiles)"
+    done <<< "$(
+        lsUntrackedFiles;
+        lsTrackedFilesForAdd
+    )"
+}
+
+# List committed files if HEAD is valid.
+lsTrackedFilesForAdd() {
+    git rev-parse -q --verify HEAD >/dev/null || return 0
+    lsSiloTracked "${arg_pathspec[@]}" | cut -d ' ' -f 2-
 }
 
 cmd_checkout() {
