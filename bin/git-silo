@@ -7,7 +7,7 @@ opt_debug=
 usage() {
     cat <<\EOF
 git-silo init
-git-silo add [--] [<file>...]
+git-silo add [--attr|--no-attr] [--] [<file>...]
 git-silo checkout [--copy] [--link] -- [<file>...]
 git-silo status [<path>...]
 git-silo push \
@@ -31,6 +31,14 @@ git-silo dedup <repo>...
   add               add untracked files for silo storage.  Creates hard link or
                     copy depending on value of 'silo.add'.  See CONFIGURATION
                     VARIABLES section.
+
+  --attr|--no-attr  (default: no)
+                    controls whether filter=silo gitattributes entries are
+                    added if needed.  With --no-attr, gitattributes will not be
+                    modified; files will only be added if the expected
+                    attributes are already set (see WILDCARD SETUP section).
+                    With --attr, the expected gitattributes will be
+                    automatically added if necessary.
 
   checkout          replace placeholders with full content.
 
@@ -498,7 +506,36 @@ argparse_filter() {
 }
 
 argparse_add() {
-    argparse_pathspec "$@"
+    arg_pathspec=
+    opt_attr=t
+    while [ $# -ge 1 ]; do
+        case "$1" in
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        --attr)
+            opt_attr=t
+            shift
+            ;;
+        --no-attr)
+            opt_attr=
+            shift
+            ;;
+        --)
+            shift
+            [ $# -gt 0 ] && arg_pathspec=( "$@" )
+            return 0
+            ;;
+        -*)
+            die "Unknown option $1"
+            ;;
+        *)
+            arg_pathspec=( "$@" )
+            return 0
+            ;;
+        esac
+    done
 }
 
 argparse_checkout() {
@@ -948,10 +985,16 @@ isSha1PlaceholderFile() {
 
 cmd_add() {
     validateHaveSilo
-    while read p; do
-        [ "$p" = "" ] && continue
-        updateGitattributes "$p"
-        git add "$p"
+    while read path; do
+        [ "${path}" = "" ] && continue
+        if test ${opt_attr}; then
+            updateGitattributes "${path}"
+            git add "${path}"
+        elif hasGitSiloAttributes "${path}"; then
+            git add "${path}"
+        else
+            printf >&2 "Warning: missing silo gitattributes 'filter=silo -text', ignoring %s\n" "${path}"
+        fi
     done <<< "$(lsUntrackedFiles)"
 }
 
