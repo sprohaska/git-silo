@@ -58,7 +58,7 @@ test_expect_success UNIX "'dedup' should not link if x-bit differs" '
         echo b >b &&
         chmod u+x b &&
         echo c >c &&
-        git silo add -- b c &&
+        git silo add --attr -- b c &&
         git commit -m "add b c"
     ) &&
     setup_repo repo4 && (
@@ -66,7 +66,7 @@ test_expect_success UNIX "'dedup' should not link if x-bit differs" '
         echo b >b &&
         echo c >c &&
         chmod u+x c &&
-        git silo add -- b c &&
+        git silo add --attr -- b c &&
         git commit -m "add b c"
     ) &&
     assertLinkCount repo3/b 2 &&

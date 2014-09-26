@@ -17,16 +17,16 @@ test_expect_success \
     cd input &&
     git config core.autocrlf input &&
     touch a &&
-    git silo add a 2>err &&
-    ! grep -q warning err
+    git silo add --attr a 2>err &&
+    ! grep -q -i warning err
 )'
 
 test_expect_success "git silo add should use CRLF for core.autocrlf=true." '(
     cd crlf &&
     git config core.autocrlf true &&
     touch a &&
-    git silo add a 2>err &&
-    ! grep -q warning err
+    git silo add --attr a 2>err &&
+    ! grep -q -i warning err
 )'
 
 test_done

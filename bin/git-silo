@@ -32,7 +32,7 @@ git-silo dedup <repo>...
                     copy depending on value of 'silo.add'.  See CONFIGURATION
                     VARIABLES section.
 
-  --attr|--no-attr  (default: no)
+  --attr|--no-attr  (default: --attr)
                     controls whether filter=silo gitattributes entries are
                     added if needed.  With --no-attr, gitattributes will not be
                     modified; files will only be added if the expected
@@ -507,7 +507,7 @@ argparse_filter() {
 
 argparse_add() {
     arg_pathspec=
-    opt_attr=t
+    opt_attr=
     while [ $# -ge 1 ]; do
         case "$1" in
         -h|--help)

@@ -21,7 +21,7 @@ test_expect_success \
     ( openssl sha1 a | cut -d " " -f 2 >a.sha1 ) &&
     echo b >b &&
     ( openssl sha1 b | cut -d " " -f 2 >b.sha1 ) &&
-    git silo add a b &&
+    git silo add --attr a b &&
     git commit -m "Add a b"
 '
 

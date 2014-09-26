@@ -34,10 +34,10 @@ test_expect_success "setup add files" "
 
 test_expect_success "'git silo add' should add objects to silo store." "
     git checkout -b tmp &&
-    git silo add c &&
+    git silo add --attr c &&
     git commit -m 'Add c' &&
     git checkout master &&
-    git silo add a b &&
+    git silo add --attr a b &&
     git commit -m 'Add a, b' &&
     ( cd .git/silo/objects && find * -type f | sed -e 's@/@@' ) >actual &&
     test_cmp abc.sha1 actual
@@ -93,7 +93,7 @@ test_expect_success \
 "'git silo gc -n 1' should keep only latest objects." "
     git tag -d witha &&
     echo a >a &&
-    git silo add a &&
+    git silo add --attr a &&
     git commit -m 'Add a' &&
     git rm a &&
     git commit -m 'Remove a' &&
@@ -105,7 +105,7 @@ test_expect_success \
 test_expect_success \
 "'git silo' without '--gitattributes' should leave .gitattributes alone." '
     echo a >a &&
-    git silo add a &&
+    git silo add --attr a &&
     git commit -m "Add a" &&
     git rm a &&
     git commit -m "Remove a" &&
@@ -144,9 +144,9 @@ test_expect_success 'gc should handle subdir with spaces' '
     mkdir "s d" &&
     echo a >"s d/a" &&
     echo b >"s d/b" &&
-    git silo add "s d/a" &&
+    git silo add --attr "s d/a" &&
     cp "s d/.gitattributes" expected &&
-    git silo add "s d/b" &&
+    git silo add --attr "s d/b" &&
     git commit -m "add a b" &&
     git rm "s d/b" &&
     git commit -m "rm b" &&

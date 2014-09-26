@@ -26,10 +26,10 @@ test_expect_success 'setup' '
     git clone repo1 repo2 && (
         cd repo1 &&
         cp ../a a &&
-        git silo add a &&
+        git silo add --attr a &&
         git commit -m "Add a" &&
         cp ../b b &&
-        git silo add b &&
+        git silo add --attr b &&
         git commit -m "Add b"
     ) && (
         cd repo2 &&

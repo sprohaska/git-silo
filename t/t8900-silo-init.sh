@@ -31,7 +31,7 @@ test_expect_success UNIX \
 "'git silo init' should preserve read-only file permissions when run twice." '(
     cd shared &&
     touch a &&
-    git silo add a &&
+    git silo add --attr a &&
     ( ls -ld .git/silo/objects/*/* | grep -q "^-r--r--" ) &&
     git silo init &&
     ( ls -ld .git/silo/objects/*/* | grep -q "^-r--r--" )

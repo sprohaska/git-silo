@@ -22,7 +22,7 @@ test_expect_success "git add should use hard link per default" '
     setup_repo default && (
         cd default &&
         echo a >a &&
-        git silo add a &&
+        git silo add --attr a &&
         assertLinkCount a 2 &&
         ! test -w a
     )
@@ -33,7 +33,7 @@ test_expect_success "git add should use hard link when silo.add=link" '
         cd link &&
         git config silo.add link &&
         echo a >a &&
-        git silo add a &&
+        git silo add --attr a &&
         assertLinkCount a 2 &&
         ! test -w a
     )
@@ -44,7 +44,7 @@ test_expect_success "git add should use copy when silo.add=copy" '
         cd copy &&
         git config silo.add copy &&
         echo a >a &&
-        git silo add a &&
+        git silo add --attr a &&
         assertLinkCount a 1 &&
         test -w a
     )
@@ -56,7 +56,7 @@ test_expect_success \
         cd invalid &&
         git config silo.add invalid-option-value &&
         echo a >a &&
-        git silo add a 2>err &&
+        git silo add --attr a 2>err &&
         grep -q -i warning err &&
         assertLinkCount a 2 &&
         ! test -w a

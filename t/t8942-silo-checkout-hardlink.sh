@@ -17,7 +17,7 @@ test_expect_success "git checkout should use hard links." '
     git commit -m "initial commit" &&
     git silo init
     echo a >a &&
-    git silo add a &&
+    git silo add --attr a &&
     git commit -m "Add a" &&
     rm a &&
     git silo checkout a &&

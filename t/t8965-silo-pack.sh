@@ -74,7 +74,7 @@ test_expect_success 'setup files (1..5)' '(
     git branch empty &&
     for i in $(seq 1 5); do
         printf "%${i}024d" $i >$i &&
-        git silo add $i ||
+        git silo add --attr $i ||
         error "failed to setup file $i."
     done &&
     git commit -m "add files" &&
@@ -181,7 +181,7 @@ test_expect_success 'setup files (6..10)' '(
     git checkout master &&
     for i in $(seq 6 10); do
         printf "%${i}024d" $i >$i &&
-        git silo add $i ||
+        git silo add --attr $i ||
         error "failed to setup file $i."
     done &&
     git commit -m "add files" &&
@@ -200,7 +200,7 @@ test_expect_success 'setup files (11..99)' '(
     git checkout master &&
     for i in $(seq 11 99); do
         printf "%3${i}0d" $i >$i &&
-        git silo add $i ||
+        git silo add --attr $i ||
         error "failed to setup file $i."
     done &&
     git commit -m "add files" &&

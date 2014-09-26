@@ -19,8 +19,9 @@ test_expect_success \
 "'git silo add' should succeed when path to git silo contains spaces." '
     export PATH=.:$PATH &&
     touch a &&
-    git silo add a 2>stderr &&
-    ! grep "error:" stderr
+    git silo add --attr a 2>stderr &&
+    ! grep -i "warning:" stderr &&
+    ! grep -i "error:" stderr
 '
 
 test_done

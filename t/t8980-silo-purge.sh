@@ -97,7 +97,7 @@ test_expect_success \
 "'git silo purge -f -- <path>' should replace content with placeholder but keep aliased object." '(
     cdNewRepo &&
     cp b b2 &&
-    git silo add b2 &&
+    git silo add --attr b2 &&
     git commit -m "Add b2" &&
     git silo purge -f -- b &&
     test_cmp ../b.sha1 b &&

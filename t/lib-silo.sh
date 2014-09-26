@@ -70,7 +70,7 @@ setup_add_file() {
     (
         cd $repo &&
         cp ../$file $file &&
-        git silo add $file &&
+        git silo add --attr $file &&
         git commit -m "Add $file"
     )
 }

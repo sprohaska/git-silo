@@ -18,7 +18,7 @@ test_expect_success UNIX \
     git commit -m "initial commit" &&
     git silo init &&
     echo a >"a a" &&
-    git silo add "a a" &&
+    git silo add --attr "a a" &&
     isSharedDir .git/silo/objects/*
 '
 

@@ -21,7 +21,7 @@ test_expect_success 'silo fsck should handle empty repo' '
 
 test_expect_success 'setup (add files)' '
     echo a >a &&
-    git silo add a &&
+    git silo add --attr a &&
     git commit -m "Add a"
 '
 

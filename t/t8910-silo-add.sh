@@ -17,7 +17,7 @@ test_expect_success "'git silo add' should handle paths with spaces." '
     git commit -m "initial commit" &&
     git silo init &&
     echo a >"a a" &&
-    git silo add "a a" &&
+    git silo add --attr "a a" &&
     git commit -m "Add a a" &&
     ( test $(blobSize "a a") -eq 41 || ( echo "Wrong blob size." && false ) )
 '

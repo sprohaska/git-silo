@@ -18,10 +18,10 @@ test_expect_success 'setup' '
         cd repo2 &&
         git silo init &&
         cp ../a a &&
-        git silo add a &&
+        git silo add --attr a &&
         git commit -m "Add a" &&
         cp ../b b &&
-        git silo add b &&
+        git silo add --attr b &&
         git commit -m "Add b"
     )
 '
@@ -55,7 +55,7 @@ test_expect_success 'remote.<remote>.silopush pathspec should limit git push' '
         cd namedremote &&
         git silo init &&
         echo "c" >c &&
-        git silo add c &&
+        git silo add --attr c &&
         git commit -m "Add c" &&
         git remote rename origin org &&
         git config remote.org.silopush a &&
