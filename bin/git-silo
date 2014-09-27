@@ -2,7 +2,7 @@
 
 set -o nounset -o errexit -o pipefail -o noglob
 
-opt_debug=
+opt_debug=${GIT_SILO_DEBUG:-}
 
 usage() {
     cat <<\EOF
