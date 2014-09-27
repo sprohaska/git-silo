@@ -11,6 +11,10 @@ else
     exit 1
 fi
 
+if ( git update-index -h 2>&1 || true ) | grep -q assume-unchanged-once; then
+    test_set_prereq ASSUME_UNCHANGED_ONCE
+fi
+
 case $(uname) in
     MINGW*)
         test_set_prereq WINDOWS

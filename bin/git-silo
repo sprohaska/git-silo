@@ -29,8 +29,9 @@ git-silo dedup <repo>...
                     silo.  See also WILDCARD SETUP section.
 
   add               add untracked files for silo storage.  Creates hard link or
-                    copy depending on value of 'silo.add'.  See CONFIGURATION
-                    VARIABLES section.
+                    copy depending on value of 'silo.add'.  Tries to avoid
+                    computing sha1s if 'silo.alternate' is set.  See
+                    CONFIGURATION VARIABLES section.
 
   --attr|--no-attr  (default: --attr)
                     controls whether filter=silo gitattributes entries are
@@ -198,6 +199,11 @@ might be useful if you want to keep the file open in another application, like
 Word, and use 'git-silo add' repeatedly.  When creating a hard link, the file
 permissions are changed to read-only, which might confuse applications like
 Word.
+
+silo.alternate (multiple allowed): Paths to git repos that contain git silos.
+If hard links can be used and 'git update-index --assume-unchanged-once' is
+available, 'git add' tries to locate inodes in the alternate silos to avoid
+computing sha1s.
 
 silo.contentSizeLimit (default '10M'): If the content for a file that is stored
 in silo is smaller than the limit or the limit is 0, the content will be used
@@ -985,13 +991,17 @@ isSha1PlaceholderFile() {
 
 cmd_add() {
     validateHaveSilo
+
+    local shouldLink=
+    [ "$(cfg_silo_add)" = "link" ] && shouldLink=t
+
     while read path; do
-        [ "${path}" = "" ] && continue
+        [ -z "${path}" ] && continue
         if test ${opt_attr}; then
             updateGitattributes "${path}"
-            git add "${path}"
+            addFile "${path}"
         elif hasGitSiloAttributes "${path}"; then
-            git add "${path}"
+            addFile "${path}"
         else
             printf >&2 "Warning: missing silo gitattributes 'filter=silo -text', ignoring %s\n" "${path}"
         fi
@@ -999,6 +1009,82 @@ cmd_add() {
         lsUntrackedFiles;
         lsTrackedFilesForAdd
     )"
+}
+
+# Try to avoid computing a sha1 by locating the inode in one of the alternates
+# and injecting a match directly into the index.  Try this optimization only if
+# a hardlink can be used.
+addFile() {
+    local path="$1"
+    local sha1
+
+    if test ${cfg_git_has_assume_unchanged_once} &&
+        test ${shouldLink} &&
+        [ $(linkCount "$path") -gt 1 ] &&
+        sha1=$(findSha1InAlternates "${path}"); then
+
+        echo_debug "Found silo.alternate ${sha1} for '${path}'."
+        linkFileInSilo ${sha1} "${path}"
+        local blob
+        local mode
+        blob=$(printf '%s\n' "${sha1}" | git hash-object --stdin -w)
+        if [ -x "${path}" ]; then
+            mode=100755
+        else
+            mode=100644
+        fi
+        git update-index --add --cacheinfo "${mode},${blob},${path}"
+        git update-index --assume-unchanged-once "${path}"
+        return 0
+    else
+        echo_debug "Did not find silo.alternate sha1 for '${path}'."
+    fi
+
+    git add "${path}"
+}
+
+linkFileInSilo() {
+    local sha1="$1"
+    local file="$2"
+    local objdir subdir objfile
+    objdir="$(getSiloObjectDir)"
+    subdir="$objdir/${sha1:0:2}"
+    objfile="$subdir/${sha1:2}"
+    [ -e "$objfile" ] && return
+    mkdirWithParentsPermissions "$subdir"
+    ln "${file}" "${objfile}" >/dev/null 2>&1 || cp "${file}" "${objfile}"
+    chmod a-w "${objfile}"
+}
+
+findSha1InAlternates() {
+    local path="$1"
+    while IFS= read -r alt; do
+        [ -z "${alt}" ] && continue
+        alt=$(resolveAlternateSiloDir "${alt}") || continue
+        findSha1ForInode "${alt}" "${path}" && return 0
+    done <<<"$(git config --get-all silo.alternate || true)"
+    return 1
+}
+
+resolveAlternateSiloDir() {
+    (
+        cd "$(git rev-parse --show-toplevel)" &&
+        cd "$1" &&
+        getSiloObjectDir
+    )
+}
+
+# Find prints at most one match: ./xx/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+# The sha1 is char 3-4,6-43.
+findSha1ForInode() {
+    local alt="$1"
+    local path="$2"
+    local inum
+    inum=$(inodeNumber "${path}")
+    (
+        cd "${alt}" &&
+        find . -type f -inum ${inum}
+    ) | cut -b 3-4,6-43 | egrep '^[0-9a-f]{40}$'
 }
 
 # List committed files if HEAD is valid.
