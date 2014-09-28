@@ -201,9 +201,10 @@ permissions are changed to read-only, which might confuse applications like
 Word.
 
 silo.alternate (multiple allowed): Paths to git repos that contain git silos.
-If hard links can be used and 'git update-index --assume-unchanged-once' is
-available, 'git add' tries to locate inodes in the alternate silos to avoid
-computing sha1s.
+'git silo fetch' tries to link files to an alternate silo instead of fetching
+via ssh.  If hard links can be used and 'git update-index
+--assume-unchanged-once' is available, 'git silo add' tries to locate inodes in
+the alternate silos to avoid computing sha1s.
 
 silo.contentSizeLimit (default '10M'): If the content for a file that is stored
 in silo is smaller than the limit or the limit is 0, the content will be used
@@ -1393,6 +1394,7 @@ transport_sshcat_fetch() {
     objdir=$(getSiloObjectDir)
     remoteObjs=$(lsRemoteObjects "$url_host" "${url_dir}")
     remoteObjdir="${url_dir}/objects"
+    local alternates="$(resolveAlternates)"
     local areMissing=
     while read p; do
         [ "$p" = "" ] && continue
@@ -1407,6 +1409,7 @@ transport_sshcat_fetch() {
         fi
         dir="$(dirname "$p")"
         mkdirWithParentsPermissions "$objdir/$dir"
+        tryLinkToAlternate "${p}" && continue
         tmp="${objdir}/${p}-tmp"
         rm -f "${tmp}"
         exec_ssh </dev/null "${url_host}" "cat '${remoteObjdir}/${p}'" >"${tmp}" ||
@@ -1423,6 +1426,34 @@ transport_sshcat_fetch() {
     done
     test $areMissing && die "Some files are missing at remote (see above)."
     true
+}
+
+# Resolve alternates to absolute paths (to silo object dir).  Ignore missing
+# directories.
+resolveAlternates() {
+    while IFS= read -r alt; do
+        (
+            cd "$(git rev-parse --show-toplevel)" &&
+            cd "${alt}" &&
+            cd "$(getSiloObjectDir)" &&
+            pwd
+        ) 2>/dev/null  # Silently ignore failure to cd.
+    done <<<"$(git config --get-all silo.alternate || true)"
+}
+
+# Uses `alternates` and `objdir` from caller.
+tryLinkToAlternate() {
+    local p="$1"
+    local src
+    while IFS= read -r alt; do
+        [ -z "${alt}" ] && continue
+        src="${alt}/${p}"
+        [ -f "${src}" ] || continue
+        ln "${src}" "${objdir}/${p}" || continue
+        echo "  linked to alternate ${alt}."
+        return 0
+    done <<<"${alternates}"
+    return 1
 }
 
 transport_sshcat_push_init() {
