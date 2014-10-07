@@ -849,12 +849,14 @@ computeSha1AndStoreContentInSilo() {
         case $(cfg_silo_add) in
         link)
             ln "$arg_file" "$objfile" >/dev/null 2>&1 ||
-            cp "$arg_file" "$objfile"
-            chmod a-w "$objfile"
+                cp "$arg_file" "$objfile"
+            [ -w "${objfile}" ] &&
+                chmod a-w "$objfile" || true
             ;;
         copy)
             cp "$arg_file" "$objfile"
-            chmod a-w "$objfile"
+            [ -w "${objfile}" ] &&
+                chmod a-w "$objfile" || true
             ;;
         esac
     fi
