@@ -1023,6 +1023,7 @@ addFile() {
 
     if test ${cfg_git_has_assume_unchanged_once} &&
         test ${shouldLink} &&
+        [ -f "${path}" ] &&
         [ $(linkCount "$path") -gt 1 ] &&
         sha1=$(findSha1InAlternates "${path}"); then
 
@@ -1043,7 +1044,13 @@ addFile() {
         echo_debug "Did not find silo.alternate sha1 for '${path}'."
     fi
 
-    git add "${path}"
+    if [ -e "${path}" ]; then
+        git add -- "${path}"
+    else
+        # Ignore potential errors when calling add on a deleted file twice.
+        # Git would complain that pathspec does not match a file.
+        git add -- "${path}" 2>/dev/null || true
+    fi
 }
 
 linkFileInSilo() {
