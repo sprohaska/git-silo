@@ -43,4 +43,17 @@ test_expect_success \
     ( git status --porcelain -- "a a" | grep ^M )
 '
 
+test_expect_success "'add' remove file." '
+    rm "a a" &&
+    git silo add -- "a a" 2>err &&
+    touch empty &&
+    test_cmp empty err &&
+    ( git status --porcelain | grep -q "^D  .a a." )
+'
+
+test_expect_success "'add' should handle deleted file twice." '
+    git silo add -- "a a" 2>err &&
+    test_cmp empty err
+'
+
 test_done
