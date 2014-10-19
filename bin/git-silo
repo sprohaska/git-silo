@@ -201,10 +201,12 @@ permissions are changed to read-only, which might confuse applications like
 Word.
 
 silo.alternate (multiple allowed): Paths to git repos that contain git silos.
-'git silo fetch' tries to link files to an alternate silo instead of fetching
-via ssh.  If hard links can be used and 'git update-index
---assume-unchanged-once' is available, 'git silo add' tries to locate inodes in
-the alternate silos to avoid computing sha1s.
+'git silo fetch' and 'git silo push' try to link files to an alternate silo
+instead of fetching or pushing via ssh.  For 'fetch', 'silo.alternate' must be
+set in the local repo.  For 'push', 'silo.alternate' must be set in the remote
+repo.  If hard links can be used and 'git update-index --assume-unchanged-once'
+is available, 'git silo add' tries to locate inodes in the alternate silos to
+avoid computing sha1s.
 
 silo.contentSizeLimit (default '10M'): If the content for a file that is stored
 in silo is smaller than the limit or the limit is 0, the content will be used
@@ -1342,20 +1344,21 @@ cmd_push() {
     fi
     (( ${#pathspec[@]} )) || dieMissingPath "push"
     validateHaveSilo
-    local url transport
-    url=$(getRemoteSiloUrl)
+    local url silourl transport
+    url=$(getRemoteUrl)
+    silourl=$(getRemoteSiloUrl)
     transport=$(getTransport "$url")
     echo "Pushing silo to $url"
     todo="$(
         lsSiloTracked "${pathspec[@]}" |
         filterSiloAttr "${arg_filter[@]}" |
         uniqSha1s |
-        transport_${transport}_push_prepush "${url}"
+        transport_${transport}_push_prepush "${url}" "${silourl}"
     )"
     ( grep '^MISSING' <<<"${todo}" || true ) | cut -d ' ' -f 2 |
         selectSha1sToUnpack |
         tryAutoUnpackInDir '.'
-    transport_${transport}_push "$url" <<<"${todo}"
+    transport_${transport}_push "${silourl}" <<<"${todo}"
 }
 
 selectSha1sToUnpack() {
@@ -1478,10 +1481,13 @@ tryLinkToAlternate() {
 
 transport_sshcat_push_prepush() {
     local url="$1"
+    local silourl="$2"
     local url_host url_dir
     read url_host url_dir <<< "$(parseUrl "$url")"
+    local silourl_host silourl_dir
+    read silourl_host silourl_dir <<< "$(parseUrl "$silourl")"
     local prgpath
-    prgpath=$(genprgRemotePrepush "${url_dir}" |
+    prgpath=$(genprgRemotePrepush "${url_dir}" "${silourl_dir}" |
         exec_ssh "${url_host}" bash -c \
             "'p=\$(mktemp /tmp/git-silo-receive.XXXXXX); cat >\$p; echo \$p'")
     exec_ssh "${url_host}" "bash '${prgpath}'" ||
@@ -1496,6 +1502,12 @@ genprgRemotePrepush() {
         catPackLsts \
         findLineIn \
         transport_localcp_push_prepush \
+        tryPrepushLinkToAlternate \
+        mkdirWithParentsPermissions \
+        isSharedDir \
+        resolveAlternates \
+        getSiloObjectDir \
+        getSiloDir \
         setup_arch \
         setup_arch_SunOS \
         setup_arch_msysgit \
@@ -1506,7 +1518,7 @@ genprgRemotePrepush() {
 genprgRemotePrepushReceiveImpl() {
     cat <<EOF
 setup_arch
-transport_localcp_push_prepush '$1'
+transport_localcp_push_prepush '$1' '$2'
 EOF
 }
 
@@ -1519,6 +1531,10 @@ transport_sshcat_push() {
     while read what p; do
         [ -z "$p" ] && continue
         p=$(sha1AsObjectPath "$p")
+        if [ "${what}" = "LINKED" ]; then
+            printSyncInfo "Linked to alternate at remote" "$p" "$objPathMap" >&2
+            continue
+        fi
         if ! [ -f "$objdir/$p" ]; then
             printSyncInfo "Warning: missing" "$p" "$objPathMap" >&2
             continue
@@ -1754,14 +1770,36 @@ transport_localcp_fetch() {
 
 transport_localcp_push_prepush() {
     local url="$1"
-    local packedAtRemote="$(catPackLsts "$url")"
+    local silourl="$2"
+    local packedAtRemote="$(catPackLsts "${silourl}")"
+    local objdir="${silourl}/objects"
+    local alternates="$(cd "${url}" && resolveAlternates)"
     while read -r sha1; do
         [ -z "${sha1}" ] && continue
         p=$(sha1AsObjectPath "${sha1}")
-        [ -f "${url}/objects/${p}" ] && continue
+        [ -f "${objdir}/${p}" ] && continue
         findLineIn "${p}" "${packedAtRemote}" && continue
+        tryPrepushLinkToAlternate "${sha1}" && continue
         printf 'MISSING %s\n' "${sha1}"
     done
+}
+
+# Uses `alternates` and `objdir` from caller.
+tryPrepushLinkToAlternate() {
+    local sha1="$1"
+    local p="$(sha1AsObjectPath "${sha1}")"
+    local src dir
+    while IFS= read -r alt; do
+        [ -z "${alt}" ] && continue
+        src="${alt}/${p}"
+        [ -f "${src}" ] || continue
+        dir=$(dirname ${p})
+        mkdirWithParentsPermissions "${objdir}/${dir}"
+        ln "${src}" "${objdir}/${p}" || continue
+        printf 'LINKED %s\n' "${sha1}"
+        return 0
+    done <<<"${alternates}"
+    return 1
 }
 
 transport_localcp_push() {
@@ -1775,6 +1813,10 @@ transport_localcp_push() {
     while read what p; do
         [ -z "$p" ] && continue
         p=$(sha1AsObjectPath "$p")
+        if [ "${what}" = "LINKED" ]; then
+            printSyncInfo "Linked to alternate at remote" "$p" "$objPathMap" >&2
+            continue
+        fi
         if ! [ -f "$objdir/$p" ]; then
             printSyncInfo "Warning: missing" "$p" "$objPathMap" >&2
             continue
@@ -2004,7 +2046,7 @@ passFilter() {
     return 0
 }
 
-getRemoteSiloUrl() {
+getRemoteUrl() {
     local url reurl
     local remote=origin
     test "$arg_remote" && remote="$arg_remote"
@@ -2020,6 +2062,11 @@ getRemoteSiloUrl() {
     elif grep -q '^[^:]*://' <<< "$url"; then
         die "Don't know how to use $url."
     fi
+    printf '%s\n' "${url}"
+}
+
+getRemoteSiloUrl() {
+    local url="$(getRemoteUrl)"
     reurl=$(resolveGitDir "$url") ||
         die "Failed to resolve git-dir for '$url'."
     printf '%s/silo\n' "$reurl"

@@ -34,7 +34,7 @@ test_expect_success "setup" '
     )
 '
 
-test_expect_failure "'push' via ssh links to remote alternate." '
+test_expect_success "'push' via ssh links to remote alternate." '
     setup_add_file orig2 first &&
     setup_add_file orig3 second &&
     setup_add_file clone first &&
