@@ -76,4 +76,20 @@ test_expect_success "'push' via ssh resolves alternate relative to gitdir." '
     )
 '
 
+test_expect_success "'push' via localcp links to remote alternate." '
+    setup_file fourth &&
+    setup_add_file orig3 fourth &&
+    setup_add_file clone fourth && (
+        cd clone &&
+        git push ../orig HEAD:clone-master &&
+        git silo push ../orig -- . 2>err &&
+        ! grep "override" err
+    ) && (
+        cd orig &&
+        git merge clone-master &&
+        git silo checkout --link -- . &&
+        assertLinkCount fourth 4
+    )
+'
+
 test_done
