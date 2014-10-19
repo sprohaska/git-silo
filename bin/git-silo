@@ -1346,16 +1346,27 @@ cmd_push() {
     url=$(getRemoteSiloUrl)
     transport=$(getTransport "$url")
     echo "Pushing silo to $url"
-    transport_${transport}_push_init "${url}"
     todo="$(
         lsSiloTracked "${pathspec[@]}" |
         filterSiloAttr "${arg_filter[@]}" |
-        uniqSha1s
+        uniqSha1s |
+        transport_${transport}_push_prepush "${url}"
     )"
-    transport_${transport}_push_selectSha1sToUnpack "$url" <<<"${todo}" |
+    ( grep '^MISSING' <<<"${todo}" || true ) | cut -d ' ' -f 2 |
+        selectSha1sToUnpack |
         tryAutoUnpackInDir '.'
-    sha1sAsObjectPaths <<<"${todo}" |
-        transport_${transport}_push "$url"
+    transport_${transport}_push "$url" <<<"${todo}"
+}
+
+selectSha1sToUnpack() {
+    local sha1 objdir
+    objdir="$(getSiloObjectDir)"
+    while read -r sha1; do
+        [ "${sha1}" = "" ] && continue
+        p=$(sha1AsObjectPath "${sha1}")
+        [ -f "${objdir}/${p}" ] && continue
+        printf '%s\n' "$sha1"
+    done
 }
 
 cmd_fetch() {
@@ -1465,23 +1476,38 @@ tryLinkToAlternate() {
     return 1
 }
 
-transport_sshcat_push_init() {
+transport_sshcat_push_prepush() {
     local url="$1"
     local url_host url_dir
     read url_host url_dir <<< "$(parseUrl "$url")"
-    existingAtRemote="$(lsRemoteObjectsWithPacked "$url_host" "$url_dir")"
+    local prgpath
+    prgpath=$(genprgRemotePrepush "${url_dir}" |
+        exec_ssh "${url_host}" bash -c \
+            "'p=\$(mktemp /tmp/git-silo-receive.XXXXXX); cat >\$p; echo \$p'")
+    exec_ssh "${url_host}" "bash '${prgpath}'" ||
+        die "Failed to prepare push."
 }
 
-transport_sshcat_push_selectSha1sToUnpack() {
-    local sha1 objdir
-    objdir="$(getSiloObjectDir)"
-    while read -r sha1; do
-        [ "${sha1}" = "" ] && continue
-        p=$(sha1AsObjectPath "${sha1}")
-        [ -f "${objdir}/${p}" ] && continue
-        findLineIn "${p}" "${existingAtRemote}" && continue
-        printf '%s\n' "$sha1"
-    done
+genprgRemotePrepush() {
+    genprgShbang
+    genprgSelfDestroy
+    genprgFunctions \
+        sha1AsObjectPath \
+        catPackLsts \
+        findLineIn \
+        transport_localcp_push_prepush \
+        setup_arch \
+        setup_arch_SunOS \
+        setup_arch_msysgit \
+        die
+    genprgRemotePrepushReceiveImpl "$@"
+}
+
+genprgRemotePrepushReceiveImpl() {
+    cat <<EOF
+setup_arch
+transport_localcp_push_prepush '$1'
+EOF
 }
 
 transport_sshcat_push() {
@@ -1490,9 +1516,9 @@ transport_sshcat_push() {
     objPathMap=$(lsSiloTracked "${pathspec[@]}")
     objdir=$(getSiloObjectDir)
     read url_host url_dir <<< "$(parseUrl "$url")"
-    while read p; do
-        [ "$p" = "" ] && continue
-        findLineIn "$p" "${existingAtRemote}" && continue
+    while read what p; do
+        [ -z "$p" ] && continue
+        p=$(sha1AsObjectPath "$p")
         if ! [ -f "$objdir/$p" ]; then
             printSyncInfo "Warning: missing" "$p" "$objPathMap" >&2
             continue
@@ -1726,22 +1752,15 @@ transport_localcp_fetch() {
     true
 }
 
-transport_localcp_push_init() {
+transport_localcp_push_prepush() {
     local url="$1"
-    existingAtRemote="$(catPackLsts "$url")"
-}
-
-transport_localcp_push_selectSha1sToUnpack() {
-    local url="$1"
-    local sha1 objdir
-    objdir="$(getSiloObjectDir)"
+    local packedAtRemote="$(catPackLsts "$url")"
     while read -r sha1; do
-        [ "${sha1}" = "" ] && continue
+        [ -z "${sha1}" ] && continue
         p=$(sha1AsObjectPath "${sha1}")
         [ -f "${url}/objects/${p}" ] && continue
-        findLineIn "${p}" "${existingAtRemote}" && continue
-        [ -f "$objdir/${p}" ] && continue
-        printf '%s\n' "${sha1}"
+        findLineIn "${p}" "${packedAtRemote}" && continue
+        printf 'MISSING %s\n' "${sha1}"
     done
 }
 
@@ -1753,10 +1772,9 @@ transport_localcp_push() {
     fi
     objPathMap=$(lsSiloTracked "${pathspec[@]}")
     objdir=$(getSiloObjectDir)
-    while read p; do
-        [ "$p" = "" ] && continue
-        [ -f "${remoteObjdir}/$p" ] && continue
-        findLineIn "${p}" "${existingAtRemote}" && continue
+    while read what p; do
+        [ -z "$p" ] && continue
+        p=$(sha1AsObjectPath "$p")
         if ! [ -f "$objdir/$p" ]; then
             printSyncInfo "Warning: missing" "$p" "$objPathMap" >&2
             continue
