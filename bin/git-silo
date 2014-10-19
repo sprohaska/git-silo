@@ -1451,17 +1451,23 @@ transport_sshcat_fetch() {
     true
 }
 
-# Resolve alternates to absolute paths (to silo object dir).  Ignore missing
-# directories.
+# Resolve alternates to absolute paths (to silo object dir).
 resolveAlternates() {
     while IFS= read -r alt; do
-        (
-            cd "$(git rev-parse --show-toplevel)" &&
-            cd "${alt}" &&
-            cd "$(getSiloObjectDir)" &&
-            pwd
-        ) 2>/dev/null  # Silently ignore failure to cd.
+        resolveAlternate "${alt}" 2>/dev/null ||
+            printf >&2 "Warning: failed to resolve alternate '%s' in '%s'.\n" \
+                "${alt}" "$(pwd)"
     done <<<"$(git config --get-all silo.alternate || true)"
+}
+
+resolveAlternate() {
+    local alt="$1"
+    (
+        cd "$(git rev-parse --show-toplevel)" &&
+        cd "${alt}" &&
+        cd "$(getSiloObjectDir)" &&
+        pwd
+    )
 }
 
 # Uses `alternates` and `objdir` from caller.
@@ -1506,6 +1512,7 @@ genprgRemotePrepush() {
         mkdirWithParentsPermissions \
         isSharedDir \
         resolveAlternates \
+        resolveAlternate \
         getSiloObjectDir \
         getSiloDir \
         setup_arch \
