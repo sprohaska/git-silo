@@ -1463,7 +1463,14 @@ resolveAlternates() {
 resolveAlternate() {
     local alt="$1"
     (
-        cd "$(git rev-parse --show-toplevel)" &&
+        if [ $(git rev-parse --is-inside-work-tree) = "true" ]; then
+            cd "$(git rev-parse --show-toplevel)"
+        elif [ $(git rev-parse --is-inside-git-dir) = "true" ]; then
+            cd "$(git rev-parse --git-dir)"
+        else
+            printf >&2 "Error: neither inside work tree nor inside git dir."
+            return 1
+        fi &&
         cd "${alt}" &&
         cd "$(getSiloObjectDir)" &&
         pwd

@@ -57,4 +57,23 @@ test_expect_success "'push' via ssh links to remote alternate." '
     )
 '
 
+test_expect_success "'push' via ssh resolves alternate relative to gitdir." '
+    setup_file third &&
+    setup_add_file orig2 third &&
+    setup_add_file clone third && (
+        cd orig &&
+        git config --add silo.alternate ../../orig2
+    ) && (
+        cd clone &&
+        git config remote.origin.url "$(git config remote.origin.url)/.git"
+        git push origin HEAD:clone-master &&
+        git silo push -- .
+    ) && (
+        cd orig &&
+        git merge clone-master &&
+        git silo checkout --link -- . &&
+        assertLinkCount third 4
+    )
+'
+
 test_done
