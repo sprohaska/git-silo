@@ -1454,6 +1454,7 @@ transport_sshcat_fetch() {
 # Resolve alternates to absolute paths (to silo object dir).
 resolveAlternates() {
     while IFS= read -r alt; do
+        [ -z "${alt}" ] && continue
         resolveAlternate "${alt}" 2>/dev/null ||
             printf >&2 "Warning: failed to resolve alternate '%s' in '%s'.\n" \
                 "${alt}" "$(pwd)"
