@@ -37,6 +37,21 @@ test_expect_success \
     ! grep -q clean err &&
     ( git ls-files -s -- first | grep -q ^100644 ) &&
     ( git ls-files -s -- second | grep -q ^100755 ) &&
+    assertRepoHasNumSiloObjects . 2 &&
+    git commit -m commit
+)'
+
+# sleep to avoid racy git.
+test_expect_success \
+"'silo add' should re-add files." '(
+    cd repo &&
+    rm -f .git/silo/objects/*/* &&
+    touch first second &&
+    sleep 1 &&
+    git silo add --attr -- first second 2>err &&
+    ! grep -q clean err &&
+    ( git ls-files -s -- first | grep -q ^100644 ) &&
+    ( git ls-files -s -- second | grep -q ^100755 ) &&
     assertRepoHasNumSiloObjects . 2
 )'
 
