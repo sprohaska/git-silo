@@ -1368,6 +1368,10 @@ cmd_push() {
         uniqSha1s |
         transport_${transport}_push_prepush "${url}" "${silourl}"
     )"
+    if [ -z "${todo}" ]; then
+        echo 'Everything up-to-date.'
+        exit 0
+    fi
     ( grep '^MISSING' <<<"${todo}" || true ) | cut -d ' ' -f 2 |
         selectSha1sToUnpack |
         tryAutoUnpackInDir '.'
@@ -1415,6 +1419,10 @@ cmd_fetch() {
         uniqSha1s |
         selectMissingSha1sWithPacked
     )"
+    if [ -z "${todo}" ]; then
+        echo 'Everything up-to-date.'
+        exit 0
+    fi
     transport_${transport}_prefetch "${url}" <<<"${todo}"
     sha1sAsObjectPaths <<<"${todo}" |
         transport_${transport}_fetch "$url"
