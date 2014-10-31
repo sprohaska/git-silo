@@ -719,6 +719,7 @@ cmd_init() {
     fi
     if ! isBareRepo; then
         # git-silo uses hard link operations, which modify ctime.  Tell git to
+        # ignore ctime.
         git config core.trustctime false
         configFilters
     fi
