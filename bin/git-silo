@@ -997,9 +997,11 @@ isSha1PlaceholderFile() {
 
 cmd_add() {
     local objdir
+    local prefix
 
     validateHaveSilo
     objdir="$(getSiloObjectDir)"
+    prefix="$(git rev-parse --show-prefix)"
 
     while read headsha1 path; do
         [ -z "${path}" ] && continue
@@ -1044,7 +1046,7 @@ addFile() {
             else
                 mode=100644
             fi
-            git update-index --add --cacheinfo "${mode},${blob},${path}"
+            git update-index --add --cacheinfo "${mode},${blob},${prefix}${path}"
             git update-index --assume-unchanged-once "${path}"
             return 0
         else

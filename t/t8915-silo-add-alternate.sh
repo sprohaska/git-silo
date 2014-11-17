@@ -55,4 +55,19 @@ test_expect_success \
     assertRepoHasNumSiloObjects . 2
 )'
 
+# Sleep to avoid racy git.
+test_expect_success \
+"'silo add' works in subdir." '(
+    cd repo &&
+    mkdir subdir && (
+        cd subdir &&
+        ln ../first third &&
+        sleep 1 &&
+        git silo add --attr -- third 2>err &&
+        ! grep -q clean err
+    ) &&
+    ( git ls-files -s -- subdir/third | grep -q ^100644 ) &&
+    assertRepoHasNumSiloObjects . 2
+)'
+
 test_done
