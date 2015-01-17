@@ -2164,7 +2164,7 @@ gcSiloObjects() {
     fi
     while IFS= read -r p; do
         [ -n "${p}" ] || continue
-        printf 'Removing %s' "${p}"
+        printf 'Removing %s\n' "${p}"
         rm -f "${objdir}/${p}"
     done <<<"${remove}"
     removeEmptyObjectDirs
