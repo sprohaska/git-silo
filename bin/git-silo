@@ -2321,7 +2321,7 @@ siloObjectsWithRevListArgs() {
     git rev-list --objects "$@" |
     cut -d ' ' -f 1 |
     git cat-file --batch-check |
-    ( grep 'blob 41$' || true ) |  # Avoid pipefail without match.
+    ( grep 'blob 41$' || true ) |  # true avoids pipefail if no match.
     cut -d ' ' -f 1 |
     sort -u |
     git cat-file --batch |
