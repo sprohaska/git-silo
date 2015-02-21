@@ -47,4 +47,14 @@ test_expect_success \
     ( git status --porcelain -- "subdir/c c.ext" | grep ^A )
 )'
 
+test_expect_success \
+"'add handled paths with ':'." '(
+    cd wildcard &&
+    touch "subdir/a:b: .ext" &&
+    rm subdir/.gitattributes &&
+    git silo add --attr "subdir/a:b: .ext" 2>err &&
+    ! [ -e subdir/.gitattributes ] &&
+    ( git status --porcelain -- "subdir/a:b: .ext" | grep ^A )
+)'
+
 test_done

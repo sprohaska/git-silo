@@ -1288,8 +1288,8 @@ getAttrValue() {
     local attr="${1}"
     local path="${2}"
     # check-attr's output is '<path> COLON SP <attribute> COLON SP <info> LF'.
-    # Split on COLON and remove SP to handle <path> with spaces.
-    git check-attr "${attr}" "${path}" | cut -d : -f 3 | cut -b 2-
+    # Remove up to `COLON SP <attribute> COLON SP` to handle colons in paths.
+    git check-attr "${attr}" "${path}" | sed -e "s/^.*: ${attr}: //"
 }
 
 getWorkingCopyEndl() {
