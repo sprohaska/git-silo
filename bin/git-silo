@@ -8,7 +8,7 @@ usage() {
     cat <<\EOF
 git-silo init
 git-silo add [--attr|--no-attr] [--] [<file>...]
-git-silo checkout [--copy] [--link] -- [<file>...]
+git-silo checkout [--copy] [--link] [--ignore-missing] -- [<file>...]
 git-silo status [<path>...]
 git-silo push \
     [--dry-run] [-v|--verbose] \
@@ -46,6 +46,8 @@ git-silo dedup <repo>...
     --copy          copy files instead of using hard link
 
     --link          replace checked-out copies with hard link
+
+    --ignore-missing    silently ignore missing objects.
 
   status            print status of files stored in silo.
 
@@ -551,6 +553,7 @@ argparse_checkout() {
     arg_pathspec=
     opt_copy=
     opt_link=
+    opt_ignore_missing=
     while [ $# -ge 1 ]; do
         case "$1" in
         -h|--help)
@@ -563,6 +566,10 @@ argparse_checkout() {
             ;;
         --link)
             opt_link=t
+            shift
+            ;;
+        --ignore-missing)
+            opt_ignore_missing=t
             shift
             ;;
         --)
@@ -1131,7 +1138,9 @@ cmd_checkout() {
         [ -z "$path" ] && continue
         objfile=$objdir/$(sha1AsObjectPath "${sha1}")
         if ! test -e "$objfile"; then
-            if hasSiloAttrLabel 'local' "${path}"; then
+            if test ${opt_ignore_missing}; then
+                true  # Silently ignore missing.
+            elif hasSiloAttrLabel 'local' "${path}"; then
                 printf >&2 "Notice: missing silo content with label 'local': %s\n" "$path"
             else
                 printf >&2 "missing silo content: %s\n" "$path"

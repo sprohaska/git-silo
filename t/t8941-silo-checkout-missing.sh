@@ -34,6 +34,22 @@ test_expect_success \
 '
 
 test_expect_success \
+"checkout warns about missing" '
+    rm -rf .git/silo/objects/$(cut -b 1-2 a.sha1) &&
+    rm -f a b &&
+    ( git silo checkout -- . 2>err || true ) &&
+    grep -q missing err
+'
+
+test_expect_success \
+"checkout --ignore-missing does not warn about missing" '
+    rm -rf .git/silo/objects/$(cut -b 1-2 a.sha1) &&
+    rm -f a b &&
+    ( git silo checkout --ignore-missing -- . 2>err ) &&
+    ! grep -q missing err
+'
+
+test_expect_success \
 "checkout should exit success if only silo=local object missing." '
     ! git silo checkout a &&
     echo "/a silo=local" >>.gitattributes &&
