@@ -854,7 +854,7 @@ computeSha1AndStoreContentInSilo() {
     sha1=$(computeSha1) || die "Failed to compute sha1."
     subdir=$objdir/${sha1:0:2}
     objfile=$subdir/${sha1:2}
-    if [ ! -e "$objfile" ]; then
+    if ! [ -e "$objfile" ]; then
         mkdirWithParentsPermissions "$subdir"
         case $(cfg_silo_add) in
         link)
