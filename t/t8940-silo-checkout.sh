@@ -23,6 +23,12 @@ test_expect_success "git checkout should replace placeholder file." '
     )
 '
 
+test_expect_success "git checkout --placeholder creates placeholder." '(
+    cd repolf &&
+    git silo checkout --placeholder -- a &&
+    test_cmp ../a.sha1 a
+)'
+
 # Trick git into creating a placeholder that ends with CRLF by duplicating the
 # placeholder file and checking out the duplicate 'b' with autocrlf=true.
 # autocrlf has no impact on the original placeholder 'a', because it has the

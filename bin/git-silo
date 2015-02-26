@@ -47,6 +47,8 @@ git-silo dedup <repo>...
 
     --link          replace checked-out copies with hard link
 
+    --placeholder   replace content with placeholders.
+
     --ignore-missing    silently ignore missing objects.
 
   status            print status of files stored in silo.
@@ -553,6 +555,7 @@ argparse_checkout() {
     arg_pathspec=
     opt_copy=
     opt_link=
+    opt_placeholder=
     opt_ignore_missing=
     while [ $# -ge 1 ]; do
         case "$1" in
@@ -566,6 +569,10 @@ argparse_checkout() {
             ;;
         --link)
             opt_link=t
+            shift
+            ;;
+        --placeholder)
+            opt_placeholder=t
             shift
             ;;
         --ignore-missing)
@@ -1129,6 +1136,10 @@ lsTrackedFilesForAdd() {
 }
 
 cmd_checkout() {
+    if test ${opt_placeholder}; then
+        cmd_checkout_placeholder
+        return
+    fi
     local sha1 path objdir objfile
     validateHaveSilo
     objdir=$(getSiloObjectDir)
@@ -1192,6 +1203,17 @@ cmd_checkout() {
     done <<< "$(lsNeedsCheckout)"
     test $haveErr && die "There have been problems during silo checkout (see above)."
     true
+}
+
+cmd_checkout_placeholder() {
+    while read -r sha1 path; do
+        [ -z "${path}" ] && continue
+        [ -e "${path}" ] && isSha1PlaceholderFile "${path}" && continue
+        printf "Placeholder %s %s\n" "${sha1}" "${path}"
+        rm -f "${path}"
+        printf '%s\n' "${sha1}" >"${path}"
+        git add -u -- "${path}"
+    done <<< "$(lsSiloTracked "${arg_pathspec[@]}")"
 }
 
 # Try to set stored objects that are writable to read-only to contain Windows
