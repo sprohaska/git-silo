@@ -345,6 +345,8 @@ argparse_gc() {
             shift
             [ $# -ge 1 ] || die "-n must be followed by number."
             opt_n=$1
+            grep -q '[1-9][0-9]*' <<<"${opt_n}" ||
+                die "-n must be followed by a number >= 1."
             shift
             ;;
         -*)
