@@ -9,7 +9,8 @@ usage() {
 git-silo init
 git-silo add [--attr|--no-attr] [--] [<file>...]
 git-silo checkout [--copy] [--link] [--ignore-missing] -- [<file>...]
-git-silo status [<path>...]
+git-silo status [-v|--verbose] [<path>...]
+git-silo ls-tree <tree-ish>
 git-silo push \
     [--dry-run] [-v|--verbose] \
     [--include=<label>] [--exclude=<pattern>] [--all] \
@@ -52,6 +53,10 @@ git-silo dedup <repo>...
     --ignore-missing    silently ignore missing objects.
 
   status            print status of files stored in silo.
+
+    -v|--verbose    include placeholder sha1s in output.
+
+  ls-tree           recursively list sha1 placeholder and paths for <tree-ish>.
 
   push              push silo files.
 
@@ -598,7 +603,52 @@ argparse_checkout() {
 }
 
 argparse_status() {
-    argparse_pathspec "$@"
+    arg_pathspec=
+    opt_verbose=
+    while [ $# -ge 1 ]; do
+        case "$1" in
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        -v|--verbose)
+            opt_verbose=t
+            shift
+            ;;
+        --)
+            shift
+            [ $# -gt 0 ] && arg_pathspec=( "$@" )
+            return 0
+            ;;
+        -*)
+            die "Unknown option $1"
+            ;;
+        *)
+            arg_pathspec=( "$@" )
+            return 0
+            ;;
+        esac
+    done
+}
+
+argparse_ls-tree() {
+    arg_commit=
+    while [ $# -ge 1 ]; do
+        case "$1" in
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        -*)
+            die "Unknown option $1"
+            ;;
+        *)
+            break
+            ;;
+        esac
+    done
+    [ $# -eq 1 ] || die "Wrong number of args."
+    arg_commit="$1"
 }
 
 argparse_pathspec() {
@@ -713,7 +763,7 @@ validateGitVersion() {
 
 validateCmd() {
     case "$1" in
-    filter_smudge|filter_clean|add|status|push|fetch|init|checkout|gc|dedup|fsck|pack|unpack|purge)
+    filter_smudge|filter_clean|add|status|push|fetch|init|checkout|gc|dedup|fsck|pack|unpack|purge|ls-tree)
         return 0
         ;;
     *)
@@ -1351,8 +1401,13 @@ cmd_status() {
         else
             printf 'content     '
         fi
+        test ${opt_verbose} && printf '%s ' "${sha1}"
         printf '%s\n' "$path"
     done <<< "$(lsSiloTracked "${arg_pathspec[@]}")"
+}
+
+cmd_ls-tree() {
+    lsSiloTracked
 }
 
 # Use git cat-file in batch mode to avoid spawning many git processes.
