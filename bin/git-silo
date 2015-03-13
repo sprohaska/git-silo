@@ -1153,7 +1153,7 @@ findSha1InAlternates() {
     local path="$1"
     while IFS= read -r alt; do
         [ -z "${alt}" ] && continue
-        alt=$(resolveAlternateSiloDir "${alt}") || continue
+        alt=$(resolveAlternateSiloDir "${alt}" 2>/dev/null) || continue
         [ -d "${alt}" ] || continue
         findSha1ForInode "${alt}" "${path}" && return 0
     done <<<"$(git config --get-all silo.alternate || true)"
