@@ -34,6 +34,12 @@ test_expect_success "'silo push' (cp) should push." '
     assertRepoHasSiloObject repo1 first
 '
 
+test_expect_success "local push should use hardlinks" '
+    echo 3 >expected &&
+    linkCount repo1/.git/silo/objects/*/* >actual &&
+    test_cmp expected actual
+'
+
 test_expect_success "cleanup" '
     rm -f repo1/.git/silo/objects/*/*
 '

@@ -1955,14 +1955,33 @@ transport_localcp_push() {
         else
             dir=$(dirname $p)
             mkdirWithParentsPermissions "${remoteObjdir}/$dir"
+
+            src="${objdir}/${p}"
+            dest="${remoteObjdir}/${p}"
+
+            # Try to change to read-only to contain Windows madness that
+            # requires to change files to writable when deleting a hardlink.
+            [ -w "${src}" ] && chmod a-w "${src}" || true
+
+            rm -f "${dest}-tmp"
+
+            if ( isGroupReadable "${src}" || chmod g+r "${src}" 2>/dev/null ) &&
+                ln "${src}" "${dest}" >/dev/null 2>&1; then
+                echo_debug 'linked'
+                continue
+            fi
+
             echo_debug "cp ..."
-            rm -f "${remoteObjdir}/$p-tmp"
-            cp "$objdir/$p" "${remoteObjdir}/$p-tmp"
-            chmod a-w "${remoteObjdir}/$p-tmp"
-            chmod g+r "${remoteObjdir}/$p-tmp"
-            mv "${remoteObjdir}/$p-tmp" "${remoteObjdir}/$p"
+            cp "${src}" "${dest}-tmp"
+            chmod a-w "${dest}-tmp"
+            chmod g+r "${dest}-tmp"
+            mv "${dest}-tmp" "${dest}"
         fi
     done
+}
+
+isGroupReadable() {
+    ls -l "$1" | grep -q '^....r'
 }
 
 transport_localcp_prefetch() {
