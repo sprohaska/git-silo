@@ -70,6 +70,28 @@ test_expect_success "'git silo purge -f -- <path>' should purge path" '(
     ! git silo checkout -- b
 )'
 
+test_expect_success "'git silo purge' refuses to purge with invalid silo.masterstore" '(
+    cdNewRepo &&
+    git config silo.masterstore /invalid/path/ &&
+    ! git silo purge -f -- b &&
+    test_cmp ../b b
+)'
+
+test_expect_success "'git silo purge' refuses to purge if file is missing in silo.masterstore" '(
+    cdNewRepo &&
+    git silo purge -f -- a &&
+    master="$(pwd)" &&
+    cd .. &&
+    cdNewRepo &&
+    git config silo.masterstore "${master}" &&
+    ! git silo purge -f -- a b &&
+    test_cmp ../a a &&
+    test_cmp ../b b &&
+    git silo purge -f -- b &&
+    ! git silo purge -f -- a &&
+    test_cmp ../a a
+)'
+
 test_expect_success \
 "'git silo purge -- <path>' should be quiet if nothing to do." '(
     cdNewRepo &&

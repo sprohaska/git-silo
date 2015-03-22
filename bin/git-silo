@@ -115,7 +115,9 @@ git-silo dedup <repo>...
   purge             replace files by placeholders and remove objects from silo.
                     Since this is a very destructive operation (comparable to
                     rm -rf), 'silo.ismasterstore=false' and the '--force' flag
-                    are both required to actually remove files.
+                    are both required to actually remove files.  If
+                    'silo.masterstore' is set, purge fill furthermore verify
+                    that object are at the specified path before deleting them.
 
     <path>...       the files to remove.
 
@@ -235,6 +237,9 @@ if needed.
 
 silo.ismasterstore (default 'true'): Unless set to 'false', some destructive
 operations, such as 'purge', are not permitted.
+
+silo.masterstore (default none): If set, 'purge' will check that objects are in
+the silo at the specified path before deleting them.
 
 GIT_SSH (environment variable): If set, git-silo will use the specified program
 instead of ssh.
@@ -2311,6 +2316,34 @@ cmd_purge() {
 
     orphanSha1s="$(orphanSha1sWithoutPaths "${arg_pathspec[@]}")"
     objdir=$(getSiloObjectDir)
+
+    # If silo.masterstore is set, verify that all objects are there.
+    if masterstore=$(git config silo.masterstore); then
+
+        masterobjdir="$(
+            cd "${masterstore}" && getSiloObjectDir
+        )" && [ -d "${masterobjdir}" ] ||
+            die "failed to resolve git silo at masterstore '${masterstore}'."
+
+        lsSiloTracked "${arg_pathspec[@]}" | (
+            err=
+            while read -r sha1 path; do
+                [ -z "${sha1}" ] && continue
+                p="$(sha1AsObjectPath "${sha1}")"
+                objpath="${objdir}/${p}"
+                if [ -f "${objpath}" ] && grep -q -F "${sha1}" <<<"${orphanSha1s}"; then
+                    if ! [ -f "${masterobjdir}/${p}" ]; then
+                        printf 'missing in masterstore %s %s\n' "${sha1}" "${path}"
+                        err=t
+                    fi
+                fi
+            done
+            if test ${err}; then
+                die "Refusing to purge, because the objects above are not in silo.masterstore '${masterstore}'."
+            fi
+        ) || exit 1
+
+    fi
 
     lsSiloTracked "${arg_pathspec[@]}" |
     while read -r sha1 path; do
