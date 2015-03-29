@@ -1326,9 +1326,9 @@ xbitAllowsLink() {
     local dest=$2
     [ -f "${src}" ] || return 1
     if gitExpectsXbit "${dest}"; then
-        [ -x "${src}" ] && return 0
+        [ "$(ls -l "${src}" | cut -b 4)" == 'x' ] && return 0
     else
-        ! [ -x "${src}" ] && return 0
+        [ "$(ls -l "${src}" | cut -b 4)" != 'x' ] && return 0
     fi
     printf >&2 "Warning: can't use hardlink, because x-bits don't match; falling back to copy '%s'.\n" "${2}"
     return 1
