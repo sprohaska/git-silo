@@ -4,6 +4,9 @@ set -o nounset -o errexit -o pipefail -o noglob
 
 opt_debug=${GIT_SILO_DEBUG:-}
 
+# Use 'C' local to avoid unexpected effects of other locales.
+export LC_ALL=C
+
 usage() {
     cat <<\EOF
 git-silo init
