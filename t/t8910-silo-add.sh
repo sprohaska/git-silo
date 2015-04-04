@@ -56,4 +56,21 @@ test_expect_success "'add' should handle deleted file twice." '
     test_cmp empty err
 '
 
+# Create multiple symlinks to ensure that lsSiloTracked() sees multiple
+# entries.  Use newline in the first symlink so that it closely resembles a
+# sha1 placeholder.
+nl=$'\n'
+test_expect_success "'add' handles symlinks that look like sha1s." '
+    echo "symlink* filter=silo -text" >>.gitattributes &&
+    ln -s "../../../../invalid/path/of/length/41___${nl}" "symlink 1" &&
+    ln -s "../../../../invalid/path/of/length/41____" "symlink 2" &&
+    ln -s "../../../../invalid/path/of/length/41____" "symlink 3" &&
+    git silo add -- "symlink 1" "symlink 2" "symlink 3" 2>err &&
+    touch empty &&
+    test_cmp empty err &&
+    git commit -m "symlinks" &&
+    rm -f "symlink 1" "symlink 2" "symlink 3" 2>err &&
+    git silo checkout -- .
+'
+
 test_done

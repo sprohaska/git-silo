@@ -1424,6 +1424,7 @@ lsSiloTracked() {
     lsTree "$@" |
     while read perm ty gitsha1 size path; do
         [ -z "$path" ] && continue
+        [ "${perm:0:3}" = "100" ] || continue
         [ "$size" = 41 ] || continue
         printf '%s %s\n' "${gitsha1}" "${path}"
     done |
@@ -1431,6 +1432,8 @@ lsSiloTracked() {
     while IFS= read -r path && IFS= read -r sha1 && read -r emptyline; do
         [ -z "${path}" ] && continue
         [ -z "${sha1}" ] && continue
+        [ -n "${emptyline}" ] &&
+            die "Failed to read silo sha1 for path '${path}' from git."
         printf '%s %s\n' "${sha1}" "${path}"
     done
 }
