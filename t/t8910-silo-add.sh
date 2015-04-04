@@ -56,7 +56,7 @@ testFilename() {
         git silo add -- "${filename}" 2>err &&
         touch empty &&
         test_cmp empty err &&
-        ( git status --porcelain | grep -q "^D  .${filename}." )
+        ( git status --porcelain -- "${filename}" | grep -q "^D  " )
     )'
 
     test_expect_success "'add' handles deleted file twice." '(
@@ -67,7 +67,7 @@ testFilename() {
 }
 
 testFilename 'spaces' 'a a'
-# testFilename 'uml' 'ä ö ü'
+testFilename 'uml' 'ä ö ü'
 
 # Create multiple symlinks to ensure that lsSiloTracked() sees multiple
 # entries.  Use newline in the first symlink so that it closely resembles a

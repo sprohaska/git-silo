@@ -1080,8 +1080,9 @@ cmd_add() {
     objdir="$(getSiloObjectDir)"
     prefix="$(git rev-parse --show-prefix)"
 
-    while read headsha1 path; do
-        [ -z "${path}" ] && continue
+    while read -r headsha1 qpath; do
+        [ -z "${qpath}" ] && continue
+        path="$(unquotePath "${qpath}")"
         if test ${opt_attr}; then
             updateGitattributes "${path}"
             addFile ${headsha1} "${path}"
@@ -1203,14 +1204,15 @@ cmd_checkout() {
         cmd_checkout_placeholder
         return
     fi
-    local sha1 path objdir objfile
+    local sha1 qpath path objdir objfile
     validateHaveSilo
     objdir=$(getSiloObjectDir)
     fixPermissions
     tryAutoUnpackForCheckout
     local haveErr=
-    while read -r sha1 path; do
-        [ -z "$path" ] && continue
+    while read -r sha1 qpath; do
+        [ -z "$qpath" ] && continue
+        path="$(unquotePath "${qpath}")"
         objfile=$objdir/$(sha1AsObjectPath "${sha1}")
         if ! test -e "$objfile"; then
             if test ${opt_ignore_missing}; then
@@ -1298,10 +1300,12 @@ tryAutoUnpackForCheckout() {
 }
 
 lsNeedsCheckout() {
-    while read -r sha1 path; do
-        [ -z "$path" ] && continue
+    local sha1 qpath path
+    while read -r sha1 qpath; do
+        [ -z "${qpath}" ] && continue
+        path="$(unquotePath "${qpath}")"
         pathNeedsCheckout ${sha1} "${path}" || continue
-        printf '%s %s\n' "${sha1}" "${path}"
+        printf '%s %s\n' "${sha1}" "${qpath}"
     done <<< "$(lsSiloTracked "${arg_pathspec[@]}")"
 }
 
@@ -1430,19 +1434,19 @@ cmd_ls-tree() {
 lsSiloTracked() {
     local nl=$'\n'
     local starttok='---------------------------------------------'
-    local perm ty gitsha1 size path sha1
+    local perm ty gitsha1 size qpath sha1
     lsTree "$@" |
-    while read perm ty gitsha1 size path; do
-        [ -z "$path" ] && continue
+    while read -r perm ty gitsha1 size qpath; do
+        [ -z "$qpath" ] && continue
         [ "${perm:0:3}" = "100" ] || continue
         [ "$size" = 41 ] || continue
-        printf '%s %s\n' "${gitsha1}" "${path}"
+        printf '%s %s\n' "${gitsha1}" "${qpath}"
     done |
     git cat-file --batch="${starttok}${nl}%(rest)" |
-    while seekToStartTok && IFS= read -r path && IFS= read -r sha1; do
-        [ -z "${path}" ] && continue
+    while seekToStartTok && IFS= read -r qpath && IFS= read -r sha1; do
+        [ -z "${qpath}" ] && continue
         [ -z "${sha1}" ] && continue
-        printf '%s %s\n' "${sha1}" "${path}"
+        printf '%s %s\n' "${sha1}" "${qpath}"
     done |
     ( egrep '^[0-9a-f]{40}' || true )
 }
@@ -1459,6 +1463,19 @@ seekToStartTok() {
 lsTree() {
     local commit=${arg_commit:-HEAD}
     git ls-tree -rl "${commit}" -- "$@"
+}
+
+# ls-tree quotes paths if they contain special characters.  A quoted path
+# starts with a double quote and contains \... sequences that can be converted
+# with printf's special format specifier '%b'.  Eval is used, because the path
+# string itself contains double quotes.
+unquotePath() {
+    local p="$1"
+    if [ "${p:0:1}" = '"' ]; then
+        eval printf '%b' ${p}
+    else
+        printf '%s' "${p}"
+    fi
 }
 
 cmd_push() {
