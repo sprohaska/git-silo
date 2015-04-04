@@ -1419,8 +1419,15 @@ cmd_ls-tree() {
 }
 
 # Use git cat-file in batch mode to avoid spawning many git processes.
+#
+# Use a start token that is longer than the content length of 41 chars to sync
+# the batch stream after each object in order to handle any object content.
+#
+# Use grep to finally accept valid sha1 placeholders and reject other content.
 lsSiloTracked() {
-    local perm ty gitsha1 size path sha1 emptyline
+    local nl=$'\n'
+    local starttok='---------------------------------------------'
+    local perm ty gitsha1 size path sha1
     lsTree "$@" |
     while read perm ty gitsha1 size path; do
         [ -z "$path" ] && continue
@@ -1428,14 +1435,22 @@ lsSiloTracked() {
         [ "$size" = 41 ] || continue
         printf '%s %s\n' "${gitsha1}" "${path}"
     done |
-    git cat-file --batch='%(rest)' |
-    while IFS= read -r path && IFS= read -r sha1 && read -r emptyline; do
+    git cat-file --batch="${starttok}${nl}%(rest)" |
+    while seekToStartTok && IFS= read -r path && IFS= read -r sha1; do
         [ -z "${path}" ] && continue
         [ -z "${sha1}" ] && continue
-        [ -n "${emptyline}" ] &&
-            die "Failed to read silo sha1 for path '${path}' from git."
         printf '%s %s\n' "${sha1}" "${path}"
+    done |
+    ( egrep '^[0-9a-f]{40}' || true )
+}
+
+# Use starttok from caller.
+seekToStartTok() {
+    local tok
+    while IFS= read -r tok; do
+        [ "${tok}" = "${starttok}" ] && return 0
     done
+    false
 }
 
 lsTree() {
