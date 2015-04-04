@@ -1009,11 +1009,13 @@ getCfgSizeVarWithDefault() {
     printf "%d" $(( ${size} ))
 }
 
-# Determine file size for large files on Mac, Linux and msysgit.
-# Because the output format of BSD find and GNU find differ, sed is used
-# to remove all leading characters before the permission field.
-# Because msysgit's ls reports the wrong size for large files, find is used
-# instead.
+# `fileSize()` determines the size for large files on Mac, Linux and msysgit.
+# Because the output formats of BSD find and GNU find differ, sed is used to
+# remove all leading characters before the permission field, assuming that "$1"
+# is an ordinary file (it won't work for a symlink).
+#
+# find is used instead of ls, because msysgit's ls reports the wrong size for
+# large files.
 fileSize() {
     find "$1" -ls | sed -e 's/  */ /g' -e 's/^[^-]*-/-/' | cut -d ' ' -f 5
 }
@@ -1064,6 +1066,7 @@ validSha1() {
 # placeholders.  In case, however, the file get checked out with CRLF, it should
 # be accepted as a placeholder.
 isSha1PlaceholderFile() {
+    [ -f "$1" ] || return 1
     local size=$(fileSize "$1")
     [ $size -eq 41 -o $size -eq 42 ] &&
     egrep -q $'^[0-9a-f]{40}\r?$' "$1"
