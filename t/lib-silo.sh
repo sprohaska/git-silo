@@ -49,9 +49,9 @@ setup_user() {
 }
 
 setup_file() {
-    local f=$1
-    echo $f >$f &&
-    ( openssl sha1 $f | cut -d ' ' -f 2 > $f.sha1 )
+    local f="$1"
+    echo "${f}" >"${f}" &&
+    ( openssl sha1 "${f}" | cut -d '=' -f 2 | sed -e 's/^ *//' > "${f}.sha1" )
 }
 
 setup_repo() {
@@ -69,12 +69,12 @@ setup_repo() {
 }
 
 setup_add_file() {
-    local repo=$1
-    local file=$2
+    local repo="$1"
+    local file="$2"
     (
         cd $repo &&
-        cp ../$file $file &&
-        git silo add --attr $file &&
+        cp "../${file}" "${file}" &&
+        git silo add --attr "${file}" &&
         git commit -m "Add $file"
     )
 }

@@ -8,9 +8,11 @@ Test basic "silo checkout" operations.
 
 test_expect_success "setup" '
     setup_user &&
-    setup_file a &&
     setup_repo repo1 &&
-    setup_add_file repo1 a
+    setup_file a &&
+    setup_add_file repo1 a &&
+    setup_file "ä ö" &&
+    setup_add_file repo1 "ä ö"
 '
 
 test_expect_success "git checkout should replace placeholder file." '
@@ -19,14 +21,24 @@ test_expect_success "git checkout should replace placeholder file." '
         git silo init &&
         git silo fetch -- . &&
         git silo checkout a &&
-        test_cmp ../a a
+        test_cmp ../a a &&
+        git silo status -- a | grep "^content *a" &&
+        git silo checkout "ä ö" &&
+        test_cmp "../ä ö" "ä ö" &&
+        git silo status -- "ä ö" |
+            grep "^content *\"[\\]303[\\]244 [\\]303[\\]266\""
     )
 '
 
 test_expect_success "git checkout --placeholder creates placeholder." '(
     cd repolf &&
     git silo checkout --placeholder -- a &&
-    test_cmp ../a.sha1 a
+    test_cmp ../a.sha1 a &&
+    git silo status -- a | grep "^placeholder" &&
+    git silo checkout --placeholder -- "ä ö" &&
+    test_cmp "../ä ö.sha1" "ä ö" &&
+    git silo status -- "ä ö" |
+        grep "^placeholder *\"[\\]303[\\]244 [\\]303[\\]266\""
 )'
 
 # Trick git into creating a placeholder that ends with CRLF by duplicating the

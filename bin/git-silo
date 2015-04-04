@@ -1271,8 +1271,9 @@ cmd_checkout() {
 }
 
 cmd_checkout_placeholder() {
-    while read -r sha1 path; do
-        [ -z "${path}" ] && continue
+    while read -r sha1 qpath; do
+        [ -z "${qpath}" ] && continue
+        path="$(unquotePath "${qpath}")"
         [ -e "${path}" ] && isSha1PlaceholderFile "${path}" && continue
         printf "Placeholder %s %s\n" "${sha1}" "${path}"
         rm -f "${path}"
@@ -1408,16 +1409,17 @@ escapeSpacesForGitattributes() {
 
 cmd_status() {
     validateHaveSilo
-    local sha1 path
-    while read sha1 path; do
-        [ "$path" = "" ] && continue
-        if isSha1PlaceholderFile "$path"; then
+    local sha1 qpath path
+    while read -r sha1 qpath; do
+        [ "${qpath}" = "" ] && continue
+        path="$(unquotePath "${qpath}")"
+        if isSha1PlaceholderFile "${path}"; then
             printf 'placeholder '
         else
             printf 'content     '
         fi
         test ${opt_verbose} && printf '%s ' "${sha1}"
-        printf '%s\n' "$path"
+        printf '%s\n' "${qpath}"
     done <<< "$(lsSiloTracked "${arg_pathspec[@]}")"
 }
 
