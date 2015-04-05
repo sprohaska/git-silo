@@ -2502,6 +2502,9 @@ allCurrentSiloObjects() {
     fi
 }
 
+# Parse output of 'cat-file --batch' by keeping every line that looks like a
+# sha1.  This should be a robust, conservative listing, even if some git
+# objects have the same size as sha1 placeholders.
 siloObjectsWithRevListArgs() {
     git rev-list --objects "$@" |
     cut -d ' ' -f 1 |
@@ -2510,11 +2513,7 @@ siloObjectsWithRevListArgs() {
     cut -d ' ' -f 1 |
     sort -u |
     git cat-file --batch |
-    while IFS= read -r meta && IFS= read -r sha1 && read -r emptyline; do
-        [ -z "${meta}" ] && continue
-        [ -z "${sha1}" ] && continue
-        printf '%s\n' "${sha1}"
-    done
+    ( egrep '^[0-9a-f]{40}' || true )
 }
 
 allLocalRefs() {

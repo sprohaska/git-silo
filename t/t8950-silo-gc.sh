@@ -6,6 +6,8 @@ Test basic garbage collection.
 
 . ./lib-silo.sh
 
+nl=$'\n'
+
 test_expect_success "setup user" '
     setup_user
 '
@@ -152,6 +154,32 @@ test_expect_success 'gc should handle subdir with spaces' '
     git commit -m "rm b" &&
     git silo gc --gitattributes &&
     test_cmp expected "s d/.gitattributes"
+'
+
+test_expect_success 'gc robustly handles symlinks and placeholder lookalikes.' '
+    setup_repo lookalikes && (
+        cd lookalikes &&
+        echo "symlink* filter=silo -text" >>.gitattributes &&
+        echo "silocontent* filter=silo -text" >>.gitattributes &&
+        git add -- .gitattributes &&
+        ln -s "../../../../invalid/path/of/length/41___${nl}" "symlink 1" &&
+        ln -s "../../../../invalid/path/of/length/41____" "symlink 2" &&
+        ln -s "../../../../invalid/path/of/length/41____" "symlink 3" &&
+        git silo add -- "symlink 1" "symlink 2" "symlink 3" &&
+        printf "xxx1af1af1af1af1af1af1af1af1af1af1af1af0${nl}" >"content 1" &&
+        printf "1af${nl}00${nl}00${nl}1af001af1af1af1af1af1af1af1af00" >"content 2" &&
+        printf "1af1af1af${nl}1af1af00${nl}1af0${nl}1af00${nl}1af1af1af00" >"content 3" &&
+        git add -- "content 1" "content 2" "content 3" &&
+        printf "xxx1af1af1af1af1af1af1af1af1af1af1af1af0${nl}" >"silocontent 1" &&
+        printf "1af${nl}00${nl}00${nl}1af001af1af1af1af1af1af1af1af00" >"silocontent 2" &&
+        printf "1af1af1af${nl}1af1af00${nl}1af0${nl}1af00${nl}1af1af1af00" >"silocontent 3" &&
+        git silo add -- "silocontent 1" "silocontent 2" "silocontent 3" &&
+        git commit -m content &&
+        find .git/silo/objects -type f >../before &&
+        git silo gc -n 1 &&
+        find .git/silo/objects -type f >../after &&
+        test_cmp ../before ../after
+    )
 '
 
 test_done
