@@ -30,7 +30,7 @@ test_expect_success "git checkout should replace placeholder file." '
     )
 '
 
-test_expect_success "git checkout --placeholder creates placeholder." '(
+test_expect_success "checkout --placeholder creates placeholder." '(
     cd repolf &&
     git silo checkout --placeholder -- a &&
     test_cmp ../a.sha1 a &&
@@ -40,6 +40,18 @@ test_expect_success "git checkout --placeholder creates placeholder." '(
     git silo status -- "ä ö" |
         grep "^placeholder *\"[\\]303[\\]244 [\\]303[\\]266\""
 )'
+
+test_expect_success "checkout --placeholder handles x-bit." '
+    setup_repo xbit && (
+        cd xbit &&
+        touch x &&
+        chmod a+x x &&
+        git silo add --attr x &&
+        git commit -m "add x" &&
+        git silo checkout --placeholder -- x &&
+        [ -x x ]
+    )
+'
 
 # Trick git into creating a placeholder that ends with CRLF by duplicating the
 # placeholder file and checking out the duplicate 'b' with autocrlf=true.

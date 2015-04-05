@@ -1278,6 +1278,7 @@ cmd_checkout_placeholder() {
         printf "Placeholder %s %s\n" "${sha1}" "${path}"
         rm -f "${path}"
         printf '%s\n' "${sha1}" >"${path}"
+        gitExpectsXbit "${path}" && chmod a+x "${path}"
         git add -u -- "${path}"
     done <<< "$(lsSiloTracked "${arg_pathspec[@]}")"
 }
