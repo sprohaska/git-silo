@@ -252,6 +252,11 @@ via ssh.  With 'sshcat', one ssh connection is used per file.
 
 # KNOWN ISSUES
 
+  - git-silo is designed and optimized towards handling relatively few large
+    files.  The performance might be unexpectedly bad with many small files.
+    If you have directory trees that contain many small files, you should
+    consider packing them into a single tar before commiting them to git-silo.
+
   - ssh performance on Windows might be poor (only 1 MB/s on local network).
     The reason is that openssh, which comes with msysgit, suffers from the
     problem explained in
@@ -281,7 +286,7 @@ via ssh.  With 'sshcat', one ssh connection is used per file.
     this is good enough in practice or whether there are conditions when a hard
     link is writable and git modifies a stored object that should be immutable.
 
-  - On SunOS, the following GNU tools are expected: ggrep, gegrep, gsed, gfind,
+  - On SunOS, the following GNU tools are required: ggrep, gegrep, gsed, gfind,
     gsort, gxargs.
 
 EOF
