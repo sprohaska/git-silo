@@ -17,6 +17,11 @@ git-bigstore: Python implementation that uses git filters and cloud storage.
 
  - GitHub: <https://github.com/lionheart/git-bigstore>.
 
+git-fat: Anothr git-filter-based approach.  It is implemented in Python and uses
+rsync for data transfer.
+
+ - GitHub: <https://github.com/jedbrown/git-fat>.
+
 git-lfs: Announced by GitHub in Apr 2015.  It uses git filters and seems to be
 an evolution of git-media.  Implemented in Go, which allows distributing
 statically linked binaries for many platforms.
