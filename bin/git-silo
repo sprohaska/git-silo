@@ -1104,7 +1104,7 @@ cmd_add() {
 
 # Try to avoid computing a sha1 by checking whether the local silo has the
 # inode for the head sha1.  If not, try to locate the inode in one of the
-# alternates and injecting a match directly into the index.  Try these
+# alternates and inject a match directly into the index.  Try these
 # optimizations only if a hardlink can be used.
 addFile() {
     local headsha1="$1"
