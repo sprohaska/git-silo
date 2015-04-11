@@ -2518,7 +2518,7 @@ siloObjectsWithRevListArgs() {
     cut -d ' ' -f 1 |
     sort -u |
     git cat-file --batch |
-    ( egrep '^[0-9a-f]{40}' || true )
+    ( egrep '^[0-9a-f]{40}$' || true )
 }
 
 allLocalRefs() {
