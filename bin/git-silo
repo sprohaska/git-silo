@@ -2530,13 +2530,31 @@ convertToObjectSubdirPaths() {
     sed -e 's@^\(.\{2\}\)@\1/@'
 }
 
-# Lines must not contain special basic regex characters.
-# SHA1s are ok.  Relative silo object paths 'xx/xxx...' are also ok.
+# A duplicate of this function is tested in t8904.
 setminus() {
-    while read l; do
-        findLineIn "$l" "$2" && continue
-        printf '%s\n' "$l"
-    done <<< "$1"
+    { sed <<<"$1" -e 's/^/1 /'; sed <<<"$2" -e 's/^/2 /'; } |
+    sort -k 2 --stable | (
+        hold=
+        while read -r which x; do
+            case ${which} in
+            1)
+                if [ -n "${hold}" ]; then
+                    printf '%s\n' "${hold}"
+                fi
+                hold=${x}
+                ;;
+            2)
+                if [ -n "${hold}" ] && [ "${hold}" != "${x}" ]; then
+                    printf '%s\n' "${hold}"
+                fi
+                hold=
+                ;;
+            esac
+        done
+        if [ -n "${hold}" ]; then
+            printf '%s\n' "${hold}"
+        fi
+    )
 }
 
 gcAllGitattributes() {
