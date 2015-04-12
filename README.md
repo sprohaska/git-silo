@@ -39,3 +39,9 @@ git-fit: It uses an approach that avoids git filters.  Meta data is tracked in
 a single json file instead.
 
  - GitHub: <https://github.com/dailymuse/git-fit>
+
+AWS CodeCommit: AWS announced CodeCommit for early 2015.  The announcement
+claims that it will be compatible with git workflows but allow storing large
+files.
+
+ - Homepage: <http://aws.amazon.com/codecommit/>
