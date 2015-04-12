@@ -28,7 +28,8 @@ statically linked binaries for many platforms.
 
  - Homepage: <https://git-lfs.github.com>.
  - GitHub: <https://github.com/github/git-lfs>.
- - Hacker news discussion: <https://news.ycombinator.com/item?id=9343021>.
+ - Hacker news discussion with lots of references to other tools:
+   <https://news.ycombinator.com/item?id=9343021>.
 
 git-annex: It uses a slightly different approach that is based on symlinks
 instead of text placeholder files.  I'm unsure how it uses git filters.
