@@ -30,7 +30,12 @@ statically linked binaries for many platforms.
  - GitHub: <https://github.com/github/git-lfs>.
  - Hacker news discussion: <https://news.ycombinator.com/item?id=9343021>.
 
-git-annex: It uses a different approach based on symlinks instead of git
-filters.
+git-annex: It uses a slightly different approach that is based on symlinks
+instead of text placeholder files.  I'm unsure how it uses git filters.
 
  - Homepage: <https://git-annex.branchable.com>.
+
+git-fit: It uses an approach that avoids git filters.  Meta data is tracked in
+a single json file instead.
+
+ - GitHub: <https://github.com/dailymuse/git-fit>
