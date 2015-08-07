@@ -8,6 +8,10 @@ See `git silo -h` for instructions how to use it.
 
 # Alternatives
 
+The following blog post contains a comparison of some approaches to storing big
+files in git:
+<http://blog.deveo.com/storing-large-binary-files-in-git-repositories/>.
+
 git-media: The mother of the git-filter-based approaches.  Originally developed
 by schacon and now maintained by alebedev.
 

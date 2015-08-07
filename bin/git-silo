@@ -289,12 +289,6 @@ via ssh.  With 'sshcat', one ssh connection is used per file.
   - On SunOS, the following GNU tools are required: ggrep, gegrep, gsed, gfind,
     gsort, gxargs.
 
-# ALTERNATIVES
-
-The following blog post contains a comparison of approaches to storing big
-files in git:
-<http://blog.deveo.com/storing-large-binary-files-in-git-repositories/>.
-
 EOF
 }
 
