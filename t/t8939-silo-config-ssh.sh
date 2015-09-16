@@ -37,7 +37,7 @@ touch plink-called
 ssh "$@"
 EOFTXT
 chmod a+x "$PLINK"
-export GIT_SSH=$PLINK
+
 
 test_expect_success \
 "'silo fetch' (ssh) should use custom plink from GIT_SSH." "
@@ -45,7 +45,7 @@ test_expect_success \
         cd clonefetch &&
         git silo init &&
         rm -f plink-called &&
-        git silo fetch -- . &&
+        GIT_SSH='$PLINK' git silo fetch -- . &&
         test -e plink-called
     )
 "
@@ -56,7 +56,7 @@ test_expect_success \
         cd clonepush &&
         git silo init &&
         rm -f plink-called &&
-        git silo push -- . &&
+        GIT_SSH='$PLINK' git silo push -- . &&
         test -e plink-called
     )
 "
