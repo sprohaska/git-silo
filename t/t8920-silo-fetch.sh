@@ -26,7 +26,7 @@ test_expect_success "'silo fetch' (cp) should fetch" '
     ( cd cpclone && git silo init ) &&
     setup_add_file repo1 first &&
     setup_add_file repo1 second &&
-    ( cd cpclone && git pull && git silo fetch -- . ) &&
+    ( cd cpclone && git pull && git silo fetch --placeholder -- . ) &&
     assertRepoHasSiloObject cpclone first
 '
 
@@ -35,6 +35,49 @@ test_expect_success "local fetch should use hardlinks" '
     linkCount cpclone/.git/silo/objects/*/* >actual &&
     test_cmp expected actual
 '
+
+test_expect_success "fetch implies checkout --link" '
+    (
+        cd cpclone &&
+        rm -f first second &&
+        git silo fetch -- .
+    ) &&
+    echo 4 >expected &&
+    linkCount cpclone/.git/silo/objects/*/* >actual &&
+    test_cmp expected actual
+'
+
+test_expect_success "fetch supports --copy" '
+    (
+        cd cpclone &&
+        git silo fetch --copy -- .
+    ) &&
+    echo 3 >expected &&
+    linkCount cpclone/.git/silo/objects/*/* >actual &&
+    test_cmp expected actual
+'
+
+test_expect_success "fetch supports --link" '
+    (
+        cd cpclone &&
+        rm -f first second &&
+        git silo fetch --link -- .
+    ) &&
+    echo 4 >expected &&
+    linkCount cpclone/.git/silo/objects/*/* >actual &&
+    test_cmp expected actual
+'
+
+test_expect_success "fetch supports --placeholder" '
+    (
+        cd cpclone &&
+        git silo fetch --placeholder -- .
+    ) &&
+    echo 3 >expected &&
+    linkCount cpclone/.git/silo/objects/*/* >actual &&
+    test_cmp expected actual
+'
+
 
 test_expect_success "cleanup" '
     rm -f cpclone/.git/silo/objects/*/*

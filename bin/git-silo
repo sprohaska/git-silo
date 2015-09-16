@@ -11,18 +11,23 @@ usage() {
     cat <<\EOF
 git-silo init
 git-silo add [--attr|--no-attr] [--] [<file>...]
-git-silo checkout [--copy] [--link] [--ignore-missing] -- [<file>...]
+git-silo checkout [--copy] [--link] [--placeholder] [--ignore-missing] \
+    -- [<file>...]
 git-silo status [-v|--verbose] [<path>...]
 git-silo ls-tree <tree-ish>
 git-silo push \
     [--dry-run] [-v|--verbose] \
     [--include=<label>] [--exclude=<pattern>] [--all] \
-    [<url>|<remote> [<commit>]] [--] [<path>... | config remote.<remote>.silopush]
+    [<url>|<remote> [<commit>]] \
+    [--] [<path>... | config remote.<remote>.silopush]
 git-silo fetch \
     [--dry-run] [-v|--verbose] \
+    [--copy] [--link] [--placeholder] \
     [--include=<label>] [--exclude=<pattern>] [--all] \
-    [<url>|<remote> [<commit>]] [--] [<path>... | config remote.<remote>.silofetch]
-git-silo gc [--gitattributes] [-f|--force] [-n <number>] [--dry-run] [--no-tags]
+    [<url>|<remote> [<commit>]] \
+    [--] [<path>... | config remote.<remote>.silofetch]
+git-silo gc [--gitattributes] [-f|--force] [-n <number>] [--dry-run] \
+    [--no-tags]
 git-silo purge [-f|--force] [--dry-run] [--] <path>...
 git-silo pack [--all] [--keep-tip|--keep|--prune]
 git-silo unpack [--keep-packs|--prune-packs] [--all] [--] [<path>...]
@@ -47,9 +52,9 @@ git-silo dedup <repo>...
 
   checkout          replace placeholders with full content.
 
-    --copy          copy files instead of using hard link
+    --copy          copy files instead of using hard link.
 
-    --link          replace checked-out copies with hard link
+    --link          replace checked-out copies with hard link.
 
     --placeholder   replace content with placeholders.
 
@@ -71,7 +76,8 @@ git-silo dedup <repo>...
                     be configured with 'remote.<remote>.silopush'.  See PATHS
                     section.
 
-  fetch             fetch silo files.
+  fetch             fetch and checkout silo files.  checkout is skipped if
+                    <path> is not explicitly specified on the command line.
 
     <url>|<remote>  url or git remote to fetch from (default: origin).
 
@@ -80,6 +86,12 @@ git-silo dedup <repo>...
     <path>...       fetch will be limited to the given paths.  Default paths
                     can be configured with 'remote.<remote>.silofetch'.  See
                     PATHS section.
+
+    --copy          copy files instead of using hard link.
+
+    --link          replace checked-out copies with a hard link.
+
+    --placeholder   replace content with placeholders.
 
   common options for push and fetch
 
@@ -689,14 +701,84 @@ argparse_pathspec() {
 }
 
 argparse_fetch() {
-    argparse_sync "$@"
+    local arg dummy
+    opt_dry_run=
+    opt_verbose=
+    arg_pathspec=
+    arg_remote=
+    arg_commit=
+    arg_filter=()
+    opt_copy=
+    opt_link=
+    opt_placeholder=
+    opt_ignore_missing=
+    while [ $# -ge 1 ]; do
+        case "$1" in
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        --dry-run)
+            opt_dry_run=--dry-run
+            shift
+            ;;
+        -v|--verbose)
+            opt_verbose=t
+            shift
+            ;;
+        --include=*)
+            IFS='=' read -r dummy arg <<<"$1"
+            shift
+            arg_filter+=( "+ $arg" )
+            ;;
+        --exclude=*)
+            IFS='=' read -r dummy arg <<<"$1"
+            shift
+            arg_filter+=( "- $arg" )
+            ;;
+        --all)
+            arg_filter=( '+ *' )
+            shift
+            ;;
+        --copy)
+            opt_copy=t
+            shift
+            ;;
+        --link)
+            opt_link=t
+            shift
+            ;;
+        --placeholder)
+            opt_placeholder=t
+            shift
+            ;;
+        --)
+            shift
+            [ $# -gt 0 ] && arg_pathspec=( "$@" )
+            break
+            ;;
+        -*)
+            die "Unknown option $1"
+            ;;
+        *)
+            if ! test "$arg_remote"; then
+                arg_remote="$1"
+                shift
+            elif ! test "${arg_commit}"; then
+                arg_commit=$(git rev-parse --verify "$1^{commit}") ||
+                    die "Invalid commit '$1'."
+                shift
+            else
+                arg_pathspec=( "$@" )
+                break
+            fi
+            ;;
+        esac
+    done
+    (( ${#arg_filter[@]} )) || arg_filter=( '- local' )
 }
 
 argparse_push() {
-    argparse_sync "$@"
-}
-
-argparse_sync() {
     local arg dummy
     opt_dry_run=
     opt_verbose=
@@ -1567,11 +1649,16 @@ cmd_fetch() {
     )"
     if [ -z "${todo}" ]; then
         echo 'Everything up-to-date.'
-        exit 0
+    else
+        transport_${transport}_prefetch "${url}" <<<"${todo}"
+        sha1sAsObjectPaths <<<"${todo}" |
+            transport_${transport}_fetch "$url"
     fi
-    transport_${transport}_prefetch "${url}" <<<"${todo}"
-    sha1sAsObjectPaths <<<"${todo}" |
-        transport_${transport}_fetch "$url"
+
+    # Checkout fetched files unless --dry-run or missing pathspec.
+    test ${opt_dry_run} && return 0
+    test "$arg_pathspec" || return 0
+    cmd_checkout
 }
 
 # transport_sshcat
