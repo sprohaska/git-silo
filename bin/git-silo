@@ -42,7 +42,7 @@ git-silo dedup <repo>...
                     computing sha1s if 'silo.alternate' is set.  See
                     CONFIGURATION VARIABLES section.
 
-  --attr|--no-attr  (default: --attr)
+  --attr|--no-attr  (default: --no-attr)
                     controls whether filter=silo gitattributes entries are
                     added if needed.  With --no-attr, gitattributes will not be
                     modified; files will only be added if the expected
