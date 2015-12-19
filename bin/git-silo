@@ -7,6 +7,11 @@ opt_debug=${GIT_SILO_DEBUG:-}
 # Use 'C' local to avoid unexpected effects of other locales.
 export LC_ALL=C
 
+# By default search for inodes in alternates only for files >50 MB.
+cfg_searchInodeLimit() {
+    getCfgSizeVarWithDefault "searchInodeLimit" "50M"
+}
+
 usage() {
     cat <<\EOF
 git-silo init
@@ -261,6 +266,11 @@ instead of ssh.
 
 silo.sshtransport (default 'sshcat'): Configures how to fetch and push files
 via ssh.  With 'sshcat', one ssh connection is used per file.
+
+silo.searchInodeLimit (default: 50M): Minimal file size at which git silo tries
+to locate an inode in alternates to avoid computing its sha1.  For large files,
+it may be cheaper to search alternates; for small files it is usually quicker
+to compute the sha1.
 
 # KNOWN ISSUES
 
@@ -1166,6 +1176,7 @@ cmd_add() {
     validateHaveSilo
     objdir="$(getSiloObjectDir)"
     prefix="$(git rev-parse --show-prefix)"
+    searchInodeLimit=$(cfg_searchInodeLimit)
 
     while read -r headsha1 qpath; do
         [ -z "${qpath}" ] && continue
@@ -1200,7 +1211,8 @@ addFile() {
             echo_debug "Head matches ${headsha1} for '${path}'."
             git update-index --assume-unchanged-once "${path}"
             return 0
-        elif sha1=$(findSha1InAlternates "${path}"); then
+        elif [ $(fileSize "${path}") -ge ${searchInodeLimit} ] &&
+                sha1=$(findSha1InAlternates "${path}"); then
             echo_debug "Found silo.alternate ${sha1} for '${path}'."
             linkFileInSilo ${sha1} "${path}"
             local blob

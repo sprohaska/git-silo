@@ -28,6 +28,7 @@ test_expect_success \
 "'silo add' uses sha1 from alternate without calling clean filter." '(
     setup_repo repo &&
     cd repo &&
+    git config silo.searchInodeLimit 0 &&
     git config --add silo.alternate ../alternate1 &&
     git config --add silo.alternate ../alternate2 &&
     ln ../alternate1/first . &&
