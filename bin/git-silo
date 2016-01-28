@@ -1165,6 +1165,10 @@ validSha1() {
 isSha1PlaceholderFile() {
     [ -f "$1" ] || return 1
     local size=$(fileSize "$1")
+    if [ -z "${size}" ]; then
+        printf >&2 "Warning: Failed to determine file size for '%s'; assuming it is not a sha1 placeholder.\n" "$1"
+        return 1
+    fi
     [ $size -eq 41 -o $size -eq 42 ] &&
     egrep -q $'^[0-9a-f]{40}\r?$' "$1"
 }
