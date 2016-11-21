@@ -6,8 +6,8 @@ Test automatic unpack
 
 . ./lib-silo.sh
 
-if ! type 7zr >/dev/null 2>&1; then
-    skip_all='Skipping tests, because 7zr is not available.'
+if ! type 7z >/dev/null 2>&1; then
+    skip_all='Skipping tests, because 7z is not available.'
     test_done
 fi
 
