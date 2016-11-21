@@ -439,7 +439,7 @@ argparse_pack() {
 }
 
 argparse_unpack() {
-    arg_pathspec=
+    arg_pathspec=( . )
     opt_keep_packs=t
     opt_all=
     while [ $# -ge 1 ]; do
@@ -498,6 +498,7 @@ argparse_dedup() {
 argparse_purge() {
     opt_force=
     opt_dry_run=
+    # Empty `arg_pathspec` array will be handled in in `cmd_purge`.
     arg_pathspec=()
     while [ $# -ge 1 ]; do
         case "$1" in
@@ -561,7 +562,7 @@ argparse_filter() {
 }
 
 argparse_add() {
-    arg_pathspec=
+    arg_pathspec=( . )
     opt_attr=
     while [ $# -ge 1 ]; do
         case "$1" in
@@ -594,7 +595,7 @@ argparse_add() {
 }
 
 argparse_checkout() {
-    arg_pathspec=
+    arg_pathspec=( . )
     opt_copy=
     opt_link=
     opt_placeholder=
@@ -638,7 +639,7 @@ argparse_checkout() {
 }
 
 argparse_status() {
-    arg_pathspec=
+    arg_pathspec=( . )
     opt_verbose=
     while [ $# -ge 1 ]; do
         case "$1" in
@@ -687,7 +688,7 @@ argparse_ls-tree() {
 }
 
 argparse_pathspec() {
-    arg_pathspec=
+    arg_pathspec=( . )
     while [ $# -ge 1 ]; do
         case "$1" in
         -h|--help)
@@ -714,6 +715,7 @@ argparse_fetch() {
     local arg dummy
     opt_dry_run=
     opt_verbose=
+    # Empty `arg_pathspec` will be handled in in `cmd_fetch`.
     arg_pathspec=
     arg_remote=
     arg_commit=
@@ -792,6 +794,7 @@ argparse_push() {
     local arg dummy
     opt_dry_run=
     opt_verbose=
+    # Empty `arg_pathspec` will be handled in in `cmd_push`.
     arg_pathspec=
     arg_remote=
     arg_commit=
