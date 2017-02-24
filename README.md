@@ -6,6 +6,8 @@ primary data transport is ssh.
 
 See `git silo -h` for usage instructions.
 
+Unless you already use Git Silo, I'd recommend you consider Git LFS instead.
+
 # Alternatives
 
 The following blog post contains a comparison of some approaches to storing big
