@@ -243,8 +243,8 @@ silo.alternate (multiple allowed): Paths to git repos that contain git silos.
 instead of fetching or pushing via ssh.  For 'fetch', 'silo.alternate' must be
 set in the local repo.  For 'push', 'silo.alternate' must be set in the remote
 repo.  If hard links can be used and 'git update-index --assume-unchanged-once'
-is available, 'git silo add' tries to locate inodes in the alternate silos to
-avoid computing sha1s.
+is available (see patch in Git Silo repo), 'git silo add' tries to locate
+inodes in the alternate silos to avoid computing sha1s.
 
 silo.contentSizeLimit (default '10M'): If the content for a file that is stored
 in silo is smaller than the limit or the limit is 0, the content will be used

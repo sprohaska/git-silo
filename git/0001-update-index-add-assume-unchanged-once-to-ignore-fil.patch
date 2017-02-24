@@ -1,0 +1,81 @@
+From ec4674b1cba9ae243dd83f40a21f44eaf1c77160 Mon Sep 17 00:00:00 2001
+From: Steffen Prohaska <prohaska@zib.de>
+Date: Sun, 14 Sep 2014 10:11:05 +0200
+Subject: [PATCH] update-index: add --assume-unchanged-once to ignore file
+ until stat changes
+
+---
+ builtin/update-index.c                   | 20 ++++++++++++++++++++
+ t/t2106-update-index-assume-unchanged.sh | 13 +++++++++++++
+ 2 files changed, 33 insertions(+)
+
+diff --git a/builtin/update-index.c b/builtin/update-index.c
+index f3f07e7f1c..67b4f9d312 100644
+--- a/builtin/update-index.c
++++ b/builtin/update-index.c
+@@ -30,6 +30,7 @@ static int info_only;
+ static int force_remove;
+ static int verbose;
+ static int mark_valid_only;
++static int mark_valid_once;
+ static int mark_skip_worktree_only;
+ #define MARK_FLAG 1
+ #define UNMARK_FLAG 2
+@@ -263,6 +264,22 @@ static int add_one_path(const struct cache_entry *old, const char *path, int len
+ 	int option, size;
+ 	struct cache_entry *ce;
+ 
++	/*
++	 * To mark a path unchanged once, record the current stat information
++	 * without checking whether it matches the old entry to avoid accessing
++	 * the file content.
++	 */
++	if (mark_valid_once && old && !ce_stage(old)) {
++		size = ce_size(old);
++		ce = xmalloc(size);
++		memcpy(ce, old, size);
++		fill_stat_cache_info(ce, st);
++		option = ADD_CACHE_OK_TO_REPLACE;
++		if (add_cache_entry(ce, option))
++			return error("%s: cannot mark unchanged once", path);
++		return 0;
++	}
++
+ 	/* Was the old index entry already up-to-date? */
+ 	if (old && !ce_stage(old) && !ce_match_stat(old, st, 0))
+ 		return 0;
+@@ -954,6 +971,9 @@ int cmd_update_index(int argc, const char **argv, const char *prefix)
+ 		{OPTION_SET_INT, 0, "no-assume-unchanged", &mark_valid_only, NULL,
+ 			N_("clear assumed-unchanged bit"),
+ 			PARSE_OPT_NOARG | PARSE_OPT_NONEG, NULL, UNMARK_FLAG},
++		{OPTION_SET_INT, 0, "assume-unchanged-once", &mark_valid_once, NULL,
++			N_("mark files as up-to-date without inspecting content"),
++			PARSE_OPT_NOARG | PARSE_OPT_NONEG, NULL, MARK_FLAG},
+ 		{OPTION_SET_INT, 0, "skip-worktree", &mark_skip_worktree_only, NULL,
+ 			N_("mark files as \"index-only\""),
+ 			PARSE_OPT_NOARG | PARSE_OPT_NONEG, NULL, MARK_FLAG},
+diff --git a/t/t2106-update-index-assume-unchanged.sh b/t/t2106-update-index-assume-unchanged.sh
+index 99d858c6b7..2e3697984a 100755
+--- a/t/t2106-update-index-assume-unchanged.sh
++++ b/t/t2106-update-index-assume-unchanged.sh
+@@ -21,4 +21,17 @@ test_expect_success 'do not switch branches with dirty file' \
+ 	 git update-index --assume-unchanged file &&
+ 	 test_must_fail git checkout master'
+ 
++# sleep before update-index to avoid racy-git check.
++test_expect_success 'ignore file after --assume-unchanged-once' '
++	git update-index --no-assume-unchanged file &&
++	git reset --hard &&
++	echo dirt >file &&
++	( git status --porcelain | grep " M file" ) &&
++	sleep 1 &&
++	git update-index --assume-unchanged-once file &&
++	[ -z "$(git status --porcelain)" ] &&
++	touch file &&
++	( git status --porcelain | grep " M file" )
++'
++
+ test_done
+-- 
+2.11.0.5.gec4674b
+
