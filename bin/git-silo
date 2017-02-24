@@ -2494,7 +2494,7 @@ cmd_purge() {
                 fi
             done
             if test ${err}; then
-                die "Refusing to purge, because the objects above are not in silo.masterstore '${masterstore}'."
+                die "Refusing to purge, because some objects above are not in silo.masterstore '${masterstore}'."
             fi
         ) || exit 1
 
