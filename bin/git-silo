@@ -1,10 +1,11 @@
 #!/bin/bash
+# vim: sw=4
 
 set -o nounset -o errexit -o pipefail -o noglob
 
 opt_debug=${GIT_SILO_DEBUG:-}
 
-# Use 'C' local to avoid unexpected effects of other locales.
+# Use 'C' locale to avoid unexpected effects of other locales.
 export LC_ALL=C
 
 # By default search for inodes in alternates only for files >50 MB.
@@ -3343,5 +3344,3 @@ setup_arch_msysgit() {
 }
 
 main "$@"
-
-# vim: sw=4
