@@ -1,10 +1,10 @@
 # Introduction
 
-git-silo is an extension to git for storing large files.  It uses git filters to
-intercept operations on large files, similar to git-media.  git-silo's primary
-data transport is ssh.
+Git Silo is an extension to Git for storing large files.  It uses Git filters
+to intercept operations on large files, similar to git-media.  Git Silo's
+primary data transport is ssh.
 
-See `git silo -h` for instructions how to use it.
+See `git silo -h` for usage instructions.
 
 # Alternatives
 
