@@ -77,7 +77,7 @@ test_expect_success "'git silo purge' refuses to purge with invalid silo.masters
     test_cmp ../b b
 )'
 
-test_expect_success "'git silo purge' refuses to purge if file is missing in silo.masterstore" '(
+test_expect_success "'git silo purge' refuses to purge if any file is missing in silo.masterstore" '(
     cdNewRepo &&
     git silo purge -f -- a &&
     master="$(pwd)" &&
@@ -90,6 +90,20 @@ test_expect_success "'git silo purge' refuses to purge if file is missing in sil
     git silo purge -f -- b &&
     ! git silo purge -f -- a &&
     test_cmp ../a a
+)'
+
+test_expect_success "'git silo purge --no-strict-masterstore' purges if some files are missing in silo.masterstore" '(
+    cdNewRepo &&
+    git silo purge -f -- a &&
+    master="$(pwd)" &&
+    cd .. &&
+    cdNewRepo &&
+    git config silo.masterstore "${master}" &&
+    git silo purge -f --no-strict-masterstore -- a b &&
+    test_cmp ../a a &&
+    test_cmp ../b.sha1 b &&
+    rm b &&
+    ! git silo checkout -- b
 )'
 
 test_expect_success \

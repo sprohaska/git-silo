@@ -33,7 +33,7 @@ git-silo fetch \
     [--] [<path>... | config remote.<remote>.silofetch]
 git-silo gc [--gitattributes] [-f|--force] [-n <number>] [--dry-run] \
     [--no-tags]
-git-silo purge [-f|--force] [--dry-run] [--] <path>...
+git-silo purge [-f|--force] [--dry-run] [--no-strict-masterstore] [--] <path>...
 git-silo pack [--all] [--keep-tip|--keep|--prune]
 git-silo unpack [--keep-packs|--prune-packs] [--all] [--] [<path>...]
 git-silo fsck
@@ -144,6 +144,13 @@ git-silo dedup <repo>...
     -f|--force      required to actually remove files.
 
     --dry-run       print only what would be removed.
+
+    --no-strict-masterstore
+                    If 'silo.masterstore' is set, purge by default refused to
+                    proceed if any object is missing in the master store.  With
+                    --no-strict-masterstore, purge deletes objects that are in
+                    the masterstore and keeps objects that are not in the
+                    masterstore.
 
   fsck              verify silo storage.
 
@@ -498,6 +505,7 @@ argparse_dedup() {
 argparse_purge() {
     opt_force=
     opt_dry_run=
+    opt_strict_masterstore=t
     # Empty `arg_pathspec` array will be handled in in `cmd_purge`.
     arg_pathspec=()
     while [ $# -ge 1 ]; do
@@ -512,6 +520,10 @@ argparse_purge() {
             ;;
         --dry-run)
             opt_dry_run=t
+            shift
+            ;;
+        --no-strict-masterstore)
+            opt_strict_masterstore=
             shift
             ;;
         --)
@@ -2473,6 +2485,7 @@ cmd_purge() {
     objdir=$(getSiloObjectDir)
 
     # If silo.masterstore is set, verify that all objects are there.
+    masterobjdir=
     if masterstore=$(git config silo.masterstore); then
 
         masterobjdir="$(
@@ -2480,32 +2493,38 @@ cmd_purge() {
         )" && [ -d "${masterobjdir}" ] ||
             die "failed to resolve git silo at masterstore '${masterstore}'."
 
-        lsSiloTracked "${arg_pathspec[@]}" | (
-            err=
-            while read -r sha1 path; do
-                [ -z "${sha1}" ] && continue
-                p="$(sha1AsObjectPath "${sha1}")"
-                objpath="${objdir}/${p}"
-                if [ -f "${objpath}" ] && grep -q -F "${sha1}" <<<"${orphanSha1s}"; then
-                    if ! [ -f "${masterobjdir}/${p}" ]; then
-                        printf 'missing in masterstore %s %s\n' "${sha1}" "${path}"
-                        err=t
+        if test ${opt_strict_masterstore}; then
+            lsSiloTracked "${arg_pathspec[@]}" | (
+                err=
+                while read -r sha1 path; do
+                    [ -z "${sha1}" ] && continue
+                    p="$(sha1AsObjectPath "${sha1}")"
+                    objpath="${objdir}/${p}"
+                    if [ -f "${objpath}" ] && grep -q -F "${sha1}" <<<"${orphanSha1s}"; then
+                        if ! [ -f "${masterobjdir}/${p}" ]; then
+                            printf 'missing in masterstore %s %s\n' "${sha1}" "${path}"
+                            err=t
+                        fi
                     fi
+                done
+                if test ${err}; then
+                    die "Refusing to purge, because some objects above are not in silo.masterstore '${masterstore}'."
                 fi
-            done
-            if test ${err}; then
-                die "Refusing to purge, because some objects above are not in silo.masterstore '${masterstore}'."
-            fi
-        ) || exit 1
-
+            ) || exit 1
+        fi
     fi
 
     lsSiloTracked "${arg_pathspec[@]}" |
     while read -r sha1 path; do
         [ "${sha1}" = "" ] && continue
 
-        objpath="${objdir}/$(sha1AsObjectPath "${sha1}")"
+        p="$(sha1AsObjectPath "${sha1}")"
+        objpath="${objdir}/${p}"
         if [ -f "${objpath}" ] && grep -q -F "${sha1}" <<<"${orphanSha1s}"; then
+            if [ -n "${masterobjdir}" ] && ! [ -f "${masterobjdir}/${p}" ]; then
+                printf 'Not in masterstore, keeping %s %s\n' "${sha1}" "${path}"
+                continue
+            fi
             shouldRemoveObject=t
             printf "%s %s %s\n" "${msg_remove}" "${sha1}" "${path}"
         elif ! isSha1PlaceholderFile "${path}"; then
