@@ -21,8 +21,8 @@ git-bigstore: Python implementation that uses git filters and cloud storage.
 
  - GitHub: <https://github.com/lionheart/git-bigstore>.
 
-git-fat: Anothr git-filter-based approach.  It is implemented in Python and uses
-rsync for data transfer.
+git-fat: Another git-filter-based approach.  It is implemented in Python and
+uses rsync for data transfer.
 
  - GitHub: <https://github.com/jedbrown/git-fat>.
 
