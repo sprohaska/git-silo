@@ -1456,6 +1456,9 @@ xbitAllowsLink() {
     local src=$1
     local dest=$2
     [ -f "${src}" ] || return 1
+    if [ "$(git config core.filemode)" == 'false' ]; then
+        return 0
+    fi
     if gitExpectsXbit "${dest}"; then
         [ "$(ls -l "${src}" | cut -b 4)" == 'x' ] && return 0
     else
@@ -1845,7 +1848,9 @@ transport_sshcat_push() {
             continue
         fi
         xbit=
-        [ -x "${objdir}/${p}" ] && xbit=yes
+        if [ -x "${objdir}/${p}" ] && [ "$(git config core.filemode)" == 'true' ]; then
+             xbit=yes
+        fi
 
         # Write paths to program to protect them from msysgit path mangling.
         # Pass prgpath together with bash in a single string to protect prgpath
